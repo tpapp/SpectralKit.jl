@@ -1,0 +1,3 @@
+module SpectralKit
+
+end # module
