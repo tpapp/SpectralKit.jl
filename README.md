@@ -11,7 +11,7 @@
 
 Building blocks of spectral methods for Julia.
 
-# Introduction
+## Introduction
 
 Mostly useful for algorithms along the lines of
 
