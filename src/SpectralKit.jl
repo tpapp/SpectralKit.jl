@@ -133,6 +133,8 @@ end
 
 Return the roots of the `N`th function in `family`, as a vector of `N` numbers with element
 type `T` (default `Float64`).
+
+In the context of collocation, this is also known as the “Gauss-Chebyshev” grid.
 """
 roots(T, family, N) = from_halfturn.(Ref(family), halfturn_roots(T, N))
 
@@ -143,6 +145,8 @@ roots(family, N::Integer) = roots(Float64, family, N)
 
 Return the augmented extrema (extrema + boundary values, in increasing order) of the `N-1`th
 function in `family`, as a vector of `N` numbers with element type `T` (default `Float64`).
+
+In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
 """
 function augmented_extrema(::Type{T}, family::FunctionFamily, N) where {T}
     from_halfturn.(Ref(family), halfturn_augmented_extrema(T, N))
