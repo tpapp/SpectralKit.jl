@@ -10,6 +10,9 @@ Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 
 [compat]
 julia = "^1"
+ArgCheck = "^1"
+DocStringExtensions = "^0.8"
+Parameters = "^0.12"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
