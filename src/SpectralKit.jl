@@ -1,12 +1,18 @@
 module SpectralKit
 
-export Chebyshev, SemiInfChebyshev, roots, augmented_extrema, evaluate, domain_extrema
+export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, SemiInfChebyshev
 
+using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
+using Parameters: @unpack
 
 ####
-#### general
+#### utilities
 ####
+
+flip_if(condition, x) = condition ? -x : x
+
+one_like(::Type{T}) where {T} = cos(zero(T))
 
 """
 $(TYPEDEF)
@@ -25,108 +31,7 @@ For `F::FunctionFamily`, the supported API functions are
 """
 abstract type FunctionFamily end
 
-Broadcast.broadcastable(f::FunctionFamily) = Ref(f)
-
-"""
-`$(FUNCTIONNAME)(F::FunctionFamily, x, order)`
-
-Internal function for implementing conversion of `x` to radians according to the family `F`.
-
-`order` follows the same semantics as [`evaluate`](@ref).
-"""
-function to_radian end
-
-"""
-`$(FUNCTIONNAME)(F::FunctionFamily, θ)
-
-Internal function for implementing conversion from half-turn units (multiples of `π`) to the
-domain of the family `F`.
-"""
-function from_halfturn end
-
-####
-#### Chebyshev on [-1,1]
-####
-
-"""
-$(TYPEDEF)
-
-Chebyhev polynomials of the first kind.
-"""
-struct Chebyshev <: FunctionFamily end
-
-@inline domain_extrema(::Chebyshev) = (-1.0, 1.0)
-
-_flip_if(condition, x) = condition ? -x : x
-
-_evaluate_min(::Chebyshev, x::T, n, ::Val{1}) where {T} = _flip_if(iseven(n), T(abs2(n)))
-
-_evaluate_max(::Chebyshev, x::T, n, ::Val{1}) where {T} = T(abs2(n))
-
-to_radian(::Chebyshev, x, ::Val{0}) = acos(x)
-
-to_radian(family, x, ::Val{1}) = last(to_radian(family, x, Val{0:1}))
-
-function to_radian(::Chebyshev, x, ::Val{0:1})
-    t = acos(x)
-    t′ = 1 / sin(t)
-    t, t′
-end
-
-from_halfturn(::Chebyshev, θ) = cospi(θ)
-
-####
-#### Rational Chebyshev on [0,Inf)
-####
-
-struct SemiInfChebyshev{T} <: FunctionFamily
-    L::T
-end
-
-to_radian(TL::SemiInfChebyshev, y, ::Val{0}) = 2 * acot(√(y / TL.L))
-
-function to_radian(TL::SemiInfChebyshev, y, ::Val{0:1})
-    ryL = √(y / L)
-    t = 2 * acot(ryL)
-    t′ = -1 / (ryL * (y + L))
-    t, t′
-end
-
-from_halfturn(TL::SemiInfChebyshev, θ) = TL.L * abs2(cot(θ * π / 2))
-
-####
-#### generic API and its implementation
-####
-
-"""
-$(SIGNATURES)
-
-Helper function for [`roots`](@ref), returning the location of `N` roots as angles, in
-halfturn units.
-
-Implementation ensures that mathematical zeros are numerically `0`. `T` determines the
-resulting float type.
-
-Internal, not exported.
-"""
-function halfturn_roots(::Type{T}, N::Integer) where {T <: Real}
-    ((2 * N - 1):-2:1) ./ T(2 * N)
-end
-
-"""
-$(SIGNATURES)
-
-Helper function for [`augmented_extrema`](@ref), returning the location of `N` augmented
-extrema as angles, in halfturn units.
-
-Implementation ensures that mathematical zeros are numerically `0`. `T` determines the
-resulting float type.
-
-Internal, not exported.
-"""
-function halfturn_augmented_extrema(::Type{T}, N::Integer) where {T <: Real}
-    ((N-1):-1:0) ./ T(N - 1)
-end
+Broadcast.broadcastable(family::FunctionFamily) = Ref(family)
 
 """
 `$(FUNCTIONNAME)([T], family, N)`
@@ -135,9 +40,9 @@ Return the roots of the `N`th function in `family`, as a vector of `N` numbers w
 type `T` (default `Float64`).
 
 In the context of collocation, this is also known as the “Gauss-Chebyshev” grid.
-"""
-roots(T, family, N) = from_halfturn.(Ref(family), halfturn_roots(T, N))
 
+Order is monotone, but not guaranteed to be increasing.
+"""
 roots(family, N::Integer) = roots(Float64, family, N)
 
 """
@@ -147,52 +52,202 @@ Return the augmented extrema (extrema + boundary values, in increasing order) of
 function in `family`, as a vector of `N` numbers with element type `T` (default `Float64`).
 
 In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
-"""
-function augmented_extrema(::Type{T}, family::FunctionFamily, N) where {T}
-    from_halfturn.(Ref(family), halfturn_augmented_extrema(T, N))
-end
 
+Order is monotone, but not guaranteed to be increasing.
+"""
 function augmented_extrema(family::FunctionFamily, N::Integer)
     augmented_extrema(Float64, family, N)
+end
+
+####
+#### Chebyshev on [-1,1]
+####
+
+"""
+$(TYPEDEF)
+
+Chebyhev polynomials of the first kind, defined on `[-1,1]`.
+"""
+struct Chebyshev <: FunctionFamily end
+
+@inline domain_extrema(::Chebyshev) = (-1.0, 1.0)
+
+"""
+$(SIGNATURES)
+
+Evaluate the `n`th Chebyshev polynomial at `-1` for the given orders.
+"""
+chebyshev_min(::Type{T}, n::Integer, ::Val{0}) where {T} = flip_if(isodd(n), one_like(T))
+
+"""
+$(SIGNATURES)
+
+Evaluate the `n`th Chebyshev polynomial at `1` for the given orders.
+"""
+chebyshev_max(::Type{T}, n::Integer, ::Val{0}) where {T} = one_like(T)
+
+function chebyshev_min(::Type{T}, n::Integer, ::Val{1}) where {T}
+    flip_if(iseven(n), one_like(T) * abs2(n))
+end
+
+chebyshev_max(::Type{T}, n::Integer, ::Val{1}) where {T} = one_like(T) * abs2(n)
+
+function chebyshev_min(::Type{T}, n::Integer, ::Val{0:1}) where {T}
+    chebyshev_min(T, n, Val(0)), chebyshev_min(T, n, Val(1))
+end
+
+function chebyshev_max(::Type{T}, n::Integer, ::Val{0:1}) where {T}
+    chebyshev_max(T, n, Val(0)), chebyshev_max(T, n, Val(1))
 end
 
 """
 $(SIGNATURES)
 
-Evaluate the `n` (starting from 0) function in `family` at `x`.
-
-`order` determines the derivatives:
-
-- `Val(d)` returns the `d`th derivatives, starting from `0` (for the function value)
-
-- `Val(0:d)` returns the derivatives up to `d`, starting from the function value, as
-  multiple values (ie a tuple).
+Evaluate the `n`th Chebyshev polynomial at `-1 < x < 1` for the given orders.
 """
-evaluate(family::FunctionFamily, x, n, order::Val{0}) = cos(n * to_radian(family, x, order))
+chebyshev_interior(n::Integer, x::Real, ::Val{0}) = cos(n * acos(x))
 
-function evaluate(family::FunctionFamily, x, n, order::Val{1})
-    mi, ma = domain_extrema(family)
-    if x == mi
-        _evaluate_min(family, x, n, Val(1))
-    elseif x == ma
-        _evaluate_max(family, x, n, Val(1))
+function chebyshev_interior(n::Integer, x::Real, ::Val{1})
+    t = acos(x)
+    n * sin(n * t) / sin(t)
+end
+
+function chebyshev_interior(n::Integer, x::Real, ::Val{0:1})
+    t = acos(x)
+    t′ = 1 / sin(t)
+    s, c = sincos(n * t)
+    c, s * n * t′
+end
+
+function evaluate(family::Chebyshev, n::Integer, x::T, order) where {T <: Real}
+    if x == -1
+        chebyshev_min(T, n, order)
+    elseif x == 1
+        chebyshev_max(T, n, order)
     else
-        t, t′ = to_radian(family, x, Val(0:1))
-        n * sin(n * t) * t′
+        chebyshev_interior(n, x, order)
     end
 end
 
-function evaluate(family::FunctionFamily, x, n, order::Val{0:1})
-    mi, ma = domain_extrema(family)
-    if x == mi
-        evaluate(family, x, n, Val(0)), _evaluate_min(family, x, n, Val(1))
-    elseif x == ma
-        evaluate(family, x, n, Val(0)), _evaluate_max(family, x, n, Val(1))
-    else
-        t, t′ = to_radian(family, x, Val(0:1))
-        s, c = sincos(n * t)
-        c, s * n * t′
+function roots(::Type{T}, ::Chebyshev, N) where {T <: Real}
+    cospi.(((2 * N - 1):-2:1) ./ T(2 * N))
+end
+
+function augmented_extrema(::Type{T}, family::Chebyshev, N) where {T}
+    cospi.(((N-1):-1:0) ./ T(N - 1))
+end
+
+####
+#### Transformation of the Chebyshev polynomials — generic code
+####
+
+"""
+$(TYPEDEF)
+
+Define a function family by transforming from the Chebyshev polynomials on `[-1,1]`.
+
+For `family::TransformedChebyshev`, subtypes implement:
+
+- `from_chebyshev(family, x)`, for transforming from `x ∈ [-1,1]` to `y` of the domain,
+
+- `to_chebyshev(family, y, order)` for transforming `y` the domain to `x ∈ [-1,1]`, where
+  `order` follows the semantics of [`evaluate`](@ref) and returns `x`, `∂x/∂y`, … as
+  requested.
+
+- `domain_extrema(family)` is optional.
+"""
+abstract type TransformedChebyshev <: FunctionFamily end
+
+function roots(::Type{T}, family::TransformedChebyshev, N) where {T}
+    from_chebyshev.(family, roots(T, Chebyshev(), N))
+end
+
+function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
+    from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
+end
+
+function evaluate(family::TransformedChebyshev, n::Integer, x::Real, order::Val{0})
+    evaluate(Chebyshev(), n, to_chebyshev(family, x, order), order)
+end
+
+function evaluate(family::TransformedChebyshev, n::Integer, x::Real, ::Val{1})
+    x, x′ = to_chebyshev(family, x, Val(0:1))
+    t′ = evaluate(Chebyshev(), n, x, Val(1))
+    t′ * x′
+end
+
+function evaluate(family::TransformedChebyshev, n::Integer, x::Real, ::Val{0:1})
+    x, x′ = to_chebyshev(family, x, Val(0:1))
+    t, t′ = evaluate(Chebyshev(), n, x, Val(0:1))
+    t, t′ * x′
+end
+
+function domain_extrema(family::TransformedChebyshev)
+    from_chebyshev.(family, domain_extrema(Chebyshev()))
+end
+
+####
+#### Rational Chebyshev on [A,Inf) or (-Inf,A]
+####
+
+"""
+$(TYPEDEF)
+
+Chebyshev polynomials transformed to the domain `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
+(when `L < 0`) using ``y = A + L * (1 + x) / (1 - x)``.
+"""
+struct SemiInfChebyshev{T <: Real} <: TransformedChebyshev
+    "The finite endpoint."
+    A::T
+    "Scale factor."
+    L::T
+    function SemiInfChebyshev(A::T, L::T) where {T <: Real}
+        @argcheck L ≠ 0
+        new{T}(A, L)
     end
+end
+
+SemiInfChebyshev(A::Real, L::Real) = SemiInfChebyshev(promote(A, L)...)
+
+function domain_extrema(TL::SemiInfChebyshev)
+    @unpack A, L = TL
+    if L > 0
+        promote(A, Inf)
+    else
+        promote(-Inf, A)
+    end
+end
+
+function from_chebyshev(TL::SemiInfChebyshev, x)
+    TL.A + TL.L * (1 + x) / (1 - x)
+end
+
+function semiinf_chebyshev_endpoints(y, L, x::T) where {T}
+    if (y == Inf && L > 0) || (y == -Inf && L < 0)
+        one_like(T)
+    else
+        x
+    end
+end
+
+function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{0})
+    @unpack A, L = TL
+    z = y - A
+    x = (z - L) / (z + L)
+    semiinf_chebyshev_endpoints(y, L, x)
+end
+
+function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{1})
+    @unpack A, L = TL
+    2 * L / abs2(y - A + L)
+end
+
+function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{0:1})
+    @unpack A, L = TL
+    z = y - A
+    num = z - L
+    den = z + L
+    semiinf_chebyshev_endpoints(y, L, num/den), 2 * L / abs2(den)
 end
 
 end # module
