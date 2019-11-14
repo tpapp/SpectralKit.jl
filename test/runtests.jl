@@ -6,7 +6,7 @@ import ForwardDiff
 #### utility functions for tests
 ####
 
-function test_roots(family, N; atol = 1e-14)
+function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
     @test length(r) == N
@@ -17,7 +17,7 @@ function test_augmented_extrema(family, N; atol = 1e-13)
     a = augmented_extrema(family, N)
     @test a isa Vector{Float64}
     @test length(a) == N
-    @test all(abs.(evaluate.(family, N - 1, a[2:(end-1)], Val(1))) .≤ 1e-13)
+    @test all(abs.(evaluate.(family, N - 1, a[2:(end-1)], Val(1))) .≤ atol)
     mi, ma = domain_extrema(family)
     â = sort(a)                 # non-increasing transformations switch signs
     @test mi ≈ â[1] atol = 1e-16
