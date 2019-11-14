@@ -83,8 +83,8 @@ end
     test_derivatives(F, () -> rand() * 2 - 1, 0:10)
 end
 
-@testset "SemiInfChebyshev" begin
-    F = SemiInfChebyshev(2.0, 4.7)
+@testset "ChebyshevSemiInf" begin
+    F = ChebyshevSemiInf(2.0, 4.7)
 
     test_roots(F, 9)
 
@@ -92,7 +92,7 @@ end
 
     test_endpoint_continuity(F, (2.0, Inf), 0:10; atol = 1e-3)
 
-    F = SemiInfChebyshev(3.0, -1.9)
+    F = ChebyshevSemiInf(3.0, -1.9)
 
     test_roots(F, 11; atol = 1e-13)
 

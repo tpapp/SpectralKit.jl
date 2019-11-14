@@ -31,7 +31,7 @@ p = plot_family(Chebyshev(), 0:5, Val(1), "Chebyshev polynomials (derivative)";
                 rel_offsets = [0, 0])
 pgfsave("chebyshev_deriv.png", p; dpi = 600)
 
-F = SemiInfChebyshev(0.0, 1.0)
+F = ChebyshevSemiInf(0.0, 1.0)
 p = plot_family(F, 0:5, Val(0), raw"Rational Chebyshev functions $[0,\infty)$ (value)";
                 xmax = 1)
 pgfsave("semiinf.png", p; dpi = 600)

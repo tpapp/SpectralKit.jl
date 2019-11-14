@@ -1,6 +1,6 @@
 module SpectralKit
 
-export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, SemiInfChebyshev
+export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, ChebyshevSemiInf
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -224,20 +224,20 @@ $(TYPEDEF)
 Chebyshev polynomials transformed to the domain `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
 (when `L < 0`) using ``y = A + L * (1 + x) / (1 - x)``.
 """
-struct SemiInfChebyshev{T <: Real} <: TransformedChebyshev
+struct ChebyshevSemiInf{T <: Real} <: TransformedChebyshev
     "The finite endpoint."
     A::T
     "Scale factor."
     L::T
-    function SemiInfChebyshev(A::T, L::T) where {T <: Real}
+    function ChebyshevSemiInf(A::T, L::T) where {T <: Real}
         @argcheck L ≠ 0
         new{T}(A, L)
     end
 end
 
-SemiInfChebyshev(A::Real, L::Real) = SemiInfChebyshev(promote(A, L)...)
+ChebyshevSemiInf(A::Real, L::Real) = ChebyshevSemiInf(promote(A, L)...)
 
-function domain_extrema(TL::SemiInfChebyshev)
+function domain_extrema(TL::ChebyshevSemiInf)
     @unpack A, L = TL
     if L > 0
         promote(A, Inf)
@@ -246,7 +246,7 @@ function domain_extrema(TL::SemiInfChebyshev)
     end
 end
 
-function from_chebyshev(TL::SemiInfChebyshev, x)
+function from_chebyshev(TL::ChebyshevSemiInf, x)
     TL.A + TL.L * (1 + x) / (1 - x)
 end
 
@@ -258,19 +258,19 @@ function semiinf_chebyshev_endpoints(y, L, x::T) where {T}
     end
 end
 
-function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{0})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0})
     @unpack A, L = TL
     z = y - A
     x = (z - L) / (z + L)
     semiinf_chebyshev_endpoints(y, L, x)
 end
 
-function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{1})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{1})
     @unpack A, L = TL
     2 * L / abs2(y - A + L)
 end
 
-function to_chebyshev(TL::SemiInfChebyshev, y, ::Val{0:1})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0:1})
     @unpack A, L = TL
     z = y - A
     num = z - L
