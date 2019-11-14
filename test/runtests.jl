@@ -123,3 +123,19 @@ end
     @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
     @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
 end
+
+@testset "ChebyshevInterval" begin
+    F = ChebyshevInterval(2.0, 5)
+
+    test_roots(F, 11)
+
+    test_augmented_extrema(F, 11)
+
+    test_endpoint_continuity(F, (2.0, 5.0), 0:10)
+
+    test_derivatives(F, () -> rand() * 3 + 2, 0:10)
+
+    @test_throws ArgumentError ChebyshevInterval(2.0, 1.0)
+    @test_throws ArgumentError ChebyshevInterval(2.0, 2)
+    @test_throws ArgumentError ChebyshevInterval(-Inf, Inf)
+end

@@ -1,7 +1,7 @@
 module SpectralKit
 
 export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, ChebyshevSemiInf,
-    ChebyshevInf
+    ChebyshevInf, ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -336,6 +336,56 @@ function to_chebyshev(TB::ChebyshevInf, y, ::Val{0:1})
     x = z / den
     x′ = abs2(L) / den^3
     chebyshev_inf_endpoints(y, x), x′
+end
+
+####
+#### Chebyshev on a finite interval `[a,b]`
+####
+
+"""
+$(TYPEDEF)
+
+Chebyshev polynomials transformed to the domain `(a, b)`. using ``y = x ⋅ s + m``.
+
+`m` and `s` are calculated and checked by the constructor; `a < b` is enforced.
+"""
+struct ChebyshevInterval{T <: Real} <: TransformedChebyshev
+    "Start of interval `a`."
+    a::T
+    "End of interval `b`."
+    b::T
+    "Midpoint `m`."
+    m::T
+    "Scale `s`."
+    s::T
+    function ChebyshevInterval(a::T, b::T) where {T <: Real}
+        @argcheck isfinite(a) && isfinite(b)
+        s = (b - a) / 2
+        m = (a + b) / 2
+        @argcheck s > 0 "Need `a < b`."
+        new{T}(a, b, m, s)
+    end
+end
+
+ChebyshevInterval(A::Real, L::Real) = ChebyshevInterval(promote(A, L)...)
+
+domain_extrema(TI::ChebyshevInterval) = (TI.a, TI.b)
+
+function from_chebyshev(TI::ChebyshevInterval, x)
+    @unpack m, s = TI
+    x * s + m
+end
+
+function to_chebyshev(TI::ChebyshevInterval, y, ::Val{0})
+    @unpack m, s = TI
+    (y - m) / s
+end
+
+to_chebyshev(TI::ChebyshevInterval, y, ::Val{1}) = 1 / TI.s
+
+function to_chebyshev(TI::ChebyshevInterval, y, ::Val{0:1})
+    @unpack m, s = TI
+    (y - m) / s, 1 / s
 end
 
 end # module
