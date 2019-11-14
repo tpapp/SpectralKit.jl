@@ -23,7 +23,7 @@ At the moment, the package API is experimental and subject to change.
 
 ## Pretty pictures
 
-Some examples generated this library. Circles mark values at the limit, shifted horizontally when this is needed to avoid overlap (this is a visual check of continuity, of course it is unit tested).
+Some examples generated this library. **Circles mark values at the limit, shifted horizontally when this is needed to avoid overlap** (this is a visual check of continuity, of course it is unit tested).
 
 ### Chebyshev polynomials and their derivatives
 
