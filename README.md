@@ -27,6 +27,6 @@ Some examples generated this library. Circles mark values at the limit, shifted 
 
 ### Chebyshev polynomials and their derivatives
 
-![Chebyshev polynomials](scripts/chebyshev.png)
+<img src="scripts/chebyshev.png" width="70%">
 
 ![Chebyshev polynomials](scripts/chebyshev_deriv.png)
