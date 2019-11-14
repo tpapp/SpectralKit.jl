@@ -34,6 +34,34 @@ abstract type FunctionFamily end
 Broadcast.broadcastable(family::FunctionFamily) = Ref(family)
 
 """
+`$(FUNCTIONNAME)(family)`
+
+Return the extrema of the domain of the given `family` as an ordered tuple.
+
+Type is not specified, but guaranteed to be the same for both endpoints.
+"""
+function domain_extrema end
+
+"""
+`$(FUNCTIONNAME)(family, n, x, order)`
+
+Evaluate the `n`th (starting from 0) function in `family` at `x`.
+
+`order` determines the derivatives:
+
+- `Val(d)` returns the `d`th derivatives, starting from `0` (for the function value)
+
+- `Val(0:d)` returns the derivatives up to `d`, starting from the function value, as
+   multiple values (ie a tuple).
+
+The implementation is intended to be type stable.
+
+Evaluating outside the domain should not error, but may not return correct values for all
+inputs, especially when far from the domain endpoints.
+"""
+function evaluate end
+
+"""
 `$(FUNCTIONNAME)([T], family, N)`
 
 Return the roots of the `N`th function in `family`, as a vector of `N` numbers with element
@@ -48,8 +76,8 @@ roots(family, N::Integer) = roots(Float64, family, N)
 """
 `$(FUNCTIONNAME)([T], family, N)`
 
-Return the augmented extrema (extrema + boundary values, in increasing order) of the `N-1`th
-function in `family`, as a vector of `N` numbers with element type `T` (default `Float64`).
+Return the augmented extrema (extrema + boundary values) of the `N-1`th function in
+`family`, as a vector of `N` numbers with element type `T` (default `Float64`).
 
 In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
 
@@ -70,7 +98,7 @@ Chebyhev polynomials of the first kind, defined on `[-1,1]`.
 """
 struct Chebyshev <: FunctionFamily end
 
-@inline domain_extrema(::Chebyshev) = (-1.0, 1.0)
+@inline domain_extrema(::Chebyshev) = (-1, 1)
 
 """
 $(SIGNATURES)
