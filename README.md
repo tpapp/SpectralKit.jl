@@ -27,6 +27,20 @@ Some examples generated this library. Circles mark values at the limit, shifted 
 
 ### Chebyshev polynomials and their derivatives
 
-<img src="scripts/chebyshev.png" width="70%">
+<img src="scripts/chebyshev.png" width="50%">
 
-![Chebyshev polynomials](scripts/chebyshev_deriv.png)
+<img src="scripts/chebyshev_deriv.png" width="50%">
+
+### Chebyshev rational functions on [0,∞)
+
+Up close, you can see the oscillation.
+
+<img src="scripts/semiinf.png" width="50%">
+
+Let's zoom out a bit to see convergence to 0 at ∞.
+
+<img src="scripts/semiinf_birdseye.png" width="50%">
+
+Derivatives die out faster.
+
+<img src="scripts/semiinf_deriv.png" width="50%">
