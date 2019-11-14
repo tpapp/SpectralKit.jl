@@ -24,12 +24,20 @@ function plot_family(family, ns, order, title;
     axis
 end
 
+###
+### Chebyshev
+###
+
 p = plot_family(Chebyshev(), 0:5, Val(0), "Chebyshev polynomials (value)")
 pgfsave("chebyshev.png", p; dpi = 600)
 
 p = plot_family(Chebyshev(), 0:5, Val(1), "Chebyshev polynomials (derivative)";
                 rel_offsets = [0, 0])
 pgfsave("chebyshev_deriv.png", p; dpi = 600)
+
+###
+### Rational Chebysev [0,∞)
+###
 
 F = ChebyshevSemiInf(0.0, 1.0)
 p = plot_family(F, 0:5, Val(0), raw"Rational Chebyshev functions $[0,\infty)$ (value)";
@@ -43,3 +51,23 @@ pgfsave("semiinf_birdseye.png", p; dpi = 600)
 p = plot_family(F, 0:5, Val(1), raw"Rational Chebyshev functions $[0,\infty)$ (derivative)";
                 xmax = 1, rel_offsets = [0, 0.01])
 pgfsave("semiinf_deriv.png", p; dpi = 600)
+
+###
+### Rational Chebysev (-∞,∞)
+###
+
+F = ChebyshevInf(0.0, 1.0)
+p = plot_family(F, 0:5, Val(0),
+                raw"Rational Chebyshev functions $(-\infty,\infty)$ (value)";
+                xmin = -1, xmax = 1)
+pgfsave("inf.png", p; dpi = 600)
+
+p = plot_family(F, 0:5, Val(0),
+                raw"Rational Chebyshev functions $(-\infty,\infty)$ (value)";
+                xmin = -30, xmax = 30)
+pgfsave("inf_birdseye.png", p; dpi = 600)
+
+p = plot_family(F, 0:5, Val(1),
+                raw"Rational Chebyshev functions $(-\infty,\infty)$ (derivative)";
+                xmin = -5, xmax = 5, rel_offsets = [0.01, 0.01])
+pgfsave("inf_deriv.png", p; dpi = 600)

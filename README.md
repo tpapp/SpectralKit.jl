@@ -23,7 +23,7 @@ At the moment, the package API is experimental and subject to change.
 
 ## Pretty pictures
 
-Some examples generated this library. **Circles mark values at the limit, shifted horizontally when this is needed to avoid overlap** (this is a visual check of continuity, of course it is unit tested).
+Some examples generated this library. **Circles mark values at the limit, shifted horizontally when this is needed to avoid overlap**. Infinite limits shown at finite values, so of course they don't match (this is a visual check of continuity, naturally it is unit tested).
 
 ### Chebyshev polynomials and their derivatives
 
@@ -44,3 +44,17 @@ Let's zoom out a bit to see convergence to 0 at ∞.
 Derivatives die out faster.
 
 <img src="scripts/semiinf_deriv.png" width="50%">
+
+### Chebyshev rational functions on (-∞,∞)
+
+Up close, you can see the oscillation.
+
+<img src="scripts/inf.png" width="50%">
+
+Let's zoom out a bit to see convergence at -∞ and ∞.
+
+<img src="scripts/inf_birdseye.png" width="50%">
+
+Derivatives die out slower than for the [0,∞) transformation.
+
+<img src="scripts/inf_deriv.png" width="50%">

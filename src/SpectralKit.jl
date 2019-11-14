@@ -1,6 +1,7 @@
 module SpectralKit
 
-export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, ChebyshevSemiInf
+export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, ChebyshevSemiInf,
+    ChebyshevInf
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -56,8 +57,7 @@ Evaluate the `n`th (starting from 0) function in `family` at `x`.
 
 The implementation is intended to be type stable.
 
-Evaluating outside the domain should not error, but may not return correct values for all
-inputs, especially when far from the domain endpoints.
+Consequences are undefined for evaluating outside the domain.
 """
 function evaluate end
 
@@ -225,9 +225,9 @@ Chebyshev polynomials transformed to the domain `[A, Inf)` (when `L > 0`) or `(-
 (when `L < 0`) using ``y = A + L * (1 + x) / (1 - x)``.
 """
 struct ChebyshevSemiInf{T <: Real} <: TransformedChebyshev
-    "The finite endpoint."
+    "The finite endpoint `A`."
     A::T
-    "Scale factor."
+    "Scale factor `L ≠ 0`."
     L::T
     function ChebyshevSemiInf(A::T, L::T) where {T <: Real}
         @argcheck L ≠ 0
@@ -250,7 +250,7 @@ function from_chebyshev(TL::ChebyshevSemiInf, x)
     TL.A + TL.L * (1 + x) / (1 - x)
 end
 
-function semiinf_chebyshev_endpoints(y, L, x::T) where {T}
+function chebyshev_semiinf_endpoints(y, L, x::T) where {T}
     if (y == Inf && L > 0) || (y == -Inf && L < 0)
         one_like(T)
     else
@@ -262,7 +262,7 @@ function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0})
     @unpack A, L = TL
     z = y - A
     x = (z - L) / (z + L)
-    semiinf_chebyshev_endpoints(y, L, x)
+    chebyshev_semiinf_endpoints(y, L, x)
 end
 
 function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{1})
@@ -275,7 +275,67 @@ function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0:1})
     z = y - A
     num = z - L
     den = z + L
-    semiinf_chebyshev_endpoints(y, L, num/den), 2 * L / abs2(den)
+    chebyshev_semiinf_endpoints(y, L, num/den), 2 * L / abs2(den)
+end
+
+####
+#### Rational Chebyshev on (-Inf,Inf)
+####
+
+"""
+$(TYPEDEF)
+
+Chebyshev polynomials transformed to the domain `(-Inf, Inf)`.
+(when `L < 0`) using ``y = A + L * x / √(L^2 + x^2)``.
+"""
+struct ChebyshevInf{T <: Real} <: TransformedChebyshev
+    "The center `A`."
+    A::T
+    "Scale factor `L > 0`."
+    L::T
+    function ChebyshevInf(A::T, L::T) where {T <: Real}
+        @argcheck L > 0
+        new{T}(A, L)
+    end
+end
+
+ChebyshevInf(A::Real, L::Real) = ChebyshevInf(promote(A, L)...)
+
+domain_extrema(TB::ChebyshevInf) = (-Inf, Inf)
+
+function from_chebyshev(TB::ChebyshevInf, x)
+    TB.A + TB.L * x / √(1 - abs2(x))
+end
+
+function chebyshev_inf_endpoints(y, x::T) where {T}
+    if y == Inf
+        one_like(T)
+    elseif y == -Inf
+        -one_like(T)
+    else
+        x
+    end
+end
+
+function to_chebyshev(TB::ChebyshevInf, y, ::Val{0})
+    @unpack A, L = TB
+    z = y - A
+    x = z / hypot(L, z)
+    chebyshev_inf_endpoints(y, x)
+end
+
+function to_chebyshev(TB::ChebyshevInf, y, ::Val{1})
+    @unpack A, L = TB
+    abs2(L) / hypot(L, z)^3
+end
+
+function to_chebyshev(TB::ChebyshevInf, y, ::Val{0:1})
+    @unpack A, L = TB
+    z = y - A
+    den = hypot(L, z)
+    x = z / den
+    x′ = abs2(L) / den^3
+    chebyshev_inf_endpoints(y, x), x′
 end
 
 end # module

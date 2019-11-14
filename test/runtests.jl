@@ -92,6 +92,8 @@ end
 
     test_endpoint_continuity(F, (2.0, Inf), 0:10; atol = 1e-3)
 
+    test_derivatives(F, () -> 2.0 + abs2(randn()), 0:10)
+
     F = ChebyshevSemiInf(3.0, -1.9)
 
     test_roots(F, 11; atol = 1e-13)
@@ -99,4 +101,25 @@ end
     test_augmented_extrema(F, 7; atol = 1e-10)
 
     test_endpoint_continuity(F, (-Inf, 3.0), 0:10; atol = 1e-3)
+
+    test_derivatives(F, () -> 3.0 - abs2(randn()), 0:10)
+
+    @test_throws ArgumentError ChebyshevSemiInf(0.0, 0.0)
+end
+
+@testset "ChebyshevInf" begin
+    F = ChebyshevInf(0.0, 1.0)
+
+    test_roots(F, 11)
+    @test roots(F, 11)[6] == 0  # precise 0
+
+    test_augmented_extrema(F, 11)
+    @test augmented_extrema(F, 11)[6] == 0 # precise 0
+
+    test_endpoint_continuity(F, (-Inf, Inf), 0:10)
+
+    test_derivatives(F, randn, 0:10)
+
+    @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
+    @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
 end
