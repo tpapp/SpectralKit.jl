@@ -10,14 +10,14 @@ function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
     @test length(r) == N
-    @test all(abs.(evaluate.(family, N, r, Val(0))) .≤ atol)
+    @test all(abs.(evaluate.(family, N + 1, r, Val(0))) .≤ atol)
 end
 
 function test_augmented_extrema(family, N; atol = 1e-13)
     a = augmented_extrema(family, N)
     @test a isa Vector{Float64}
     @test length(a) == N
-    @test all(abs.(evaluate.(family, N - 1, a[2:(end-1)], Val(1))) .≤ atol)
+    @test all(abs.(evaluate.(family, N, a[2:(end-1)], Val(1))) .≤ atol)
     mi, ma = domain_extrema(family)
     â = sort(a)                 # non-increasing transformations switch signs
     @test mi ≈ â[1] atol = 1e-16
@@ -78,9 +78,11 @@ end
     test_augmented_extrema(F, 11)
     @test augmented_extrema(F, 11)[6] == 0 # precise 0
 
-    test_endpoint_continuity(F, (-1, 1), 0:10)
+    test_endpoint_continuity(F, (-1, 1), 1:10)
 
-    test_derivatives(F, () -> rand() * 2 - 1, 0:10)
+    test_derivatives(F, () -> rand() * 2 - 1, 1:10)
+
+    @test_throws ArgumentError evaluate(F, 0, 0.0, Val(0)) # K ≥ 1
 end
 
 @testset "ChebyshevSemiInf" begin
@@ -90,9 +92,9 @@ end
 
     test_augmented_extrema(F, 10)
 
-    test_endpoint_continuity(F, (2.0, Inf), 0:10; atol = 1e-3)
+    test_endpoint_continuity(F, (2.0, Inf), 1:10; atol = 1e-3)
 
-    test_derivatives(F, () -> 2.0 + abs2(randn()), 0:10)
+    test_derivatives(F, () -> 2.0 + abs2(randn()), 1:10)
 
     F = ChebyshevSemiInf(3.0, -1.9)
 
@@ -100,9 +102,9 @@ end
 
     test_augmented_extrema(F, 7; atol = 1e-10)
 
-    test_endpoint_continuity(F, (-Inf, 3.0), 0:10; atol = 1e-3)
+    test_endpoint_continuity(F, (-Inf, 3.0), 1:10; atol = 1e-3)
 
-    test_derivatives(F, () -> 3.0 - abs2(randn()), 0:10)
+    test_derivatives(F, () -> 3.0 - abs2(randn()), 1:10)
 
     @test_throws ArgumentError ChebyshevSemiInf(0.0, 0.0)
 end
@@ -116,9 +118,9 @@ end
     test_augmented_extrema(F, 11)
     @test augmented_extrema(F, 11)[6] == 0 # precise 0
 
-    test_endpoint_continuity(F, (-Inf, Inf), 0:10)
+    test_endpoint_continuity(F, (-Inf, Inf), 1:10)
 
-    test_derivatives(F, randn, 0:10)
+    test_derivatives(F, randn, 1:10)
 
     @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
     @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
@@ -131,9 +133,9 @@ end
 
     test_augmented_extrema(F, 11)
 
-    test_endpoint_continuity(F, (2.0, 5.0), 0:10)
+    test_endpoint_continuity(F, (2.0, 5.0), 1:10)
 
-    test_derivatives(F, () -> rand() * 3 + 2, 0:10)
+    test_derivatives(F, () -> rand() * 3 + 2, 1:10)
 
     @test_throws ArgumentError ChebyshevInterval(2.0, 1.0)
     @test_throws ArgumentError ChebyshevInterval(2.0, 2)

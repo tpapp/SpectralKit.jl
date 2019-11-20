@@ -44,9 +44,9 @@ Type is not specified, but guaranteed to be the same for both endpoints.
 function domain_extrema end
 
 """
-`$(FUNCTIONNAME)(family, n, x, order)`
+`$(FUNCTIONNAME)(family, k, x, order)`
 
-Evaluate the `n`th (starting from 0) function in `family` at `x`.
+Evaluate the `k`th (starting from 1) function in `family` at `x`.
 
 `order` determines the derivatives:
 
@@ -58,14 +58,20 @@ Evaluate the `n`th (starting from 0) function in `family` at `x`.
 The implementation is intended to be type stable.
 
 Consequences are undefined for evaluating outside the domain.
+
+## Note about indexing
+
+Most texts index polynomial families with `n = 0, 1, …`. Following the Julia array indexing
+convention, this package uses `k = 1, 2, …`. Some code may use `n` internally for easier
+comparison with well-known formulas.
 """
 function evaluate end
 
 """
 `$(FUNCTIONNAME)([T], family, N)`
 
-Return the roots of the `N`th function in `family`, as a vector of `N` numbers with element
-type `T` (default `Float64`).
+Return the roots of the `K = N + 1`th function in `family`, as a vector of `N` numbers with
+element type `T` (default `Float64`).
 
 In the context of collocation, this is also known as the “Gauss-Chebyshev” grid.
 
@@ -76,8 +82,8 @@ roots(family, N::Integer) = roots(Float64, family, N)
 """
 `$(FUNCTIONNAME)([T], family, N)`
 
-Return the augmented extrema (extrema + boundary values) of the `N-1`th function in
-`family`, as a vector of `N` numbers with element type `T` (default `Float64`).
+Return the augmented extrema (extrema + boundary values) of the `N`th function in `family`,
+as a vector of `N` numbers with element type `T` (default `Float64`).
 
 In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
 
@@ -103,57 +109,60 @@ struct Chebyshev <: FunctionFamily end
 """
 $(SIGNATURES)
 
-Evaluate the `n`th Chebyshev polynomial at `-1` for the given orders.
+Evaluate the `k`th Chebyshev polynomial at `-1` for the given orders.
 """
-chebyshev_min(::Type{T}, n::Integer, ::Val{0}) where {T} = flip_if(isodd(n), one_like(T))
-
-"""
-$(SIGNATURES)
-
-Evaluate the `n`th Chebyshev polynomial at `1` for the given orders.
-"""
-chebyshev_max(::Type{T}, n::Integer, ::Val{0}) where {T} = one_like(T)
-
-function chebyshev_min(::Type{T}, n::Integer, ::Val{1}) where {T}
-    flip_if(iseven(n), one_like(T) * abs2(n))
-end
-
-chebyshev_max(::Type{T}, n::Integer, ::Val{1}) where {T} = one_like(T) * abs2(n)
-
-function chebyshev_min(::Type{T}, n::Integer, ::Val{0:1}) where {T}
-    chebyshev_min(T, n, Val(0)), chebyshev_min(T, n, Val(1))
-end
-
-function chebyshev_max(::Type{T}, n::Integer, ::Val{0:1}) where {T}
-    chebyshev_max(T, n, Val(0)), chebyshev_max(T, n, Val(1))
-end
+chebyshev_min(::Type{T}, k::Integer, ::Val{0}) where {T} = flip_if(iseven(k), one_like(T))
 
 """
 $(SIGNATURES)
 
-Evaluate the `n`th Chebyshev polynomial at `-1 < x < 1` for the given orders.
+Evaluate the `k`th Chebyshev polynomial at `1` for the given orders.
 """
-chebyshev_interior(n::Integer, x::Real, ::Val{0}) = cos(n * acos(x))
+chebyshev_max(::Type{T}, k::Integer, ::Val{0}) where {T} = one_like(T)
 
-function chebyshev_interior(n::Integer, x::Real, ::Val{1})
+function chebyshev_min(::Type{T}, k::Integer, ::Val{1}) where {T}
+    flip_if(isodd(k), one_like(T) * abs2(k - 1))
+end
+
+chebyshev_max(::Type{T}, k::Integer, ::Val{1}) where {T} = one_like(T) * abs2(k - 1)
+
+function chebyshev_min(::Type{T}, k::Integer, ::Val{0:1}) where {T}
+    chebyshev_min(T, k, Val(0)), chebyshev_min(T, k, Val(1))
+end
+
+function chebyshev_max(::Type{T}, k::Integer, ::Val{0:1}) where {T}
+    chebyshev_max(T, k, Val(0)), chebyshev_max(T, k, Val(1))
+end
+
+"""
+$(SIGNATURES)
+
+Evaluate the `k`th Chebyshev polynomial at `-1 < x < 1` for the given orders.
+"""
+chebyshev_interior(k::Integer, x::Real, ::Val{0}) = cos((k - 1) * acos(x))
+
+function chebyshev_interior(k::Integer, x::Real, ::Val{1})
+    n = k - 1
     t = acos(x)
     n * sin(n * t) / sin(t)
 end
 
-function chebyshev_interior(n::Integer, x::Real, ::Val{0:1})
+function chebyshev_interior(k::Integer, x::Real, ::Val{0:1})
+    n = k - 1
     t = acos(x)
     t′ = 1 / sin(t)
     s, c = sincos(n * t)
     c, s * n * t′
 end
 
-function evaluate(family::Chebyshev, n::Integer, x::T, order) where {T <: Real}
+function evaluate(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
+    @argcheck k > 0
     if x == -1
-        chebyshev_min(T, n, order)
+        chebyshev_min(T, k, order)
     elseif x == 1
-        chebyshev_max(T, n, order)
+        chebyshev_max(T, k, order)
     else
-        chebyshev_interior(n, x, order)
+        chebyshev_interior(k, x, order)
     end
 end
 
@@ -194,19 +203,19 @@ function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
     from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
 end
 
-function evaluate(family::TransformedChebyshev, n::Integer, x::Real, order::Val{0})
-    evaluate(Chebyshev(), n, to_chebyshev(family, x, order), order)
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, order::Val{0})
+    evaluate(Chebyshev(), k, to_chebyshev(family, x, order), order)
 end
 
-function evaluate(family::TransformedChebyshev, n::Integer, x::Real, ::Val{1})
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Val{1})
     x, x′ = to_chebyshev(family, x, Val(0:1))
-    t′ = evaluate(Chebyshev(), n, x, Val(1))
+    t′ = evaluate(Chebyshev(), k, x, Val(1))
     t′ * x′
 end
 
-function evaluate(family::TransformedChebyshev, n::Integer, x::Real, ::Val{0:1})
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Val{0:1})
     x, x′ = to_chebyshev(family, x, Val(0:1))
-    t, t′ = evaluate(Chebyshev(), n, x, Val(0:1))
+    t, t′ = evaluate(Chebyshev(), k, x, Val(0:1))
     t, t′ * x′
 end
 
