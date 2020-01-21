@@ -1,6 +1,6 @@
 # Unreleased
 
-- enable docs
+- enable docs, add `is_function_family`, improve coverage
 
 # v0.2.0
 
