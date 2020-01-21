@@ -395,8 +395,7 @@ struct ChebyshevInterval{T <: Real} <: TransformedChebyshev
         s = (b - a) / 2
         m = (a + b) / 2
         @argcheck s > 0 "Need `a < b`."
-        args = promote(a, b, m, s)
-        new{typeof(first(args))}(args...)
+        new{promote_type(T,typeof(m),typeof(s))}(a, b, m, s)
     end
 end
 
