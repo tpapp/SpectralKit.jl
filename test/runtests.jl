@@ -6,6 +6,11 @@ import ForwardDiff
 #### utility functions for tests
 ####
 
+function test_is_function_family(family::F) where F
+    @test is_function_family(family)
+    @test is_function_family(F)
+end
+
 function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
@@ -72,6 +77,8 @@ end
 @testset "Chebyshev" begin
     F = Chebyshev()
 
+    test_is_function_family(F)
+
     test_roots(F, 11)
     @test roots(F, 11)[6] == 0  # precise 0
 
@@ -87,6 +94,8 @@ end
 
 @testset "ChebyshevSemiInf" begin
     F = ChebyshevSemiInf(2.0, 4.7)
+
+    test_is_function_family(F)
 
     test_roots(F, 9)
 
@@ -112,6 +121,8 @@ end
 @testset "ChebyshevInf" begin
     F = ChebyshevInf(0.0, 1.0)
 
+    test_is_function_family(F)
+
     test_roots(F, 11)
     @test roots(F, 11)[6] == 0  # precise 0
 
@@ -124,10 +135,14 @@ end
 
     @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
     @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
+
+    @test ChebyshevInf(0, 1.0) isa ChebyshevInf{Float64}
 end
 
 @testset "ChebyshevInterval" begin
     F = ChebyshevInterval(2.0, 5)
+
+    test_is_function_family(F)
 
     test_roots(F, 11)
 

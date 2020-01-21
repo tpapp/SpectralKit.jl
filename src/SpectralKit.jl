@@ -44,7 +44,7 @@ Can be used on both types (preferred) and values (for convenience).
 """
 is_function_family(::Type{Any}) = false
 
-is_function_family(::Type{<:FunctionFamily}) = false
+is_function_family(::Type{<:FunctionFamily}) = true
 
 is_function_family(x) = is_function_family(typeof(x))
 
