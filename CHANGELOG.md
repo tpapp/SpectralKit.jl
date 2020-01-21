@@ -1,5 +1,7 @@
 # Unreleased
 
+- enable docs
+
 # v0.2.0
 
 - Change indexing to 1-based from 0-based.

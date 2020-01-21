@@ -140,4 +140,6 @@ end
     @test_throws ArgumentError ChebyshevInterval(2.0, 1.0)
     @test_throws ArgumentError ChebyshevInterval(2.0, 2)
     @test_throws ArgumentError ChebyshevInterval(-Inf, Inf)
+
+    @test ChebyshevInterval(0, 1) isa ChebyshevInterval{Float64} # promotion
 end
