@@ -1,7 +1,7 @@
 module SpectralKit
 
-export domain_extrema, roots, augmented_extrema, evaluate, Chebyshev, ChebyshevSemiInf,
-    ChebyshevInf, ChebyshevInterval
+export is_function_family, domain_extrema, roots, augmented_extrema, evaluate, Chebyshev,
+    ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -20,26 +20,40 @@ $(TYPEDEF)
 
 Abstract type for function families.
 
-# Supported interface
 
-For `F::FunctionFamily`, the supported API functions are
-
-- [`domain_extrema`](@ref) for querying the domain,
-
-- [`evaluate`](@ref) for function evaluation,
-
-- [`roots`](@ref) and [`augmented_extrema`](@ref) to obtain collocation points.
+Not part of the API, just used internally for dispatch. See [`is_function_family`](@ref).
 """
 abstract type FunctionFamily end
 
 Broadcast.broadcastable(family::FunctionFamily) = Ref(family)
 
 """
+`$(FUNCTIONNAME)(F)`
+
+`$(FUNCTIONNAME)(f::F)`
+
+Test if the argument is a *function family*, supporting the following interface:
+
+- [`domain_extrema`](@ref) for querying the domain,
+
+- [`evaluate`](@ref) for function evaluation,
+
+- [`roots`](@ref) and [`augmented_extrema`](@ref) to obtain collocation points.
+
+Can be used on both types (preferred) and values (for convenience).
+"""
+is_function_family(::Type{Any}) = false
+
+is_function_family(::Type{<:FunctionFamily}) = true
+
+is_function_family(x) = is_function_family(typeof(x))
+
+"""
 `$(FUNCTIONNAME)(family)`
 
-Return the extrema of the domain of the given `family` as an ordered tuple.
+Return the extrema of the domain of the given `family` as a tuple.
 
-Type is not specified, but guaranteed to be the same for both endpoints.
+Type can be arbitrary, but guaranteed to be the same for both endpoints, and type stable.
 """
 function domain_extrema end
 
@@ -50,20 +64,21 @@ Evaluate the `k`th (starting from 1) function in `family` at `x`.
 
 `order` determines the derivatives:
 
-- `Val(d)` returns the `d`th derivatives, starting from `0` (for the function value)
+- `Val(d)` returns the `d`th derivative, starting from `0` (for the function value)
 
 - `Val(0:d)` returns the derivatives up to `d`, starting from the function value, as
    multiple values (ie a tuple).
 
 The implementation is intended to be type stable.
 
-Consequences are undefined for evaluating outside the domain.
+!!! note
+    Consequences are undefined for evaluating outside the domain.
 
 ## Note about indexing
 
 Most texts index polynomial families with `n = 0, 1, …`. Following the Julia array indexing
-convention, this package uses `k = 1, 2, …`. Some code may use `n` internally for easier
-comparison with well-known formulas.
+convention, this package uses `k = 1, 2, …`. Some code may use `n = k - 1` internally for
+easier comparison with well-known formulas.
 """
 function evaluate end
 
@@ -231,7 +246,7 @@ end
 $(TYPEDEF)
 
 Chebyshev polynomials transformed to the domain `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
-(when `L < 0`) using ``y = A + L * (1 + x) / (1 - x)``.
+(when `L < 0`) using ``y = A + L ⋅ (1 + x) / (1 - x)``.
 """
 struct ChebyshevSemiInf{T <: Real} <: TransformedChebyshev
     "The finite endpoint `A`."
@@ -295,7 +310,7 @@ end
 $(TYPEDEF)
 
 Chebyshev polynomials transformed to the domain `(-Inf, Inf)`.
-(when `L < 0`) using ``y = A + L * x / √(L^2 + x^2)``.
+(when `L < 0`) using ``y = A + L ⋅ x / √(L^2 + x^2)``.
 """
 struct ChebyshevInf{T <: Real} <: TransformedChebyshev
     "The center `A`."
@@ -372,7 +387,8 @@ struct ChebyshevInterval{T <: Real} <: TransformedChebyshev
         s = (b - a) / 2
         m = (a + b) / 2
         @argcheck s > 0 "Need `a < b`."
-        new{T}(a, b, m, s)
+        args = promote(a, b, m, s)
+        new{typeof(first(args))}(args...)
     end
 end
 
