@@ -1,5 +1,7 @@
 # Unreleased
 
+# v0.2.1
+
 - re-enable 1.1 support, fix docs links [[#3](https://github.com/tpapp/SpectralKit.jl/pull/3)]
 - add show methods and improve docs [[#2](https://github.com/tpapp/SpectralKit.jl/pull/2)]
 - enable docs, add `is_function_family`, improve coverage [[#1](https://github.com/tpapp/SpectralKit.jl/pull/1)]
