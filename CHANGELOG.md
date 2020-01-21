@@ -1,5 +1,6 @@
 # Unreleased
 
+- add show methods and improve docs [[#2](https://github.com/tpapp/SpectralKit.jl/pull/2)]
 - enable docs, add `is_function_family`, improve coverage [[#1](https://github.com/tpapp/SpectralKit.jl/pull/1)]
 
 # v0.2.0

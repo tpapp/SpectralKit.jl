@@ -6,9 +6,9 @@ makedocs(
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
     pages = Any["index.md"],
-    # strict = true,
+    strict = true,
     clean = true,
-    # checkdocs = :exports,
+    checkdocs = :exports,
 )
 
 deploydocs(
