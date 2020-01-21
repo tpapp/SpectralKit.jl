@@ -261,6 +261,10 @@ end
 
 ChebyshevSemiInf(A::Real, L::Real) = ChebyshevSemiInf(promote(A, L)...)
 
+function Base.show(io::IO, TL::ChebyshevSemiInf)
+    print(io, "ChebyshevSemiInf($(TL.A), $(TL.L))")
+end
+
 function domain_extrema(TL::ChebyshevSemiInf)
     @unpack A, L = TL
     if L > 0
@@ -324,6 +328,10 @@ struct ChebyshevInf{T <: Real} <: TransformedChebyshev
 end
 
 ChebyshevInf(A::Real, L::Real) = ChebyshevInf(promote(A, L)...)
+
+function Base.show(io::IO, TB::ChebyshevInf)
+    print(io, "ChebyshevInf($(TB.A), $(TB.L))")
+end
 
 domain_extrema(TB::ChebyshevInf) = (-Inf, Inf)
 
@@ -390,6 +398,10 @@ struct ChebyshevInterval{T <: Real} <: TransformedChebyshev
         args = promote(a, b, m, s)
         new{typeof(first(args))}(args...)
     end
+end
+
+function Base.show(io::IO, TI::ChebyshevInterval)
+    print(io, "ChebyshevInterval($(TI.a), $(TI.b))")
 end
 
 ChebyshevInterval(A::Real, L::Real) = ChebyshevInterval(promote(A, L)...)

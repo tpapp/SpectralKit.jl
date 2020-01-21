@@ -77,6 +77,8 @@ end
 @testset "Chebyshev" begin
     F = Chebyshev()
 
+    @test repr(F) == "Chebyshev()"
+
     test_is_function_family(F)
 
     test_roots(F, 11)
@@ -94,6 +96,8 @@ end
 
 @testset "ChebyshevSemiInf" begin
     F = ChebyshevSemiInf(2.0, 4.7)
+
+    @test repr(F) == "ChebyshevSemiInf(2.0, 4.7)"
 
     test_is_function_family(F)
 
@@ -121,6 +125,8 @@ end
 @testset "ChebyshevInf" begin
     F = ChebyshevInf(0.0, 1.0)
 
+    @test repr(F) == "ChebyshevInf(0.0, 1.0)"
+
     test_is_function_family(F)
 
     test_roots(F, 11)
@@ -141,6 +147,8 @@ end
 
 @testset "ChebyshevInterval" begin
     F = ChebyshevInterval(2.0, 5)
+
+    @test repr(F) == "ChebyshevInterval(2.0, 5.0)"
 
     test_is_function_family(F)
 
