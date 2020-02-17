@@ -5,7 +5,7 @@ export is_function_family, domain_extrema, roots, augmented_extrema, evaluate, C
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
-using Parameters: @unpack
+using UnPack: @unpack
 
 ####
 #### utilities
