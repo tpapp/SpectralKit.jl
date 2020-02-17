@@ -15,14 +15,14 @@ function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
     @test length(r) == N
-    @test all(abs.(evaluate.(family, N + 1, r, Val(0))) .≤ atol)
+    @test all(abs.(evaluate.(family, N + 1, r, Order(0))) .≤ atol)
 end
 
 function test_augmented_extrema(family, N; atol = 1e-13)
     a = augmented_extrema(family, N)
     @test a isa Vector{Float64}
     @test length(a) == N
-    @test all(abs.(evaluate.(family, N, a[2:(end-1)], Val(1))) .≤ atol)
+    @test all(abs.(evaluate.(family, N, a[2:(end-1)], Order(1))) .≤ atol)
     mi, ma = domain_extrema(family)
     â = sort(a)                 # non-increasing transformations switch signs
     @test mi ≈ â[1] atol = 1e-16
@@ -37,24 +37,24 @@ function test_endpoint_continuity(family, expected_extrema, ns;
     for n in ns
         ev(x, order) = evaluate(family, n, x, order)
         # at domain minimum
-        f_mi, f′_mi = @inferred ev(mi, Val(0:1))
+        f_mi, f′_mi = @inferred ev(mi, OrdersTo(1))
         mi_approx = isfinite(mi) ? mi + eps() : -inf_proxy
         @test f_mi isa Float64
         @test f′_mi isa Float64
-        @test f_mi ≈ ev(mi, Val(0))
-        @test f_mi ≈ ev(mi_approx, Val(0)) atol = atol
-        @test f′_mi ≈ ev(mi, Val(1))
-        @test f′_mi ≈ ev(mi_approx, Val(1)) atol = atol
+        @test f_mi ≈ ev(mi, Order(0))
+        @test f_mi ≈ ev(mi_approx, Order(0)) atol = atol
+        @test f′_mi ≈ ev(mi, Order(1))
+        @test f′_mi ≈ ev(mi_approx, Order(1)) atol = atol
 
         # at domain maximum
-        f_ma, f′_ma = @inferred ev(ma, Val(0:1))
+        f_ma, f′_ma = @inferred ev(ma, OrdersTo(1))
         ma_approx = isfinite(ma) ? ma - eps() : inf_proxy
         @test f_ma isa Float64
         @test f′_ma isa Float64
-        @test f_ma ≈ ev(ma, Val(0))
-        @test f_ma ≈ ev(ma_approx, Val(0)) atol = atol
-        @test f′_ma ≈ ev(ma, Val(1))
-        @test f′_ma ≈ ev(ma_approx, Val(1)) atol = atol
+        @test f_ma ≈ ev(ma, Order(0))
+        @test f_ma ≈ ev(ma_approx, Order(0)) atol = atol
+        @test f′_ma ≈ ev(ma, Order(1))
+        @test f′_ma ≈ ev(ma_approx, Order(1)) atol = atol
     end
 end
 
@@ -62,10 +62,10 @@ function test_derivatives(family, generator, ns; M = 100)
     for n in ns
         for _ in 1:M
             x = generator()
-            f, f′ = @inferred evaluate(family, n, x, Val(0:1))
-            @test f ≈ @inferred evaluate(family, n, x, Val(0))
-            @test f′ ≈ @inferred evaluate(family, n, x, Val(1))
-            @test f′ ≈ ForwardDiff.derivative(x -> evaluate(family, n, x, Val(0)), x)
+            f, f′ = @inferred evaluate(family, n, x, OrdersTo(1))
+            @test f ≈ @inferred evaluate(family, n, x, Order(0))
+            @test f′ ≈ @inferred evaluate(family, n, x, Order(1))
+            @test f′ ≈ ForwardDiff.derivative(x -> evaluate(family, n, x, Order(0)), x)
         end
     end
 end
@@ -73,6 +73,13 @@ end
 ####
 #### tests
 ####
+
+@testset "order specs" begin
+    @test Order(0) ≡ Order{0}()
+    @test OrdersTo(0) ≡ OrdersTo{0}()
+    @test_throws ArgumentError Order(-9)
+    @test_throws ArgumentError OrdersTo(-9)
+end
 
 @testset "Chebyshev" begin
     F = Chebyshev()
@@ -91,7 +98,7 @@ end
 
     test_derivatives(F, () -> rand() * 2 - 1, 1:10)
 
-    @test_throws ArgumentError evaluate(F, 0, 0.0, Val(0)) # K ≥ 1
+    @test_throws ArgumentError evaluate(F, 0, 0.0, Order(0)) # K ≥ 1
 end
 
 @testset "ChebyshevSemiInf" begin

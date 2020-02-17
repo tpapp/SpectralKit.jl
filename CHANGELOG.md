@@ -1,5 +1,9 @@
 # Unreleased
 
+# v0.3.0
+
+- API redesign: take `Order` & `OrdersTo`, return `SVector` [[#5](https://github.com/tpapp/SpectralKit.jl/pull/5)]
+
 # v0.2.0
 
 - re-enable 1.1 support, fix docs links [[#3](https://github.com/tpapp/SpectralKit.jl/pull/3)]

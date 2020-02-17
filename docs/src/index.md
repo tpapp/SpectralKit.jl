@@ -31,16 +31,20 @@ julia> augmented_extrema(F, 5)        # Gauss-Lobatto grid
  1.7071067811865475
  2.0
 
-julia> evaluate(F, 3, 0.41, Val(0))   # value of the 3nd (starting at 1!) polynomial at 0.41
+julia> evaluate(F, 3, 0.41, Order(0))   # value of the 3rd (starting at 1!) polynomial at 0.41
 -0.3037999999999994
 
-julia> evaluate(F, 3, 0.41, Val(0:1)) # value and the derivative
-(-0.3037999999999994, -2.3600000000000008)
+julia> evaluate(F, 3, 0.41, OrdersTo(1)) # value and the derivative
+2-element StaticArrays.SArray{Tuple{2},Float64,1,2} with indices SOneTo(2):
+ -0.3037999999999994
+ -2.3600000000000008
 ```
 
 ## Abstract interface for function families
 
 ```@docs
+Order
+OrdersTo
 is_function_family
 domain_extrema
 evaluate
