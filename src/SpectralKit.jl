@@ -1,10 +1,11 @@
 module SpectralKit
 
-export is_function_family, domain_extrema, roots, augmented_extrema, evaluate, Chebyshev,
-    ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
+export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
+    evaluate, Chebyshev, ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
+using StaticArrays: SVector
 using UnPack: @unpack
 
 ####
@@ -14,6 +15,42 @@ using UnPack: @unpack
 flip_if(condition, x) = condition ? -x : x
 
 one_like(::Type{T}) where {T} = cos(zero(T))
+
+####
+#### API
+####
+
+struct Order{D}
+    function Order{D}() where D
+        @argcheck D isa Integer && D ≥ 0
+        new{D}()
+    end
+end
+
+Broadcast.broadcastable(o::Order) = Ref(o)
+
+"""
+$(SIGNATURES)
+
+(Evaluate) derivative `D`, ≥ 0.
+"""
+@inline Order(D::Integer) = Order{Int(D)}()
+
+struct OrdersTo{D}
+    function OrdersTo{D}() where D
+        @argcheck D isa Integer && D ≥ 0
+        new{D}()
+    end
+end
+
+Broadcast.broadcastable(o::OrdersTo) = Ref(o)
+
+"""
+$(SIGNATURES)
+
+(Evaluate) derivatives `0`, …, `D`.
+"""
+@inline OrdersTo(D::Integer) = OrdersTo{Int(D)}()
 
 """
 $(TYPEDEF)
@@ -64,10 +101,11 @@ Evaluate the `k`th (starting from 1) function in `family` at `x`.
 
 `order` determines the derivatives:
 
-- `Val(d)` returns the `d`th derivative, starting from `0` (for the function value)
+- `Order(d)` returns the `d`th derivative as a scalar, starting from `0` (for the function
+  value)
 
-- `Val(0:d)` returns the derivatives up to `d`, starting from the function value, as
-   multiple values (ie a tuple).
+- `OrdersTo(d)` returns the derivatives up to `d`, starting from the function value, as an
+  `SVector`.
 
 The implementation is intended to be type stable.
 
@@ -126,27 +164,27 @@ $(SIGNATURES)
 
 Evaluate the `k`th Chebyshev polynomial at `-1` for the given orders.
 """
-chebyshev_min(::Type{T}, k::Integer, ::Val{0}) where {T} = flip_if(iseven(k), one_like(T))
+chebyshev_min(::Type{T}, k::Integer, ::Order{0}) where {T} = flip_if(iseven(k), one_like(T))
 
 """
 $(SIGNATURES)
 
 Evaluate the `k`th Chebyshev polynomial at `1` for the given orders.
 """
-chebyshev_max(::Type{T}, k::Integer, ::Val{0}) where {T} = one_like(T)
+chebyshev_max(::Type{T}, k::Integer, ::Order{0}) where {T} = one_like(T)
 
-function chebyshev_min(::Type{T}, k::Integer, ::Val{1}) where {T}
+function chebyshev_min(::Type{T}, k::Integer, ::Order{1}) where {T}
     flip_if(isodd(k), one_like(T) * abs2(k - 1))
 end
 
-chebyshev_max(::Type{T}, k::Integer, ::Val{1}) where {T} = one_like(T) * abs2(k - 1)
+chebyshev_max(::Type{T}, k::Integer, ::Order{1}) where {T} = one_like(T) * abs2(k - 1)
 
-function chebyshev_min(::Type{T}, k::Integer, ::Val{0:1}) where {T}
-    chebyshev_min(T, k, Val(0)), chebyshev_min(T, k, Val(1))
+function chebyshev_min(::Type{T}, k::Integer, ::OrdersTo{1}) where {T}
+    SVector(chebyshev_min(T, k, Order(0)), chebyshev_min(T, k, Order(1)))
 end
 
-function chebyshev_max(::Type{T}, k::Integer, ::Val{0:1}) where {T}
-    chebyshev_max(T, k, Val(0)), chebyshev_max(T, k, Val(1))
+function chebyshev_max(::Type{T}, k::Integer, ::OrdersTo{1}) where {T}
+    SVector(chebyshev_max(T, k, Order(0)), chebyshev_max(T, k, Order(1)))
 end
 
 """
@@ -154,20 +192,20 @@ $(SIGNATURES)
 
 Evaluate the `k`th Chebyshev polynomial at `-1 < x < 1` for the given orders.
 """
-chebyshev_interior(k::Integer, x::Real, ::Val{0}) = cos((k - 1) * acos(x))
+chebyshev_interior(k::Integer, x::Real, ::Order{0}) = cos((k - 1) * acos(x))
 
-function chebyshev_interior(k::Integer, x::Real, ::Val{1})
+function chebyshev_interior(k::Integer, x::Real, ::Order{1})
     n = k - 1
     t = acos(x)
     n * sin(n * t) / sin(t)
 end
 
-function chebyshev_interior(k::Integer, x::Real, ::Val{0:1})
+function chebyshev_interior(k::Integer, x::Real, ::OrdersTo{1})
     n = k - 1
     t = acos(x)
     t′ = 1 / sin(t)
     s, c = sincos(n * t)
-    c, s * n * t′
+    SVector(c, s * n * t′)
 end
 
 function evaluate(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
@@ -218,20 +256,20 @@ function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
     from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, order::Val{0})
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, order::Order{0})
     evaluate(Chebyshev(), k, to_chebyshev(family, x, order), order)
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Val{1})
-    x, x′ = to_chebyshev(family, x, Val(0:1))
-    t′ = evaluate(Chebyshev(), k, x, Val(1))
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Order{1})
+    x, x′ = to_chebyshev(family, x, OrdersTo(1))
+    t′ = evaluate(Chebyshev(), k, x, Order(1))
     t′ * x′
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Val{0:1})
-    x, x′ = to_chebyshev(family, x, Val(0:1))
-    t, t′ = evaluate(Chebyshev(), k, x, Val(0:1))
-    t, t′ * x′
+function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::OrdersTo{1})
+    x, x′ = to_chebyshev(family, x, OrdersTo(1))
+    t, t′ = evaluate(Chebyshev(), k, x, OrdersTo(1))
+    SVector(t, t′ * x′)
 end
 
 function domain_extrema(family::TransformedChebyshev)
@@ -286,24 +324,24 @@ function chebyshev_semiinf_endpoints(y, L, x::T) where {T}
     end
 end
 
-function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::Order{0})
     @unpack A, L = TL
     z = y - A
     x = (z - L) / (z + L)
     chebyshev_semiinf_endpoints(y, L, x)
 end
 
-function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{1})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::Order{1})
     @unpack A, L = TL
     2 * L / abs2(y - A + L)
 end
 
-function to_chebyshev(TL::ChebyshevSemiInf, y, ::Val{0:1})
+function to_chebyshev(TL::ChebyshevSemiInf, y, ::OrdersTo{1})
     @unpack A, L = TL
     z = y - A
     num = z - L
     den = z + L
-    chebyshev_semiinf_endpoints(y, L, num/den), 2 * L / abs2(den)
+    SVector(chebyshev_semiinf_endpoints(y, L, num/den), 2 * L / abs2(den))
 end
 
 ####
@@ -349,25 +387,25 @@ function chebyshev_inf_endpoints(y, x::T) where {T}
     end
 end
 
-function to_chebyshev(TB::ChebyshevInf, y, ::Val{0})
+function to_chebyshev(TB::ChebyshevInf, y, ::Order{0})
     @unpack A, L = TB
     z = y - A
     x = z / hypot(L, z)
     chebyshev_inf_endpoints(y, x)
 end
 
-function to_chebyshev(TB::ChebyshevInf, y, ::Val{1})
+function to_chebyshev(TB::ChebyshevInf, y, ::Order{1})
     @unpack A, L = TB
     abs2(L) / hypot(L, z)^3
 end
 
-function to_chebyshev(TB::ChebyshevInf, y, ::Val{0:1})
+function to_chebyshev(TB::ChebyshevInf, y, ::OrdersTo{1})
     @unpack A, L = TB
     z = y - A
     den = hypot(L, z)
     x = z / den
     x′ = abs2(L) / den^3
-    chebyshev_inf_endpoints(y, x), x′
+    SVector(chebyshev_inf_endpoints(y, x), x′)
 end
 
 ####
@@ -412,16 +450,16 @@ function from_chebyshev(TI::ChebyshevInterval, x)
     x * s + m
 end
 
-function to_chebyshev(TI::ChebyshevInterval, y, ::Val{0})
+function to_chebyshev(TI::ChebyshevInterval, y, ::Order{0})
     @unpack m, s = TI
     (y - m) / s
 end
 
-to_chebyshev(TI::ChebyshevInterval, y, ::Val{1}) = 1 / TI.s
+to_chebyshev(TI::ChebyshevInterval, y, ::Order{1}) = 1 / TI.s
 
-function to_chebyshev(TI::ChebyshevInterval, y, ::Val{0:1})
+function to_chebyshev(TI::ChebyshevInterval, y, ::OrdersTo{1})
     @unpack m, s = TI
-    (y - m) / s, 1 / s
+    SVector((y - m) / s, 1 / s)
 end
 
 end # module
