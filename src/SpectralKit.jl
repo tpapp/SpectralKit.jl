@@ -1,7 +1,8 @@
 module SpectralKit
 
 export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
-    evaluate, Chebyshev, ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
+    evaluate, linear_combination, Chebyshev, ChebyshevSemiInf, ChebyshevInf,
+    ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -119,6 +120,16 @@ convention, this package uses `k = 1, 2, …`. Some code may use `n = k - 1` int
 easier comparison with well-known formulas.
 """
 function evaluate end
+
+"""
+$(SIGNATURES)
+
+Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of functiona family ``f₁, …`` at `x`, for
+the given order.
+"""
+function linear_combination(family, θ, x, order)
+    mapreduce(((k, θ),) -> θ * evaluate(family, k, x, order), +, enumerate(θ))
+end
 
 """
 `$(FUNCTIONNAME)([T], family, N)`
