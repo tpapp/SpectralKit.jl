@@ -21,7 +21,7 @@ function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
     @test length(r) == N
-    @test all(abs.(evaluate.(family, N + 1, r, Order(0))) .≤ atol)
+    @test all(abs.(basis_function.(family, N + 1, r, Order(0))) .≤ atol)
 end
 
 """
@@ -33,7 +33,7 @@ function test_augmented_extrema(family, N; atol = 1e-13)
     a = augmented_extrema(family, N)
     @test a isa Vector{Float64}
     @test length(a) == N
-    @test all(abs.(evaluate.(family, N, a[2:(end-1)], Order(1))) .≤ atol)
+    @test all(abs.(basis_function.(family, N, a[2:(end-1)], Order(1))) .≤ atol)
     mi, ma = domain_extrema(family)
     â = sort(a)                 # non-increasing transformations switch signs
     @test mi ≈ â[1] atol = 1e-16
@@ -45,7 +45,7 @@ $(SIGNATURES)
 
 Test continuity of `family` at endpoints using a heuristic.
 
-`expected_extrema` is the expected domain extrema. The function `k ∈ ks` is evaluated at the
+`expected_extrema` is the expected domain extrema. The function `k ∈ ks` is basis_functiond at the
 extrema and tested for continuity:
 
 1. finite extrema are adjusted by `eps_step`,
@@ -57,7 +57,7 @@ function test_endpoint_continuity(family, expected_extrema, ks;
     @test mi == expected_extrema[1]
     @test ma == expected_extrema[2]
     for k in ks
-        ev(x, order) = evaluate(family, k, x, order)
+        ev(x, order) = basis_function(family, k, x, order)
 
         # at domain minimum
         f_mi, f′_mi = @inferred ev(mi, OrdersTo(1))
@@ -112,10 +112,10 @@ function test_derivatives(family, ks; M = 100)
     for k in ks
         for _ in 1:M
             x = generator()
-            f, f′ = @inferred evaluate(family, k, x, OrdersTo(1))
-            @test f ≈ @inferred evaluate(family, k, x, Order(0))
-            @test f′ ≈ @inferred evaluate(family, k, x, Order(1))
-            @test f′ ≈ ForwardDiff.derivative(x -> evaluate(family, k, x, Order(0)), x)
+            f, f′ = @inferred basis_function(family, k, x, OrdersTo(1))
+            @test f ≈ @inferred basis_function(family, k, x, Order(0))
+            @test f′ ≈ @inferred basis_function(family, k, x, Order(1))
+            @test f′ ≈ ForwardDiff.derivative(x -> basis_function(family, k, x, Order(0)), x)
         end
     end
 end
@@ -132,7 +132,7 @@ function test_linear_combinations(family, order; Ks = 2:10, Mθ = 100, Mx = 10)
         θ = randn(K)
         for _ in 1:Mx
             x = generator()
-            v = sum([evaluate(family, k, x, order) * θ for (k, θ) in enumerate(θ)])
+            v = sum([basis_function(family, k, x, order) * θ for (k, θ) in enumerate(θ)])
             @test v ≈ linear_combination(family, θ, x, order)
         end
     end

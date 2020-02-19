@@ -36,7 +36,7 @@ end
 
     test_linear_combinations.(F, TESTED_ORDERS)
 
-    @test_throws ArgumentError evaluate(F, 0, 0.0, Order(0)) # K ≥ 1
+    @test_throws ArgumentError basis_function(F, 0, 0.0, Order(0)) # K ≥ 1
 end
 
 @testset "ChebyshevSemiInf" begin
