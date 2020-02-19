@@ -1,7 +1,8 @@
 module SpectralKit
 
 export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
-    evaluate, Chebyshev, ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
+    basis_function, linear_combination, Chebyshev, ChebyshevSemiInf, ChebyshevInf,
+    ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -73,7 +74,7 @@ Test if the argument is a *function family*, supporting the following interface:
 
 - [`domain_extrema`](@ref) for querying the domain,
 
-- [`evaluate`](@ref) for function evaluation,
+- [`basis_function`](@ref) for function evaluation,
 
 - [`roots`](@ref) and [`augmented_extrema`](@ref) to obtain collocation points.
 
@@ -118,7 +119,17 @@ Most texts index polynomial families with `n = 0, 1, …`. Following the Julia a
 convention, this package uses `k = 1, 2, …`. Some code may use `n = k - 1` internally for
 easier comparison with well-known formulas.
 """
-function evaluate end
+function basis_function end
+
+"""
+$(SIGNATURES)
+
+Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of functiona family ``f₁, …`` at `x`, for
+the given order.
+"""
+function linear_combination(family, θ, x, order)
+    mapreduce(((k, θ),) -> θ * basis_function(family, k, x, order), +, enumerate(θ))
+end
 
 """
 `$(FUNCTIONNAME)([T], family, N)`
@@ -208,7 +219,7 @@ function chebyshev_interior(k::Integer, x::Real, ::OrdersTo{1})
     SVector(c, s * n * t′)
 end
 
-function evaluate(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
+function basis_function(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
     @argcheck k > 0
     if x == -1
         chebyshev_min(T, k, order)
@@ -241,7 +252,7 @@ For `family::TransformedChebyshev`, subtypes implement:
 - `from_chebyshev(family, x)`, for transforming from `x ∈ [-1,1]` to `y` of the domain,
 
 - `to_chebyshev(family, y, order)` for transforming `y` the domain to `x ∈ [-1,1]`, where
-  `order` follows the semantics of [`evaluate`](@ref) and returns `x`, `∂x/∂y`, … as
+  `order` follows the semantics of [`basis_function`](@ref) and returns `x`, `∂x/∂y`, … as
   requested.
 
 - `domain_extrema(family)` is optional.
@@ -256,19 +267,19 @@ function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
     from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, order::Order{0})
-    evaluate(Chebyshev(), k, to_chebyshev(family, x, order), order)
+function basis_function(family::TransformedChebyshev, k::Integer, x::Real, order::Order{0})
+    basis_function(Chebyshev(), k, to_chebyshev(family, x, order), order)
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::Order{1})
+function basis_function(family::TransformedChebyshev, k::Integer, x::Real, ::Order{1})
     x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    t′ = evaluate(Chebyshev(), k, x, Order(1))
+    t′ = basis_function(Chebyshev(), k, x, Order(1))
     t′ * x′
 end
 
-function evaluate(family::TransformedChebyshev, k::Integer, x::Real, ::OrdersTo{1})
+function basis_function(family::TransformedChebyshev, k::Integer, x::Real, ::OrdersTo{1})
     x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    t, t′ = evaluate(Chebyshev(), k, x, OrdersTo(1))
+    t, t′ = basis_function(Chebyshev(), k, x, OrdersTo(1))
     SVector(t, t′ * x′)
 end
 
