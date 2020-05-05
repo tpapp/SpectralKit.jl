@@ -84,7 +84,7 @@ is_function_family(::Type{Any}) = false
 
 is_function_family(::Type{<:FunctionFamily}) = true
 
-is_function_family(x) = is_function_family(typeof(x))
+is_function_family(f) = is_function_family(typeof(f))
 
 """
 `$(FUNCTIONNAME)(family)`
@@ -329,13 +329,13 @@ end
 (τ::TransformOrder1{Order{1}})(t′::Real) = τ.x′ * t′
 (τ::TransformOrder1{OrdersTo{1}})(t::SVector{2}) = SVector(t[1], τ.x′ * t[2])
 
-function chebyshev_transform_helpers(family, x, order::Union{Order{1},OrdersTo{1}})
-    x, x′ = to_chebyshev(family, x, OrdersTo(1))
+function chebyshev_transform_helpers(family, y, order::Union{Order{1},OrdersTo{1}})
+    x, x′ = to_chebyshev(family, y, OrdersTo(1))
     x, TransformOrder1(order, x′)
 end
 
-function basis_function(family::TransformedChebyshev, k, x::Real, order)
-    x, τ = chebyshev_transform_helpers(family, x, order)
+function basis_function(family::TransformedChebyshev, k, y::Real, order)
+    x, τ = chebyshev_transform_helpers(family, y, order)
     b = basis_function(Chebyshev(), k, x, order)
     if k isa Int
         τ(b)
