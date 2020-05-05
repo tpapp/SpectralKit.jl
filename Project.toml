@@ -10,7 +10,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-ArgCheck = "^1"
+ArgCheck = "^1, 2.0"
 DocStringExtensions = "^0.8"
 StaticArrays = "0.12"
 UnPack = "0.1"
