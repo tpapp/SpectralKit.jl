@@ -126,6 +126,8 @@ $(SIGNATURES)
 
 Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of functiona family ``f₁, …`` at `x`, for
 the given order.
+
+The dimension is implicitly taken from `θ`.
 """
 function linear_combination(family, θ, x, order)
     mapreduce(((k, θ),) -> θ * basis_function(family, k, x, order), +, enumerate(θ))
