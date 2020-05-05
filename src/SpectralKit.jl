@@ -124,7 +124,7 @@ function basis_function end
 """
 $(SIGNATURES)
 
-Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of functiona family ``f₁, …`` at `x`, for
+Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of function family ``f₁, …`` at `x`, for
 the given order.
 
 The dimension is implicitly taken from `θ`.
