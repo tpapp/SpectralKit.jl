@@ -21,7 +21,7 @@ function test_roots(family, N; atol = 1e-13)
     r = roots(family, N)
     @test r isa Vector{Float64}
     @test length(r) == N
-    @test all(abs.(basis_function.(family, N + 1, r, Order(0))) .≤ atol)
+    @test all(abs.(basis_function.(family, r, Order(0), N + 1)) .≤ atol)
 end
 
 """
@@ -33,7 +33,7 @@ function test_augmented_extrema(family, N; atol = 1e-13)
     a = augmented_extrema(family, N)
     @test a isa Vector{Float64}
     @test length(a) == N
-    @test all(abs.(basis_function.(family, N, a[2:(end-1)], Order(1))) .≤ atol)
+    @test all(abs.(basis_function.(family, a[2:(end-1)], Order(1), N)) .≤ atol)
     mi, ma = domain_extrema(family)
     â = sort(a)                 # non-increasing transformations switch signs
     @test mi ≈ â[1] atol = 1e-16
@@ -57,7 +57,7 @@ function test_endpoint_continuity(family, expected_extrema, ks;
     @test mi == expected_extrema[1]
     @test ma == expected_extrema[2]
     for k in ks
-        ev(x, order) = basis_function(family, k, x, order)
+        ev(x, order) = basis_function(family, x, order, k)
 
         # at domain minimum
         f_mi, f′_mi = @inferred ev(mi, OrdersTo(1))
@@ -112,10 +112,10 @@ function test_derivatives(family, ks; M = 100)
     for k in ks
         for _ in 1:M
             x = generator()
-            f, f′ = @inferred basis_function(family, k, x, OrdersTo(1))
-            @test f ≈ @inferred basis_function(family, k, x, Order(0))
-            @test f′ ≈ @inferred basis_function(family, k, x, Order(1))
-            @test f′ ≈ ForwardDiff.derivative(x -> basis_function(family, k, x, Order(0)), x)
+            f, f′ = @inferred basis_function(family, x, OrdersTo(1), k)
+            @test f ≈ @inferred basis_function(family, x, Order(0), k)
+            @test f′ ≈ @inferred basis_function(family, x, Order(1), k)
+            @test f′ ≈ ForwardDiff.derivative(x -> basis_function(family, x, Order(0), k), x)
         end
     end
 end
@@ -132,8 +132,8 @@ function test_linear_combinations(family, order; Ks = 2:10, Mθ = 100, Mx = 10)
         θ = randn(K)
         for _ in 1:Mx
             x = generator()
-            v = sum([basis_function(family, k, x, order) * θ for (k, θ) in enumerate(θ)])
-            @test v ≈ linear_combination(family, θ, x, order)
+            v = sum([basis_function(family, x, order, k) * θ for (k, θ) in enumerate(θ)])
+            @test v ≈ linear_combination(family, x, order, θ)
         end
     end
 end
@@ -148,11 +148,11 @@ function test_basis_many(family, order; Ks = 0:10, Mx = 100)
     for K in Ks
         for _ in Mx
             x = generator()
-            b1 = basis_function.(family, 1:K, x, order)
-            b2 = @inferred basis_function(family, Val(K), x, order)
+            b1 = basis_function.(family, x, order, 1:K)
+            b2 = @inferred basis_function(family, x, order, Val(K))
             @test b2 isa SVector{K}
             @test b1 ≈ Vector(b2)   # convert for comparison
-            b3 = collect(Iterators.take(basis_iterator(family, x, order), K))
+            b3 = collect(Iterators.take(basis_function(family, x, order), K))
             @test b3 ≈ b1
         end
     end

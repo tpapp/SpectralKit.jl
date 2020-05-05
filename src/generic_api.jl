@@ -77,11 +77,17 @@ Type can be arbitrary, but guaranteed to be the same for both endpoints, and typ
 function domain_extrema end
 
 """
-`$(FUNCTIONNAME)(family, k, x, order)`
+`$(FUNCTIONNAME)(family, x, order, [k])`
 
-Evaluate the `k`th (starting from 1) function in `family` at `x`.
+Evaluate basis functions of `family` at `x`, up to the given `order`.
 
-`k = Val{K}()` returns the first `K` function values in the family as an `SVector{K}`.
+`k` can be one of the following:
+
+- `k::Int ≥ 1` evaluates the `k`th (starting from 1) function in `family` at `x`.
+
+- `k::Val{K}()` returns the first `K` function values in the family as an `SVector{K}`.
+
+- when `k` is not provided, the function returns a *iterable* for all basis functions.
 
 `order` determines the derivatives:
 
@@ -112,8 +118,8 @@ the given order.
 
 The dimension is implicitly taken from `θ`.
 """
-function linear_combination(family, θ, x, order)
-    mapreduce(((k, θ),) -> θ * basis_function(family, k, x, order), +, enumerate(θ))
+function linear_combination(family, x, order, θ)
+    mapreduce(*, +, θ, basis_function(family, x, order))
 end
 
 """

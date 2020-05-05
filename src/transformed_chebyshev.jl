@@ -50,9 +50,9 @@ function chebyshev_transform_helpers(family, y, order::Union{Order{1},OrdersTo{1
     x, TransformOrder1(order, x′)
 end
 
-function basis_function(family::TransformedChebyshev, k, y::Real, order)
+function basis_function(family::TransformedChebyshev, y::Real, order, k)
     x, τ = chebyshev_transform_helpers(family, y, order)
-    b = basis_function(Chebyshev(), k, x, order)
+    b = basis_function(Chebyshev(), x, order, k)
     if k isa Int
         τ(b)
     elseif k isa Val
@@ -60,9 +60,9 @@ function basis_function(family::TransformedChebyshev, k, y::Real, order)
     end
 end
 
-function basis_iterator(family::TransformedChebyshev, y::Real, order)
+function basis_function(family::TransformedChebyshev, y::Real, order)
     x, τ = chebyshev_transform_helpers(family, y, order)
-    (τ(x) for x in basis_iterator(Chebyshev(), x, order))
+    (τ(x) for x in basis_function(Chebyshev(), x, order))
 end
 
 function domain_extrema(family::TransformedChebyshev)

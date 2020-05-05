@@ -83,7 +83,7 @@ Base.eltype(::Type{<:ChebyshevIterator{T,<:OrdersTo{K}}}) where {T,K} = SVector{
 
 Base.IteratorSize(::Type{<:ChebyshevIterator}) = Base.IsInfinite()
 
-function basis_iterator(::Chebyshev, x::Real, order)
+function basis_function(::Chebyshev, x::Real, order)
     ChebyshevIterator(x, order)
 end
 
@@ -114,7 +114,7 @@ function Base.iterate(itr::ChebyshevIterator{T,O},
     O ≡ Order{1} ? last(f) : f, (f, fp)
 end
 
-function basis_function(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
+function basis_function(family::Chebyshev, x::T, order, k::Integer) where {T <: Real}
     @argcheck k > 0
     if x == -1
         chebyshev_min(T, k, order)
@@ -125,7 +125,7 @@ function basis_function(family::Chebyshev, k::Integer, x::T, order) where {T <: 
     end
 end
 
-function basis_function(family::Chebyshev, ::Val{K}, x::T, ::Order{0}) where {K, T <: Real}
+function basis_function(family::Chebyshev, x::T, ::Order{0}, ::Val{K}) where {K, T <: Real}
     # FIXME this is a somewhat naive implementation, could be improved (eg unrolling for
     # small K, etc)
     @argcheck K ≥ 0
@@ -142,7 +142,8 @@ function basis_function(family::Chebyshev, ::Val{K}, x::T, ::Order{0}) where {K,
     SVector{K,T}(z)
 end
 
-function basis_function(family::Chebyshev, ::Val{K}, x::T, ::OrdersTo{1}) where {K, T <: Real}
+function basis_function(family::Chebyshev, x::T, ::OrdersTo{1},
+                        ::Val{K}) where {K, T <: Real}
     @argcheck K ≥ 0
     S = SVector{2,T}
     z = MVector{K,S}(undef)
@@ -160,9 +161,9 @@ function basis_function(family::Chebyshev, ::Val{K}, x::T, ::OrdersTo{1}) where 
     SVector{K,S}(z)
 end
 
-function basis_function(family::Chebyshev, k::Val, x::Real, ::Order{1})
+function basis_function(family::Chebyshev, x::Real, ::Order{1}, k::Val)
     # FIXME we punt here, should be possible using recursion directly
-    map(last, basis_function(family, k, x, OrdersTo(1)))
+    map(last, basis_function(family, x, OrdersTo(1), k))
 end
 
 function roots(::Type{T}, ::Chebyshev, N) where {T <: Real}

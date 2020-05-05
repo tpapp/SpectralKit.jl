@@ -1,8 +1,11 @@
 module SpectralKit
 
-export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
-    basis_iterator, basis_function, linear_combination, Chebyshev, ChebyshevSemiInf,
-    ChebyshevInf, ChebyshevInterval
+export
+    # generic
+    Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
+    basis_function, linear_combination,
+    # Chebyshev & transformed
+    Chebyshev, ChebyshevSemiInf, ChebyshevInf, ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
