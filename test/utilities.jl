@@ -152,6 +152,8 @@ function test_basis_many(family, order; Ks = 0:10, Mx = 100)
             b2 = @inferred basis_function(family, Val(K), x, order)
             @test b2 isa SVector{K}
             @test b1 ≈ Vector(b2)   # convert for comparison
+            b3 = collect(Iterators.take(basis_iterator(family, x, order), K))
+            @test b3 ≈ b1
         end
     end
 end

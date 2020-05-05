@@ -1,8 +1,8 @@
 module SpectralKit
 
 export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_extrema,
-    basis_function, linear_combination, Chebyshev, ChebyshevSemiInf, ChebyshevInf,
-    ChebyshevInterval
+    basis_iterator, basis_function, linear_combination, Chebyshev, ChebyshevSemiInf,
+    ChebyshevInf, ChebyshevInterval
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
@@ -223,6 +223,54 @@ function chebyshev_interior(k::Integer, x::Real, ::OrdersTo{1})
     SVector(c, s * n * t′)
 end
 
+####
+#### basis function iterator
+####
+
+struct ChebyshevIterator{T,O}
+    x::T
+    order::O
+end
+
+Base.IteratorEltype(::Type{<:ChebyshevIterator}) = Base.HasEltype()
+
+Base.eltype(::Type{<:ChebyshevIterator{T,<:Order}}) where {T} = T
+
+Base.eltype(::Type{<:ChebyshevIterator{T,<:OrdersTo{K}}}) where {T,K} = SVector{K+1,T}
+
+Base.IteratorSize(::Type{<:ChebyshevIterator}) = Base.IsInfinite()
+
+function basis_iterator(::Chebyshev, x::Real, order)
+    ChebyshevIterator(x, order)
+end
+
+function Base.iterate(itr::ChebyshevIterator)
+    @unpack x = itr
+    one(x), (one(x), x)
+end
+
+function Base.iterate(itr::ChebyshevIterator, state)
+    @unpack x = itr
+    fp, fpp = state
+    f = 2 * x * fp - fpp
+    f, (f, fp)
+end
+
+function Base.iterate(itr::ChebyshevIterator{T,O}) where {T,O<:Union{Order{1},OrdersTo{1}}}
+    @unpack x, order = itr
+    fp = SVector(one(x), zero(x))
+    fpp = SVector(x, one(x))
+    O ≡ Order{1} ? last(fp) : fp, (fp, fpp)
+end
+
+function Base.iterate(itr::ChebyshevIterator{T,O},
+                      state) where {T,O<:Union{Order{1},OrdersTo{1}}}
+    @unpack x = itr
+    fp, fpp = state
+    f = SVector(2 * x * fp[1] - fpp[1], 2 * fp[1] + 2 * x * fp[2] - fpp[2])
+    O ≡ Order{1} ? last(f) : f, (f, fp)
+end
+
 function basis_function(family::Chebyshev, k::Integer, x::T, order) where {T <: Real}
     @argcheck k > 0
     if x == -1
@@ -342,6 +390,11 @@ function basis_function(family::TransformedChebyshev, k, y::Real, order)
     elseif k isa Val
         map(τ, b)
     end
+end
+
+function basis_iterator(family::TransformedChebyshev, y::Real, order)
+    x, τ = chebyshev_transform_helpers(family, y, order)
+    (τ(x) for x in basis_iterator(Chebyshev(), x, order))
 end
 
 function domain_extrema(family::TransformedChebyshev)
