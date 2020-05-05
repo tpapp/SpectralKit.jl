@@ -311,23 +311,36 @@ function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
     from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
 end
 
-function basis_function(family::TransformedChebyshev, k, x::Real, order::Order{0})
-    basis_function(Chebyshev(), k, to_chebyshev(family, x, order), order)
+"""
+$(SIGNATURES)
+
+Return the first argument transformed to the domain `[-1,1]`, and a callable that transform
+Chebyshev basis functions and derivatives back to the original domain.
+"""
+function chebyshev_transform_helpers(family, y, order::Order{0})
+    to_chebyshev(family, y, order), identity
 end
 
-@inline _transform_result(f, k::Int, z) = f(z)
-@inline _transform_result(f, ::Val, z) = map(f, z)
-
-function basis_function(family::TransformedChebyshev, k, x::Real, ::Order{1})
-    x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    _transform_result(t′ -> t′ * x′, k, basis_function(Chebyshev(), k, x, Order(1)))
+struct TransformOrder1{O,T}
+    order::O
+    x′::T
 end
 
-function basis_function(family::TransformedChebyshev, k, x::Real, ::OrdersTo{1})
+(τ::TransformOrder1{Order{1}})(t′::Real) = τ.x′ * t′
+(τ::TransformOrder1{OrdersTo{1}})(t::SVector{2}) = SVector(t[1], τ.x′ * t[2])
+
+function chebyshev_transform_helpers(family, x, order::Union{Order{1},OrdersTo{1}})
     x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    _transform_result(k, basis_function(Chebyshev(), k, x, OrdersTo(1))) do z
-        t, t′ = z
-        SVector(t, t′ * x′)
+    x, TransformOrder1(order, x′)
+end
+
+function basis_function(family::TransformedChebyshev, k, x::Real, order)
+    x, τ = chebyshev_transform_helpers(family, x, order)
+    b = basis_function(Chebyshev(), k, x, order)
+    if k isa Int
+        τ(b)
+    elseif k isa Val
+        map(τ, b)
     end
 end
 
