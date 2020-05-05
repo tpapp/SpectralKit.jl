@@ -1,5 +1,5 @@
 using SpectralKit
-using Test, DocStringExtensions
+using Test, DocStringExtensions, StaticArrays
 import ForwardDiff
 
 include("utilities.jl")
