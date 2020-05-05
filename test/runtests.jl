@@ -36,6 +36,8 @@ end
 
     test_linear_combinations.(F, TESTED_ORDERS)
 
+    test_basis_many.(F, TESTED_ORDERS)
+
     @test_throws ArgumentError basis_function(F, 0, 0.0, Order(0)) # K ≥ 1
 end
 
@@ -49,6 +51,7 @@ end
         test_endpoint_continuity(F, (2.0, Inf), 1:10; atol = 1e-3)
         test_derivatives(F, 1:10)
         test_linear_combinations.(F, TESTED_ORDERS)
+        test_basis_many.(F, TESTED_ORDERS)
     end
 
     @testset "from -∞" begin
@@ -58,6 +61,7 @@ end
         test_endpoint_continuity(F, (-Inf, 3.0), 1:10; atol = 1e-3)
         test_derivatives(F, 1:10)
         test_linear_combinations.(F, TESTED_ORDERS)
+        test_basis_many.(F, TESTED_ORDERS)
     end
 
     @test_throws ArgumentError ChebyshevSemiInf(0.0, 0.0)
@@ -79,6 +83,7 @@ end
     test_endpoint_continuity(F, (-Inf, Inf), 1:10)
     test_derivatives(F, 1:10)
     test_linear_combinations.(F, TESTED_ORDERS)
+    test_basis_many.(F, TESTED_ORDERS)
 
     @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
     @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
@@ -102,6 +107,8 @@ end
     test_derivatives(F, 1:10)
 
     test_linear_combinations.(F, TESTED_ORDERS)
+
+    test_basis_many.(F, TESTED_ORDERS)
 
     @test_throws ArgumentError ChebyshevInterval(2.0, 1.0)
     @test_throws ArgumentError ChebyshevInterval(2.0, 2)

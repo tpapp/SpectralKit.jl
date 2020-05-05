@@ -6,7 +6,7 @@ export Order, OrdersTo, is_function_family, domain_extrema, roots, augmented_ext
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
-using StaticArrays: SVector
+using StaticArrays: MVector, SVector
 using UnPack: @unpack
 
 ####
@@ -99,6 +99,8 @@ function domain_extrema end
 `$(FUNCTIONNAME)(family, k, x, order)`
 
 Evaluate the `k`th (starting from 1) function in `family` at `x`.
+
+`k = Val{K}()` returns the first `K` function values in the family as an `SVector{K}`.
 
 `order` determines the derivatives:
 
@@ -232,6 +234,46 @@ function basis_function(family::Chebyshev, k::Integer, x::T, order) where {T <: 
     end
 end
 
+function basis_function(family::Chebyshev, ::Val{K}, x::T, ::Order{0}) where {K, T <: Real}
+    # FIXME this is a somewhat naive implementation, could be improved (eg unrolling for
+    # small K, etc)
+    @argcheck K ≥ 0
+    z = MVector{K,T}(undef)
+    if K ≥ 1
+        z[1] = one(x)
+    end
+    if K ≥ 2
+        z[2] = x
+    end
+    for k in 3:K
+        z[k] = 2 * x * z[k - 1] - z[k - 2]
+    end
+    SVector{K,T}(z)
+end
+
+function basis_function(family::Chebyshev, ::Val{K}, x::T, ::OrdersTo{1}) where {K, T <: Real}
+    @argcheck K ≥ 0
+    S = SVector{2,T}
+    z = MVector{K,S}(undef)
+    if K ≥ 1
+        z[1] = SVector(one(x), zero(x))
+    end
+    if K ≥ 2
+        z[2] = SVector(x, one(x))
+    end
+    for k in 3:K
+        p0, p1 = z[k - 1]
+        pp0, pp1 = z[k - 2]
+        z[k] = SVector(2 * x * p0 - pp0, 2 * p0 + 2 * x * p1 - pp1)
+    end
+    SVector{K,S}(z)
+end
+
+function basis_function(family::Chebyshev, k::Val, x::Real, ::Order{1})
+    # FIXME we punt here, should be possible using recursion directly
+    map(last, basis_function(family, k, x, OrdersTo(1)))
+end
+
 function roots(::Type{T}, ::Chebyshev, N) where {T <: Real}
     cospi.(((2 * N - 1):-2:1) ./ T(2 * N))
 end
@@ -269,20 +311,24 @@ function augmented_extrema(::Type{T}, family::TransformedChebyshev, N) where {T}
     from_chebyshev.(family, augmented_extrema(T, Chebyshev(), N))
 end
 
-function basis_function(family::TransformedChebyshev, k::Integer, x::Real, order::Order{0})
+function basis_function(family::TransformedChebyshev, k, x::Real, order::Order{0})
     basis_function(Chebyshev(), k, to_chebyshev(family, x, order), order)
 end
 
-function basis_function(family::TransformedChebyshev, k::Integer, x::Real, ::Order{1})
+@inline _transform_result(f, k::Int, z) = f(z)
+@inline _transform_result(f, ::Val, z) = map(f, z)
+
+function basis_function(family::TransformedChebyshev, k, x::Real, ::Order{1})
     x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    t′ = basis_function(Chebyshev(), k, x, Order(1))
-    t′ * x′
+    _transform_result(t′ -> t′ * x′, k, basis_function(Chebyshev(), k, x, Order(1)))
 end
 
-function basis_function(family::TransformedChebyshev, k::Integer, x::Real, ::OrdersTo{1})
+function basis_function(family::TransformedChebyshev, k, x::Real, ::OrdersTo{1})
     x, x′ = to_chebyshev(family, x, OrdersTo(1))
-    t, t′ = basis_function(Chebyshev(), k, x, OrdersTo(1))
-    SVector(t, t′ * x′)
+    _transform_result(k, basis_function(Chebyshev(), k, x, OrdersTo(1))) do z
+        t, t′ = z
+        SVector(t, t′ * x′)
+    end
 end
 
 function domain_extrema(family::TransformedChebyshev)

@@ -137,3 +137,21 @@ function test_linear_combinations(family, order; Ks = 2:10, Mθ = 100, Mx = 10)
         end
     end
 end
+
+"""
+$(SIGNATURES)
+
+Test multiple basis functions evaluated at once, with the given `Ks`, and `Mx` random `x`s.
+"""
+function test_basis_many(family, order; Ks = 0:10, Mx = 100)
+    generator = random_generator_in_domain(family)
+    for K in Ks
+        for _ in Mx
+            x = generator()
+            b1 = basis_function.(family, 1:K, x, order)
+            b2 = @inferred basis_function(family, Val(K), x, order)
+            @test b2 isa SVector{K}
+            @test b1 ≈ Vector(b2)   # convert for comparison
+        end
+    end
+end
