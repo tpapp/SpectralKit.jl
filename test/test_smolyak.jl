@@ -1,42 +1,53 @@
-using SpectralKit: _chebyshev_open_ℓ, SmolyakIndices
+using SpectralKit: ChebyshevOpen, block_length, cumulative_block_length, SmolyakIndices,
+    smolyak_length
 
 @testset "Smolyak length" begin
-    @test _chebyshev_open_ℓ(0) == 1
-    @test _chebyshev_open_ℓ(1) == 1 + 2
-    @test _chebyshev_open_ℓ(2) == 1 + 2 + 2
-    @test _chebyshev_open_ℓ(3) == 1 + 2 + 2 + 4
-    @test _chebyshev_open_ℓ(4) == 1 + 2 + 2 + 4 + 8
+    kind = ChebyshevOpen()
+    @test cumulative_block_length(kind, 0) == 1
+    @test cumulative_block_length(kind, 1) == 1 + 2
+    @test cumulative_block_length(kind, 2) == 1 + 2 + 2
+    @test cumulative_block_length(kind, 3) == 1 + 2 + 2 + 4
+    @test cumulative_block_length(kind, 4) == 1 + 2 + 2 + 4 + 8
+    for i in 1:10
+        c = cumulative_block_length(kind, i)
+        cprev = i == 0 ? 0 : cumulative_block_length(kind, i - 1)
+        @test block_length(kind, i) == c - cprev
+    end
 end
 
 """
 Naive implementation of Smolyan index iteration, traversing a `CartesianIndices` and keeping
-valid indexes. For testing/comparison.
+valid indexes. For testing/comparison. Returns a vector of `indexes => blocks` pairs.
 """
-function smolyak_indices_check(N, ℓ, B, M)
-    m = ℓ(M)
+function smolyak_indices_check(N, B, kind, M)
+    m = cumulative_block_length(kind, M)
     b_table = fill(M, m)
     for b in (M-1):(-1):0
-        b_table[1:ℓ(b)] .= b
+        b_table[1:cumulative_block_length(kind, b)] .= b
     end
-    result = Vector{NTuple{N,Int}}()
+    T = NTuple{N,Int}
+    result = Vector{Pair{T,T}}()
     for ι in CartesianIndices(ntuple(_ -> 1:m, N))
         ix = Tuple(ι)
         blocks = map(i -> b_table[i], ix)
         if sum(blocks) ≤ B
-            push!(result, ix)
+            push!(result, ix => blocks)
         end
     end
     result
 end
 
 @testset "Smolyak indices" begin
+    kind = ChebyshevOpen()
     for B in 0:3
         for M in 0:B
             for N in 1:4
-                ι = SmolyakIndices{N}(_chebyshev_open_ℓ, B, M)
-                x1 = collect(ι)
-                x2 = smolyak_indices_check(N, _chebyshev_open_ℓ, B, M)
+                ι = SmolyakIndices{N,B}(kind, M)
+                x1 = @inferred collect(ι)
+                x2 = first.(smolyak_indices_check(N, B, kind, M))
+                len = @inferred smolyak_length(Val(N), Val(B), kind, M)
                 @test x1 == x2
+                @test len == length(x1) == length(ι) == length(x2)
             end
         end
     end

@@ -2,6 +2,17 @@
 ##### Smolyak bases NOTE WIP
 #####
 
+struct ChebyshevOpen end
+
+block_length(::ChebyshevOpen, b::Int) = b ≤ 1 ? b + 1 : 2^(b - 1)
+
+"""
+$(SIGNATURES)
+
+Cumulative block length for Chebyshev nodes on open intervals.
+"""
+cumulative_block_length(::ChebyshevOpen, b::Int) =  b == 0 ? 1 : (2^b + 1)
+
 ####
 #### Utility functions for traversal
 ####
@@ -33,8 +44,8 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-function __inc(M::Int, ℓ::L, slack::Int, indices::NTuple{N,Int}, blocks::NTuple{N,Int},
-               limits::NTuple{N,Int}) where {L,N}
+function __inc(M::Int, kind, slack::Int, indices::NTuple{N,Int}, blocks::NTuple{N,Int},
+               limits::NTuple{N,Int}) where {N}
     i1, iτ... = indices
     b1, bτ... = blocks
     l1, lτ... = limits
@@ -42,33 +53,31 @@ function __inc(M::Int, ℓ::L, slack::Int, indices::NTuple{N,Int}, blocks::NTupl
         true, 0, (i1 + 1, iτ...), blocks, limits
     elseif b1 < M && slack > 0  # increment i1, next block
         b1′ = b1 + 1
-        true, -1, (i1 + 1, iτ...), (b1′, bτ...), (ℓ(b1′), lτ...)
+        true, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_length(kind, b1′), lτ...)
     else
         if N == 1               # end of the line, arbitrary value since !valid
             false, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, Δτ, iτ′, bτ′, lτ′ = __inc(M, ℓ, slack + Δ1, iτ, bτ, lτ)
-            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (ℓ(0), lτ′...)
+            valid, Δτ, iτ′, bτ′, lτ′ = __inc(M, kind, slack + Δ1, iτ, bτ, lτ)
+            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (cumulative_block_length(kind, 0), lτ′...)
         end
     end
 end
 
-struct SmolyakIndices{N,L}
-    ℓ::L
-    B::Int
+struct SmolyakIndices{N,B,K}
+    kind::K
     M::Int
     @doc """
     Iteration over indices in a Smolyak basis/interpolation.
 
     # Arguments
 
-    - `ℓ` calculates cumulative block lengths for block `b` (counting from 0), mapping to
-      positive integers
-
     - `N`: the dimension of indices
 
     - `B ≥ 0`: sum of block indices, starting from `0` (ie `B = 0` has just one element),
+
+    - `kind` (eg [`ChebyshevOpen`]) for calculating block sizes
 
     - `M`: upper bound on each block index
 
@@ -76,8 +85,8 @@ struct SmolyakIndices{N,L}
 
     Consider positive integer indices `(i1, …, iN)`, each starting at one.
 
-    Let `b1` denote the smallest integer such that `i1 ≤ ℓ(b1)`, and similarly for `i2, …,
-    iN`.
+    Let `ℓ(b) = cumulative_block_length(kind, b)`, and `b1` denote the smallest integer such
+    that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`.
 
     An index `(i1, …, iN)` is visited iff all of the following hold:
 
@@ -87,36 +96,55 @@ struct SmolyakIndices{N,L}
 
     Visited indexes are in *column-major* order.
     """
-    function SmolyakIndices{N}(ℓ::L, B::Int, M::Int = B) where {N,L}
+    function SmolyakIndices{N,B}(kind::K, M::Int = B) where {N,B,K}
         @argcheck N ≥ 1
         @argcheck B ≥ M ≥ 0
-        new{N,L}(ℓ, B, M)
+        new{N,B,K}(kind, M)
     end
 end
 
 Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 
-Base.IteratorSize(::Type{<:SmolyakIndices{N}}) where N = Base.SizeUnknown() # FIXME
+"""
+$(SIGNATURES)
 
-@inline function Base.iterate(ι::SmolyakIndices{N}) where N
+Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
+"""
+function smolyak_length(::Val{N}, ::Val{B}, kind, M::Int) where {N,B}
+    # implicit assumption: M ≤ B
+    c = zeros(MVector{B+1,Int}) # indexed as 0, …, B
+    for b in 0:M
+        c[b + 1] = block_length(kind, b)
+    end
+    for n in 2:N
+        for b in B:(-1):0            # blocks with indices that sum to b
+            s = 0
+            for a in 0:min(b, M)
+                s += block_length(kind, a) * c[b - a + 1]
+            end
+            # can safely overwrite since they will not be used again for n + 1
+            c[b + 1] = s
+        end
+    end
+    sum(c)
+end
+
+function Base.length(ι::SmolyakIndices{N,B}) where {N,B}
+    smolyak_length(Val(N), Val(B), ι.kind, ι.M)
+end
+
+@inline function Base.iterate(ι::SmolyakIndices{N,B}) where {N,B}
     indices = ntuple(_ -> 1, Val(N))
     blocks = ntuple(_ -> 0, Val(N))
-    l = ι.ℓ(0)
+    l = cumulative_block_length(ι.kind, 0)
     limits = ntuple(_ -> l, Val(N))
-    slack = ι.B
+    slack = B
     indices, (slack, indices, blocks, limits)
 end
 
-@inline function Base.iterate(ι::SmolyakIndices{N}, (slack, indices, blocks, limits)) where N
-    valid, Δ, indices′, blocks′, limits′ = __inc(ι.M, ι.ℓ, slack, indices, blocks, limits)
+@inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
+    valid, Δ, indices′, blocks′, limits′ = __inc(ι.M, ι.kind, slack, indices, blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
 end
-
-"""
-$(SIGNATURES)
-
-Cumulative block length for Chebyshev nodes on open intervals.
-"""
-_chebyshev_open_ℓ(b::Int) = b == 0 ? 1 : (2^b + 1)
