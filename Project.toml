@@ -13,7 +13,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 ArgCheck = "^1, 2.0"
 DocStringExtensions = "^0.8"
 StaticArrays = "0.12, 1.0"
-UnPack = "0.1"
+UnPack = "0.1, 1.0"
 julia = "^1.2"
 
 [extras]
