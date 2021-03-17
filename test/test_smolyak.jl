@@ -1,5 +1,5 @@
 using SpectralKit: ChebyshevOpen, block_length, cumulative_block_length, SmolyakIndices,
-    smolyak_length
+    smolyak_length, nested_extrema_indices
 
 @testset "Smolyak length" begin
     kind = ChebyshevOpen()
@@ -50,5 +50,19 @@ end
                 @test len == length(x1) == length(ι) == length(x2)
             end
         end
+    end
+end
+
+@testset "nested extrema indexing" begin
+    results = Dict([0 => [1],
+                    1 => [2, 1, 3],
+                    2 => [3, 1, 5, 2, 4],
+                    3 => vcat([5, 1, 9, 3, 7], 2:2:8),
+                    4 => vcat([9, 1, 17, 5, 13], 3:4:17, 2:2:17)])
+    for (b, i) in pairs(results)
+        ι = nested_extrema_indices(ChebyshevOpen(), b)
+        @test length(ι) == length(i)
+        @test @inferred eltype(ι) == Int
+        @test collect(ι) == i
     end
 end

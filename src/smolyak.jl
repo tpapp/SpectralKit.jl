@@ -69,7 +69,7 @@ struct SmolyakIndices{N,B,K}
     kind::K
     M::Int
     @doc """
-    Iteration over indices in a Smolyak basis/interpolation.
+    Indexing specification in a Smolyak basis/interpolation.
 
     # Arguments
 
@@ -86,7 +86,7 @@ struct SmolyakIndices{N,B,K}
     Consider positive integer indices `(i1, …, iN)`, each starting at one.
 
     Let `ℓ(b) = cumulative_block_length(kind, b)`, and `b1` denote the smallest integer such
-    that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`.
+    that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with `ℓ(-1) = 0` for the purposes of notation.
 
     An index `(i1, …, iN)` is visited iff all of the following hold:
 
@@ -147,4 +147,76 @@ end
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
+end
+
+
+# struct SmolyakBasis{N,B,I<:SmolyakIndices{N,B},T<:NTuple{N}}
+#     ι::I
+#     transformations::T
+# end
+
+# struct SmolyakBasisAt{S,U}
+#     smolyak_basis::S
+#     univariate_bases_at::U
+# end
+
+# function basis_at(smolyak_basis::SmolyakBasis{N,B}, x::SVector{N,R},
+#                   order::Order{0}()) where {N,B,R<:Real}
+#     @unpack ι, univariate_bases = smolyak_basis
+#     L = cumulative_block_length(ι.kind, ι.M)
+#     _f(b, x) = sacollect(SVector{L}, basis_function(b, x, order))
+#     univariate_bases_at = map(_f, x, t)
+#     SmolyakBasis(basis, univariate_bases_at)
+# end
+
+# function Base.iterate(ι::SmolyakBasisAt, state = ())
+#     @unpack univariate_basis, smolyak_basis = ι
+#     indices, state′ = iterate(smolyak_basis.ι, state...)
+#     v = mapfoldl(getindex, *, univariate_basis, SVector(indices))
+#     v, state′
+# end
+
+####
+#### collocation points
+####
+
+struct NestedExtremaIndices
+    len::Int
+end
+
+Base.length(ι::NestedExtremaIndices) = ι.len
+
+Base.eltype(::Type{NestedExtremaIndices}) = Int
+
+"""
+$(SIGNATURES)
+
+Return an iterator that traverses indexes of extrema.
+"""
+function nested_extrema_indices(kind::ChebyshevOpen, b::Int)
+    @argcheck b ≥ 0
+    NestedExtremaIndices(cumulative_block_length(kind, b))
+end
+
+function Base.iterate(ι::NestedExtremaIndices)
+    @unpack len = ι
+    i = (len + 1) ÷ 2
+    i, (0, 0)                   # step = 0 is special-cased
+end
+
+function Base.iterate(ι::NestedExtremaIndices, (i, step))
+    @unpack len = ι
+    i == 0 && return len > 1 ? (1, (1, len - 1)) : nothing
+    i′ = i + step
+    if i′ ≤ len
+        i′, (i′, step)
+    else
+        step′ = step ÷ 2
+        if step′ ≥ 2
+            i′ = step′ ÷ 2 + 1
+            i′, (i′, step′)
+        else
+            nothing
+        end
+    end
 end
