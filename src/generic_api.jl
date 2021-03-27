@@ -39,7 +39,6 @@ $(TYPEDEF)
 
 Abstract type for function families.
 
-
 Not part of the API, just used internally for dispatch. See [`is_function_family`](@ref).
 """
 abstract type FunctionFamily end

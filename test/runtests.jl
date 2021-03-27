@@ -116,3 +116,5 @@ end
 
     @test ChebyshevInterval(0, 1) isa ChebyshevInterval{Float64} # promotion
 end
+
+include("test_smolyak.jl")

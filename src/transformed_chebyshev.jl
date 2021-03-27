@@ -144,8 +144,10 @@ end
 """
 $(TYPEDEF)
 
-Chebyshev polynomials transformed to the domain `(-Inf, Inf)`.
-(when `L < 0`) using ``y = A + L ⋅ x / √(L^2 + x^2)``.
+Chebyshev polynomials transformed to the domain `(-Inf, Inf)`
+using ``y = A + L ⋅ x / √(L^2 + x^2)``, with `L > 0`.
+
+`0` is mapped to `A`.
 """
 struct ChebyshevInf{T <: Real} <: TransformedChebyshev
     "The center `A`."
