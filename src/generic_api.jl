@@ -2,37 +2,8 @@
 ##### Generic API
 #####
 
-struct Order{D}
-    function Order{D}() where D
-        @argcheck D isa Integer && D ≥ 0
-        new{D}()
-    end
-end
-
-Broadcast.broadcastable(o::Order) = Ref(o)
-
-"""
-$(SIGNATURES)
-
-(Evaluate) derivative `D`, ≥ 0.
-"""
-@inline Order(D::Integer) = Order{Int(D)}()
-
-struct OrdersTo{D}
-    function OrdersTo{D}() where D
-        @argcheck D isa Integer && D ≥ 0
-        new{D}()
-    end
-end
-
-Broadcast.broadcastable(o::OrdersTo) = Ref(o)
-
-"""
-$(SIGNATURES)
-
-(Evaluate) derivatives `0`, …, `D`.
-"""
-@inline OrdersTo(D::Integer) = OrdersTo{Int(D)}()
+export is_function_family, domain, basis_at, linear_combination, InteriorGrid, EndpointGrid,
+    grid
 
 """
 $(TYPEDEF)
@@ -52,11 +23,11 @@ Broadcast.broadcastable(family::FunctionFamily) = Ref(family)
 
 Test if the argument is a *function family*, supporting the following interface:
 
-- [`domain_extrema`](@ref) for querying the domain,
+- [`domain`](@ref) for querying the domain,
 
-- [`basis_function`](@ref) for function evaluation,
+- [`basis_at`](@ref) for function evaluation,
 
-- [`roots`](@ref) and [`augmented_extrema`](@ref) to obtain collocation points.
+- [`interior_grid`](@ref) and [`endpoint_grid`](@ref) to obtain collocation points.
 
 Can be used on both types (preferred) and values (for convenience).
 """
@@ -69,45 +40,22 @@ is_function_family(f) = is_function_family(typeof(f))
 """
 `$(FUNCTIONNAME)(family)`
 
-Return the extrema of the domain of the given `family` as a tuple.
-
-Type can be arbitrary, but guaranteed to be the same for both endpoints, and type stable.
+The domain of a function family. Can be an arbitrary object, but has to be constant.
 """
-function domain_extrema end
+function domain end
 
 """
-`$(FUNCTIONNAME)(family, x, order, [k])`
+`$(FUNCTIONNAME)(family, x)`
 
-Evaluate basis functions of `family` at `x`, up to the given `order`.
-
-`k` can be one of the following:
-
-- `k::Int ≥ 1` evaluates the `k`th (starting from 1) function in `family` at `x`.
-
-- `k::Val{K}()` returns the first `K` function values in the family as an `SVector{K}`.
-
-- when `k` is not provided, the function returns a *iterable* for all basis functions.
-
-`order` determines the derivatives:
-
-- `Order(d)` returns the `d`th derivative as a scalar, starting from `0` (for the function
-  value)
-
-- `OrdersTo(d)` returns the derivatives up to `d`, starting from the function value, as an
-  `SVector`.
+Return an iterable with known element type and length (`Base.HasEltype()`,
+`Base.HasLength()`) of basis functions in `family` evaluated at `x`.
 
 The implementation is intended to be type stable.
 
 !!! note
-    Consequences are undefined for evaluating outside the domain.
-
-## Note about indexing
-
-Most texts index polynomial families with `n = 0, 1, …`. Following the Julia array indexing
-convention, this package uses `k = 1, 2, …`. Some code may use `n = k - 1` internally for
-easier comparison with well-known formulas.
+    Consequences are undefined when evaluating outside the domain.
 """
-function basis_function end
+function basis_at end
 
 """
 $(SIGNATURES)
@@ -117,32 +65,29 @@ the given order.
 
 The dimension is implicitly taken from `θ`.
 """
-function linear_combination(family, x, order, θ)
-    mapreduce(*, +, θ, basis_function(family, x, order))
+function linear_combination(family, x, θ)
+    mapreduce(*, +, θ, basis_at(family, x))
 end
 
 """
-`$(FUNCTIONNAME)([T], family, N)`
+$(TYPEDEF)
 
-Return the roots of the `K = N + 1`th function in `family`, as a vector of `N` numbers with
-element type `T` (default `Float64`).
-
-In the context of collocation, this is also known as the “Gauss-Chebyshev” grid.
-
-Order is monotone, but not guaranteed to be increasing.
+Grid with interior points (eg Gauss-Chebyshev).
 """
-roots(family, N::Integer) = roots(Float64, family, N)
+struct InteriorGrid end
 
 """
-`$(FUNCTIONNAME)([T], family, N)`
+$(TYPEDEF)
 
-Return the augmented extrema (extrema + boundary values) of the `N`th function in `family`,
-as a vector of `N` numbers with element type `T` (default `Float64`).
-
-In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
-
-Order is monotone, but not guaranteed to be increasing.
+Grid that includes endpoints (eg Gauss-Lobatto).
 """
-function augmented_extrema(family::FunctionFamily, N::Integer)
-    augmented_extrema(Float64, family, N)
-end
+struct EndpointGrid end
+
+"""
+`$(FUNCTIONNAME)([T], family, kind)`
+
+Return a grid the given `kind`, recommended for collocation.
+
+`T` is used for the element type of grid coordinates, and defaults to `Float64`.
+"""
+grid(family, kind) = grid(Float64, family, kind)
