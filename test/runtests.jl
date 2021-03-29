@@ -2,6 +2,8 @@ using SpectralKit
 using Test, DocStringExtensions, StaticArrays
 using ForwardDiff: derivative
 
+using SpectralKit: to_domain, from_domain
+
 include("utilities.jl")
 
 ####
@@ -55,11 +57,20 @@ end
     A = 3.0
     L = 4.0
     N = 11
-    basis = univariate_basis(Chebyshev(N), SemiInfinite(A, L))
+    basis0 = Chebyshev(N)
+    trans = SemiInfRational(A, L)
+    basis = univariate_basis(basis0, trans)
     @test dimension(basis) == N
     @test domain(basis) == (A, Inf)
 
-    @testset "interior" begin
+    @testset "transformation" begin
+        for i in 1:100
+            x = rand_in_domain(i, A, Inf)
+            @test from_domain(trans, basis0, to_domain(trans, basis0, x)) ≈ x
+        end
+    end
+
+    @testset "interior grid" begin
         gi = grid(basis, InteriorGrid())
         @test length(gi) == N
         @test sum(gi .< A + L) == 5
@@ -71,7 +82,7 @@ end
                       grid_dense) ≤ 1e-7
     end
 
-    @testset "endpoints" begin
+    @testset "endpoints grid" begin
         ge = grid(basis, EndpointGrid())
         @test length(ge) == N
         @test sum(ge .< A + L) == 5
@@ -83,6 +94,57 @@ end
                       grid_dense) ≤ 1e-7
     end
 end
+
+@testset "Chebyshev infinite" begin
+    f(x) = exp(-4*abs2(x))
+    f′(x) = -8*x*f(x)
+    grid_dense = range(-1, 2, length = 100)
+
+    A = 0.0
+    L = 1.0
+    N = 20
+    basis0 = Chebyshev(N)
+    trans = InfRational(A, L)
+    basis = univariate_basis(basis0, trans)
+    @test dimension(basis) == N
+    @test domain(basis) == (-Inf, Inf)
+
+    @testset "transformation" begin
+        for i in 1:100
+            x = rand_in_domain(i, -Inf, Inf)
+            @test from_domain(trans, basis0, to_domain(trans, basis0, x)) ≈ x
+        end
+    end
+
+    @testset "interior grid" begin
+        gi = grid(basis, InteriorGrid())
+        @test length(gi) == N
+        @test sum(gi .< A) == 10
+        @test all(-Inf .< gi .< Inf)
+        C = collocation_matrix(basis, gi)
+        θ = C \ f.(gi)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-4
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 2e-3
+    end
+
+    @testset "endpoints grid" begin
+        ge = grid(basis, EndpointGrid())
+        @test length(ge) == N
+        @test sum(ge .< A) == 10
+        @test all(-Inf .≤ ge .≤ Inf)
+        C = collocation_matrix(basis, ge)
+        θ = C \ f.(ge)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-4
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 2e-3
+    end
+end
+
+# @pgf Axis({ no_marks },
+#           Plot(Table(grid_dense, f′.(grid_dense))),
+#           Plot(Table(grid_dense, (x -> derivative(linear_combination(basis, θ), x)).(grid_dense)))
+#           )
 
 # @testset "ChebyshevSemiInf" begin
 #     @testset "to ∞" begin
