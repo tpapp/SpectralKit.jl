@@ -49,6 +49,49 @@ include("utilities.jl")
     end
 end
 
+@testset "Chebyshev bounded" begin
+    f(x) = exp(-3*x)
+    f′(x) = -3*f(x)
+    A, B = 1, 5
+    N = 11
+    grid_dense = range(A, B, length = 100)
+
+    basis0 = Chebyshev(N)
+    trans = BoundedLinear(A, B)
+    basis = univariate_basis(basis0, trans)
+    @test dimension(basis) == N
+    @test domain(basis) == (A, B)
+
+    @testset "transformation" begin
+        for i in 1:100
+            x = rand_in_domain(i, A, B)
+            @test from_domain(trans, basis0, to_domain(trans, basis0, x)) ≈ x
+        end
+    end
+
+    @testset "interior grid" begin
+        gi = grid(basis, InteriorGrid())
+        @test length(gi) == N
+        @test all(A .< gi .< B)
+        C = collocation_matrix(basis, gi)
+        θ = C \ f.(gi)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-5
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 5e-4
+    end
+
+    @testset "endpoints grid" begin
+        ge = grid(basis, EndpointGrid())
+        @test length(ge) == N
+        @test all(A .≤ ge .≤ B)
+        C = collocation_matrix(basis, ge)
+        θ = C \ f.(ge)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-5
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 5e-4
+    end
+end
+
 @testset "Chebyshev semi-infinite" begin
     f(x) = exp(-3*x)
     f′(x) = -3*f(x)
@@ -140,86 +183,5 @@ end
                       grid_dense) ≤ 2e-3
     end
 end
-
-# @pgf Axis({ no_marks },
-#           Plot(Table(grid_dense, f′.(grid_dense))),
-#           Plot(Table(grid_dense, (x -> derivative(linear_combination(basis, θ), x)).(grid_dense)))
-#           )
-
-# @testset "ChebyshevSemiInf" begin
-#     @testset "to ∞" begin
-#         F = ChebyshevSemiInf(2.0, 4.7)
-#         @test repr(F) == "ChebyshevSemiInf(2.0, 4.7)"
-#         test_is_function_basis(F)
-#         test_roots(F, 9)
-#         test_augmented_extrema(F, 10)
-#         test_endpoint_continuity(F, (2.0, Inf), 1:10; atol = 1e-3)
-#         test_derivatives(F, 1:10)
-#         test_linear_combinations.(F, TESTED_ORDERS)
-#         test_basis_many.(F, TESTED_ORDERS)
-#     end
-
-#     @testset "from -∞" begin
-#         F = ChebyshevSemiInf(3.0, -1.9)
-#         test_roots(F, 11; atol = 1e-13)
-#         test_augmented_extrema(F, 7; atol = 1e-10)
-#         test_endpoint_continuity(F, (-Inf, 3.0), 1:10; atol = 1e-3)
-#         test_derivatives(F, 1:10)
-#         test_linear_combinations.(F, TESTED_ORDERS)
-#         test_basis_many.(F, TESTED_ORDERS)
-#     end
-
-#     @test_throws ArgumentError ChebyshevSemiInf(0.0, 0.0)
-# end
-
-# @testset "ChebyshevInf" begin
-#     F = ChebyshevInf(0.0, 1.0)
-
-#     @test repr(F) == "ChebyshevInf(0.0, 1.0)"
-
-#     test_is_function_basis(F)
-
-#     test_roots(F, 11)
-#     @test roots(F, 11)[6] == 0  # precise 0
-
-#     test_augmented_extrema(F, 11)
-#     @test augmented_extrema(F, 11)[6] == 0 # precise 0
-
-#     test_endpoint_continuity(F, (-Inf, Inf), 1:10)
-#     test_derivatives(F, 1:10)
-#     test_linear_combinations.(F, TESTED_ORDERS)
-#     test_basis_many.(F, TESTED_ORDERS)
-
-#     @test_throws ArgumentError ChebyshevInf(0.0, -3.0)
-#     @test_throws ArgumentError ChebyshevInf(0.0, 0.0)
-
-#     @test ChebyshevInf(0, 1.0) isa ChebyshevInf{Float64}
-# end
-
-# @testset "ChebyshevInterval" begin
-#     F = ChebyshevInterval(2.0, 5)
-
-#     @test repr(F) == "ChebyshevInterval(2.0, 5.0)"
-
-#     test_is_function_basis(F)
-
-#     test_roots(F, 11)
-
-#     test_augmented_extrema(F, 11)
-
-#     test_endpoint_continuity(F, (2.0, 5.0), 1:10)
-
-#     test_derivatives(F, 1:10)
-
-#     test_linear_combinations.(F, TESTED_ORDERS)
-
-#     test_basis_many.(F, TESTED_ORDERS)
-
-#     @test_throws ArgumentError ChebyshevInterval(2.0, 1.0)
-#     @test_throws ArgumentError ChebyshevInterval(2.0, 2)
-#     @test_throws ArgumentError ChebyshevInterval(-Inf, Inf)
-
-#     @test ChebyshevInterval(0, 1) isa ChebyshevInterval{Float64} # promotion
-# end
 
 # include("test_smolyak.jl")

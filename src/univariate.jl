@@ -2,13 +2,51 @@
 ##### Transformation of the Chebyshev polynomials — generic code
 #####
 
-export univariate_basis, InfRational, SemiInfRational
+export univariate_basis, BoundedLinear, InfRational, SemiInfRational
 
 abstract type UnivariateTransformation end
 
 ####
 #### transformations
 ####
+
+###
+### bounded linear
+###
+
+struct BoundedLinear{T <: Real} <: UnivariateTransformation
+    "Midpoint `m`."
+    m::T
+    "Scale `s`."
+    s::T
+    function BoundedLinear(a::T, b::T) where {T <: Real}
+        @argcheck isfinite(a) && isfinite(b)
+        s = (b - a) / 2
+        m = (a + b) / 2
+        @argcheck s > 0 "Need `a < b`."
+        m, s = promote(m, s)
+        new{typeof(m)}(m, s)
+    end
+end
+
+"""
+$(TYPEDEF)
+
+Transform `x ∈ (-1,1)` to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
+
+`m` and `s` are calculated and checked by the constructor; `a < b` is enforced.
+"""
+BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
+
+function from_domain(T::BoundedLinear, ::Chebyshev, x::Real)
+    @unpack m, s = T
+    x * s + m
+end
+
+function to_domain(T::BoundedLinear, ::Chebyshev, y::Real)
+    @unpack m, s = T
+    (y - m) / s
+end
 
 ###
 ### semi-infinite interval
@@ -128,51 +166,3 @@ function grid(::Type{T}, basis::UnivariateBasis, kind) where T
     @unpack parent, transformation = basis
     map(x -> from_domain(transformation, parent, x), grid(T, parent, kind))
 end
-
-
-####
-#### Chebyshev on a finite interval `[a,b]`
-####
-
-# """
-# $(TYPEDEF)
-
-# Chebyshev polynomials transformed to the domain `(a, b)`. using ``y = x ⋅ s + m``.
-
-# `m` and `s` are calculated and checked by the constructor; `a < b` is enforced.
-# """
-# struct ChebyshevInterval{T <: Real} <: TransformedChebyshev
-#     "Start of interval `a`."
-#     a::T
-#     "End of interval `b`."
-#     b::T
-#     "Midpoint `m`."
-#     m::T
-#     "Scale `s`."
-#     s::T
-#     function ChebyshevInterval(a::T, b::T) where {T <: Real}
-#         @argcheck isfinite(a) && isfinite(b)
-#         s = (b - a) / 2
-#         m = (a + b) / 2
-#         @argcheck s > 0 "Need `a < b`."
-#         new{promote_type(T,typeof(m),typeof(s))}(a, b, m, s)
-#     end
-# end
-
-# function Base.show(io::IO, TI::ChebyshevInterval)
-#     print(io, "ChebyshevInterval($(TI.a), $(TI.b))")
-# end
-
-# ChebyshevInterval(A::Real, L::Real) = ChebyshevInterval(promote(A, L)...)
-
-# domain_extrema(TI::ChebyshevInterval) = (TI.a, TI.b)
-
-# function from_chebyshev(TI::ChebyshevInterval, x)
-#     @unpack m, s = TI
-#     x * s + m
-# end
-
-# function to_chebyshev(TI::ChebyshevInterval, y)
-#     @unpack m, s = TI
-#     (y - m) / s
-# end
