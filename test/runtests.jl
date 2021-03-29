@@ -12,31 +12,32 @@ include("utilities.jl")
     @test_throws ArgumentError Chebyshev(0)
 
     for N in 1:10
-        F = Chebyshev(N)
-        @test is_function_family(F)
-        @test is_function_family(typeof(F))
+        basis = Chebyshev(N)
+        @test is_function_basis(basis)
+        @test is_function_basis(typeof(basis))
+        @test dimension(basis) == N
 
         for i in 1:100
             x = rand_in_domain(i, -1, 1)
-            b = @inferred basis_at(F, x)
+            bx = @inferred basis_at(basis, x)
 
-            @test length(b) == N
-            @test eltype(b) == Float64
-            @test collect(b) ≈ [chebyshev_cos(x, i) for i in 1:N]
+            @test length(bx) == N
+            @test eltype(bx) == Float64
+            @test collect(bx) ≈ [chebyshev_cos(x, i) for i in 1:N]
 
             θ = rand(N)
-            @test linear_combination(F, x, θ) ≈
+            @test linear_combination(basis, θ, x) ≈
                 sum(chebyshev_cos(x, i) * θ for (i,θ) in enumerate(θ))
-            @test derivative(x -> linear_combination(F, x, θ), x) ≈
+            @test derivative(linear_combination(basis, θ), x) ≈
                 sum(chebyshev_cos_deriv(x, i) * θ for (i,θ) in enumerate(θ))
         end
 
-        gi = @inferred grid(F, InteriorGrid())
+        gi = @inferred grid(basis, InteriorGrid())
         @test length(gi) == N
         @test all(x -> isapprox(chebyshev_cos(x, N + 1), 0, atol = 1e-14), gi)
 
         if N ≥ 2
-            ge = @inferred grid(F, EndpointGrid())
+            ge = @inferred grid(basis, EndpointGrid())
             @test length(ge) == N
             @test all(x -> isapprox(chebyshev_cos_deriv(x, N), 0, atol = 1e-13),
                       ge[2:(end-1)])
@@ -46,11 +47,48 @@ include("utilities.jl")
     end
 end
 
+@testset "Chebyshev semi-infinite" begin
+    f(x) = exp(-3*x)
+    f′(x) = -3*f(x)
+    grid_dense = range(3.1, 8, length = 100)
+
+    A = 3.0
+    L = 4.0
+    N = 11
+    basis = univariate_basis(Chebyshev(N), SemiInfinite(A, L))
+    @test dimension(basis) == N
+    @test domain(basis) == (A, Inf)
+
+    @testset "interior" begin
+        gi = grid(basis, InteriorGrid())
+        @test length(gi) == N
+        @test sum(gi .< A + L) == 5
+        @test all(A .< gi .< Inf)
+        C = collocation_matrix(basis, gi)
+        θ = C \ f.(gi)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-8
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 1e-7
+    end
+
+    @testset "endpoints" begin
+        ge = grid(basis, EndpointGrid())
+        @test length(ge) == N
+        @test sum(ge .< A + L) == 5
+        @test all(A .≤ ge .≤ Inf)
+        C = collocation_matrix(basis, ge)
+        θ = C \ f.(ge)
+        @test maximum(x -> abs(linear_combination(basis, θ, x) - f(x)), grid_dense) ≤ 1e-8
+        @test maximum(x -> abs(derivative(linear_combination(basis, θ), x) - f′(x)),
+                      grid_dense) ≤ 1e-7
+    end
+end
+
 # @testset "ChebyshevSemiInf" begin
 #     @testset "to ∞" begin
 #         F = ChebyshevSemiInf(2.0, 4.7)
 #         @test repr(F) == "ChebyshevSemiInf(2.0, 4.7)"
-#         test_is_function_family(F)
+#         test_is_function_basis(F)
 #         test_roots(F, 9)
 #         test_augmented_extrema(F, 10)
 #         test_endpoint_continuity(F, (2.0, Inf), 1:10; atol = 1e-3)
@@ -77,7 +115,7 @@ end
 
 #     @test repr(F) == "ChebyshevInf(0.0, 1.0)"
 
-#     test_is_function_family(F)
+#     test_is_function_basis(F)
 
 #     test_roots(F, 11)
 #     @test roots(F, 11)[6] == 0  # precise 0
@@ -101,7 +139,7 @@ end
 
 #     @test repr(F) == "ChebyshevInterval(2.0, 5.0)"
 
-#     test_is_function_family(F)
+#     test_is_function_basis(F)
 
 #     test_roots(F, 11)
 
