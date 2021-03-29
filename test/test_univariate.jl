@@ -1,3 +1,5 @@
+using SpectralKit: to_domain, from_domain
+
 @testset "Chebyshev bounded" begin
     f(x) = exp(-3*x)
     f′(x) = -3*f(x)
