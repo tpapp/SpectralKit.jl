@@ -4,11 +4,70 @@
 
 export univariate_basis, BoundedLinear, InfRational, SemiInfRational
 
-abstract type UnivariateTransformation end
+####
+#### univariate basis
+####
+
+struct UnivariateBasis{P,T}
+    parent::P
+    transformation::T
+end
+
+"""
+$(SIGNATURES)
+
+Create a univariate basis from `parent`, transforming the domain with `transformation`.
+
+`parent` is a univariate basis, `transformation` is a univariate transformation (see
+[`UnivariateTransformation`](@ref).
+
+# Example
+
+The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
+``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4`:
+```julia
+univariate_basis(Chebyshev(10), SemiInfRational(3.0, 4.0))
+```
+"""
+function univariate_basis(parent, transformation)
+    UnivariateBasis(parent, transformation)
+end
+
+@inline dimension(basis::UnivariateBasis) = dimension(basis.parent)
+
+function domain(basis::UnivariateBasis)
+    @unpack parent, transformation = basis
+    from_domain.(Ref(transformation), Ref(parent), domain(parent))
+end
+
+function basis_at(basis::UnivariateBasis, x::Real)
+    @unpack parent, transformation = basis
+    basis_at(parent, to_domain(transformation, parent, x))
+end
+
+function grid(::Type{T}, basis::UnivariateBasis, kind) where T
+    @unpack parent, transformation = basis
+    map(x -> from_domain(transformation, parent, x), grid(T, parent, kind))
+end
 
 ####
 #### transformations
 ####
+
+"""
+$(TYPEDEF)
+
+An abstract type for univariate transformations. Transformations are not required to be
+subtypes, this just documents the interface they need to support:
+
+- [`to_domain`](@ref)
+
+- [`from_domain`](@ref)
+
+FIXME document a generic function for these two, especially differentiability requirements
+at infinite endpoints
+"""
+abstract type UnivariateTransformation end
 
 ###
 ### bounded linear
@@ -122,47 +181,4 @@ function to_domain(T::InfRational, ::Chebyshev, y::Real)
     else
         x
     end
-end
-
-####
-#### univariate basis
-####
-
-struct UnivariateBasis{P,T}
-    parent::P
-    transformation::T
-end
-
-"""
-$(SIGNATURES)
-
-Create a univariate basis from `parent`, transforming the domain with `transformation`.
-
-# Example
-
-The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
-``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4`:
-```julia
-univariate_basis(Chebyshev(10), SemiInfRational(3.0, 4.0))
-```
-"""
-function univariate_basis(parent, transformation)
-    UnivariateBasis(parent, transformation)
-end
-
-@inline dimension(basis::UnivariateBasis) = dimension(basis.parent)
-
-function domain(basis::UnivariateBasis)
-    @unpack parent, transformation = basis
-    from_domain.(Ref(transformation), Ref(parent), domain(parent))
-end
-
-function basis_at(basis::UnivariateBasis, x::Real)
-    @unpack parent, transformation = basis
-    basis_at(parent, to_domain(transformation, parent, x))
-end
-
-function grid(::Type{T}, basis::UnivariateBasis, kind) where T
-    @unpack parent, transformation = basis
-    map(x -> from_domain(transformation, parent, x), grid(T, parent, kind))
 end
