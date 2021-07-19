@@ -2,147 +2,136 @@
 ##### Generic API
 #####
 
-struct Order{D}
-    function Order{D}() where D
-        @argcheck D isa Integer && D ≥ 0
-        new{D}()
-    end
-end
-
-Broadcast.broadcastable(o::Order) = Ref(o)
-
-"""
-$(SIGNATURES)
-
-(Evaluate) derivative `D`, ≥ 0.
-"""
-@inline Order(D::Integer) = Order{Int(D)}()
-
-struct OrdersTo{D}
-    function OrdersTo{D}() where D
-        @argcheck D isa Integer && D ≥ 0
-        new{D}()
-    end
-end
-
-Broadcast.broadcastable(o::OrdersTo) = Ref(o)
-
-"""
-$(SIGNATURES)
-
-(Evaluate) derivatives `0`, …, `D`.
-"""
-@inline OrdersTo(D::Integer) = OrdersTo{Int(D)}()
+export is_function_basis, dimension, domain, basis_at, linear_combination,
+    InteriorGrid, EndpointGrid, grid, collocation_matrix
 
 """
 $(TYPEDEF)
 
 Abstract type for function families.
 
-Not part of the API, just used internally for dispatch. See [`is_function_family`](@ref).
+Not part of the API, just used internally for dispatch. See [`is_function_basis`](@ref).
 """
-abstract type FunctionFamily end
+abstract type FunctionBasis end
 
-Broadcast.broadcastable(family::FunctionFamily) = Ref(family)
+Broadcast.broadcastable(basis::FunctionBasis) = Ref(basis)
 
 """
 `$(FUNCTIONNAME)(F)`
 
 `$(FUNCTIONNAME)(f::F)`
 
-Test if the argument is a *function family*, supporting the following interface:
+Test if the argument is a *function basis*, supporting the following interface:
 
-- [`domain_extrema`](@ref) for querying the domain,
+- [`domain`](@ref) for querying the domain,
 
-- [`basis_function`](@ref) for function evaluation,
+- [`dimension`](@ref) for the dimension,
 
-- [`roots`](@ref) and [`augmented_extrema`](@ref) to obtain collocation points.
+- [`basis_at`](@ref) for function evaluation,
+
+- [`grid`](@ref) to obtain collocation points.
 
 Can be used on both types (preferred) and values (for convenience).
 """
-is_function_family(::Type{Any}) = false
+is_function_basis(T::Type) = false
 
-is_function_family(::Type{<:FunctionFamily}) = true
+is_function_basis(::Type{<:FunctionBasis}) = true
 
-is_function_family(f) = is_function_family(typeof(f))
-
-"""
-`$(FUNCTIONNAME)(family)`
-
-Return the extrema of the domain of the given `family` as a tuple.
-
-Type can be arbitrary, but guaranteed to be the same for both endpoints, and type stable.
-"""
-function domain_extrema end
+is_function_basis(f) = is_function_basis(typeof(f))
 
 """
-`$(FUNCTIONNAME)(family, x, order, [k])`
+`$(FUNCTIONNAME)(basis)`
 
-Evaluate basis functions of `family` at `x`, up to the given `order`.
+The domain of a function basis. Can be an arbitrary object, but has to be constant.
+"""
+function domain end
 
-`k` can be one of the following:
+"""
+`$(FUNCTIONNAME)(basis)`
 
-- `k::Int ≥ 1` evaluates the `k`th (starting from 1) function in `family` at `x`.
+Return the dimension of `basis`, a positive `Int`.
+"""
+function dimension end
 
-- `k::Val{K}()` returns the first `K` function values in the family as an `SVector{K}`.
+"""
+`$(FUNCTIONNAME)(basis, x)`
 
-- when `k` is not provided, the function returns a *iterable* for all basis functions.
+Return an iterable with known element type and length (`Base.HasEltype()`,
+`Base.HasLength()`) of basis functions in `basis` evaluated at `x`.
 
-`order` determines the derivatives:
-
-- `Order(d)` returns the `d`th derivative as a scalar, starting from `0` (for the function
-  value)
-
-- `OrdersTo(d)` returns the derivatives up to `d`, starting from the function value, as an
-  `SVector`.
-
-The implementation is intended to be type stable.
+Methods are type stable.
 
 !!! note
-    Consequences are undefined for evaluating outside the domain.
-
-## Note about indexing
-
-Most texts index polynomial families with `n = 0, 1, …`. Following the Julia array indexing
-convention, this package uses `k = 1, 2, …`. Some code may use `n = k - 1` internally for
-easier comparison with well-known formulas.
+    Consequences are undefined when evaluating outside the domain.
 """
-function basis_function end
+function basis_at end
 
 """
 $(SIGNATURES)
 
-Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of function family ``f₁, …`` at `x`, for
+Evaluate the linear combination of ``∑ θₖ⋅fₖ(x)`` of function basis ``f₁, …`` at `x`, for
 the given order.
 
-The dimension is implicitly taken from `θ`.
+The length of `θ` should equal `dimension(θ)`.
 """
-function linear_combination(family, x, order, θ)
-    mapreduce(*, +, θ, basis_function(family, x, order))
+function linear_combination(basis, θ, x)
+    mapreduce(*, +, θ, basis_at(basis, x))
 end
 
-"""
-`$(FUNCTIONNAME)([T], family, N)`
+# FIXME define a nice Base.show method
+struct LinearCombination{B,T}
+    basis::B
+    θ::T
+end
 
-Return the roots of the `K = N + 1`th function in `family`, as a vector of `N` numbers with
-element type `T` (default `Float64`).
-
-In the context of collocation, this is also known as the “Gauss-Chebyshev” grid.
-
-Order is monotone, but not guaranteed to be increasing.
-"""
-roots(family, N::Integer) = roots(Float64, family, N)
+(l::LinearCombination)(x) = linear_combination(l.basis, l.θ, x)
 
 """
-`$(FUNCTIONNAME)([T], family, N)`
+$(SIGNATURES)
 
-Return the augmented extrema (extrema + boundary values) of the `N`th function in `family`,
-as a vector of `N` numbers with element type `T` (default `Float64`).
-
-In the context of collocation, this is also known as the “Gauss-Lobatto” grid.
-
-Order is monotone, but not guaranteed to be increasing.
+Return a callable that calculates `linear_combination(basis, θ, x)` when called with `x`.
 """
-function augmented_extrema(family::FunctionFamily, N::Integer)
-    augmented_extrema(Float64, family, N)
+linear_combination(basis, θ) = LinearCombination(basis, θ)
+
+"""
+$(TYPEDEF)
+
+Grid with interior points (eg Gauss-Chebyshev).
+"""
+struct InteriorGrid end
+
+"""
+$(TYPEDEF)
+
+Grid that includes endpoints (eg Gauss-Lobatto).
+"""
+struct EndpointGrid end
+
+"""
+`$(FUNCTIONNAME)([T], basis, kind)`
+
+Return a grid the given `kind`, recommended for collocation, with `dimension(basis)`
+elements.
+
+`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
+The actual type can be broadened as required. Methods are type stable.
+"""
+grid(basis, kind) = grid(Float64, basis, kind)
+
+"""
+$(SIGNATURES)
+
+Convenience function to obtain a collocation matrix at gridpoints `x`, which is assumed to
+have a concrete `eltype`.
+
+Methods are type stable.
+"""
+function collocation_matrix(basis, x)
+    @argcheck isconcretetype(eltype(x))
+    N = dimension(basis)
+    C = Matrix{eltype(basis_at(basis, first(x)))}(undef, N, N)
+    for i in 1:N
+        foreach(((j, f),) -> C[i, j] = f, enumerate(basis_at(basis, x[i])))
+    end
+    C
 end
