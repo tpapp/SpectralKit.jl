@@ -5,10 +5,42 @@
 export univariate_basis, BoundedLinear, InfRational, SemiInfRational
 
 ####
+#### simplified transformation API
+####
+
+"""
+$(TYPEDEF)
+
+An abstract type for univariate transformations. Transformations are not required to be
+subtypes, this just documents the interface they need to support:
+
+- [`to_domain`](@ref)
+
+- [`from_domain`](@ref)
+"""
+abstract type UnivariateTransformation end
+
+"""
+`$(FUNCTIONNAME)(transformation, parent, x)`
+
+!!! FIXME
+    document, especially differentiability requirements at infinite endpoints
+"""
+function to_domain end
+
+"""
+`$(FUNCTIONNAME)(transformation, parent, x)`
+
+!!! FIXME
+    document, especially differentiability requirements at infinite endpoints
+"""
+function from_domain end
+
+####
 #### univariate basis
 ####
 
-struct UnivariateBasis{P,T}
+struct UnivariateBasis{P,T} <: FunctionBasis
     parent::P
     transformation::T
 end
@@ -18,8 +50,9 @@ $(SIGNATURES)
 
 Create a univariate basis from `parent`, transforming the domain with `transformation`.
 
-`parent` is a univariate basis, `transformation` is a univariate transformation (see
-[`UnivariateTransformation`](@ref).
+`parent` is a univariate basis, `transformation` is a univariate transformation (supporting
+the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
+subtype).
 
 # Example
 
@@ -54,20 +87,6 @@ end
 #### transformations
 ####
 
-"""
-$(TYPEDEF)
-
-An abstract type for univariate transformations. Transformations are not required to be
-subtypes, this just documents the interface they need to support:
-
-- [`to_domain`](@ref)
-
-- [`from_domain`](@ref)
-
-FIXME document a generic function for these two, especially differentiability requirements
-at infinite endpoints
-"""
-abstract type UnivariateTransformation end
 
 ###
 ### bounded linear

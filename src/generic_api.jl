@@ -29,7 +29,7 @@ Test if the argument is a *function basis*, supporting the following interface:
 
 - [`basis_at`](@ref) for function evaluation,
 
-- [`interior_grid`](@ref) and [`endpoint_grid`](@ref) to obtain collocation points.
+- [`grid`](@ref) to obtain collocation points.
 
 Can be used on both types (preferred) and values (for convenience).
 """
@@ -47,7 +47,7 @@ The domain of a function basis. Can be an arbitrary object, but has to be consta
 function domain end
 
 """
-`$(FUNCTIONNAME)(basis)
+`$(FUNCTIONNAME)(basis)`
 
 Return the dimension of `basis`, a positive `Int`.
 """
