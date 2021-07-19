@@ -33,7 +33,7 @@ Test if the argument is a *function basis*, supporting the following interface:
 
 Can be used on both types (preferred) and values (for convenience).
 """
-is_function_basis(::Type{Any}) = false
+is_function_basis(T::Type) = false
 
 is_function_basis(::Type{<:FunctionBasis}) = true
 
