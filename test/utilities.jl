@@ -51,6 +51,13 @@ function rand_in_domain(i, left, right)
     end
 end
 
+"Replace elements `[begin:C]` with zero, return the new vector."
+function zero_upto(x::SVector{N,T}, C) where {N,T}
+    y = MVector(x)
+    y[begin:C] .= zero(T)
+    SVector(y)
+end
+
 # """
 # $(SIGNATURES)
 

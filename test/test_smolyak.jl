@@ -1,5 +1,5 @@
 using SpectralKit: ChebyshevOpen, block_length, cumulative_block_length, SmolyakIndices,
-    smolyak_length, nested_extrema_indices
+    smolyak_length, nested_extrema_indices, __update_products, SmolyakProduct, Repeating
 
 @testset "Smolyak length" begin
     kind = ChebyshevOpen()
@@ -64,5 +64,48 @@ end
         @test length(ι) == length(i)
         @test @inferred eltype(ι) == Int
         @test collect(ι) == i
+    end
+end
+
+@testset "__update_products" begin
+    N = 7
+    M = 6
+    sources = SVector{N}([rand(SVector{M,Float64}) for _ in 1:N])
+    indices = SVector{N}([rand(1:M) for _ in 1:N])
+    products = reverse(cumprod(reverse(getindex.(sources, indices))))
+    @test products == @inferred __update_products(0, indices, sources, products)
+    @test products == @inferred __update_products(1, indices, sources, zero_upto(products, 1))
+    @test products == @inferred __update_products(2, indices, sources, zero_upto(products, 2))
+    @test products == @inferred __update_products(N, indices, sources, zero_upto(products, N))
+end
+
+@testset "Smolyak product primitives" begin
+    kind = ChebyshevOpen()
+    for B in 0:3
+        for M in 0:B
+            for N in 1:4
+                ι = SmolyakIndices{N,B}(kind, M)
+                ℓ = cumulative_block_length(kind, min(B,M))
+
+                # non-repeated sources
+                sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
+                P = SmolyakProduct{N,B}(kind, M, sources)
+                @test length(ι) == length(P)
+                @test eltype(P) == Float64
+                for (i, p) in zip(ι, P)
+                    @test prod(getindex.(sources, i)) ≈ p
+                end
+
+                # repeated sources
+                x = rand(SVector{ℓ, Float64})
+                ι = SmolyakIndices{N,B}(kind, M)
+                P = SmolyakProduct{N,B}(kind, M, Repeating(x))
+                @test length(ι) == length(P)
+                @test eltype(P) == Float64
+                for (i, p) in zip(ι, P)
+                    @test prod(getindex.(Ref(x), i)) ≈ p
+                end
+            end
+        end
     end
 end
