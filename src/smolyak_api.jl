@@ -10,9 +10,9 @@ struct SmolyakBasis{I<:SmolyakIndices,U,T<:Tuple} <: FunctionBasis
     transformations::T
 end
 
-function smolyak_basis(univariate_family, kind, ::Val{B}, transformations::NTuple{N},
+function smolyak_basis(univariate_family, grid_kind, ::Val{B}, transformations::NTuple{N},
                        M = B) where {B,N}
-    smolyak_indices = SmolyakIndices{N,B}(kind, M)
+    smolyak_indices = SmolyakIndices{N,B}(grid_kind, M)
     univariate_parent = univariate_family(highest_visited_index(smolyak_indices))
     SmolyakBasis(smolyak_indices, univariate_parent, transformations)
 end
@@ -42,11 +42,11 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}},
 end
 
 function grid(::Type{T},
-              smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}}, kind) where {T<:Real,N,B,H}
+              smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}}, grid_kind) where {T<:Real,N,B,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
-    @argcheck kind == smolyak_indices.kind # FIXME remove when kind is moved to family
-    x = sacollect(SVector{H}, gridpoint(T, univariate_parent, kind, i)
-                  for i in block_shuffle(kind, H))
+    @argcheck grid_kind == smolyak_indices.grid_kind # FIXME remove when grid_kind is moved to family
+    x = sacollect(SVector{H}, gridpoint(T, univariate_parent, grid_kind, i)
+                  for i in block_shuffle(grid_kind, H))
     ys = map(transformation -> from_domain.(Ref(transformation), Ref(univariate_parent), x),
              transformations)
     [SVector{N}(getindex.(ys, ι)) for ι in smolyak_indices]

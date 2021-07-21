@@ -6,16 +6,16 @@ using SpectralKit: block_length, cumulative_block_length, SmolyakIndices,
 ####
 
 @testset "block length" begin
-    kind = InteriorGrid()
-    @test cumulative_block_length(kind, 0) == 1
-    @test cumulative_block_length(kind, 1) == 1 + 2
-    @test cumulative_block_length(kind, 2) == 1 + 2 + 2
-    @test cumulative_block_length(kind, 3) == 1 + 2 + 2 + 4
-    @test cumulative_block_length(kind, 4) == 1 + 2 + 2 + 4 + 8
+    grid_kind = InteriorGrid()
+    @test cumulative_block_length(grid_kind, 0) == 1
+    @test cumulative_block_length(grid_kind, 1) == 1 + 2
+    @test cumulative_block_length(grid_kind, 2) == 1 + 2 + 2
+    @test cumulative_block_length(grid_kind, 3) == 1 + 2 + 2 + 4
+    @test cumulative_block_length(grid_kind, 4) == 1 + 2 + 2 + 4 + 8
     for i in 1:10
-        c = cumulative_block_length(kind, i)
-        cprev = i == 0 ? 0 : cumulative_block_length(kind, i - 1)
-        @test block_length(kind, i) == c - cprev
+        c = cumulative_block_length(grid_kind, i)
+        cprev = i == 0 ? 0 : cumulative_block_length(grid_kind, i - 1)
+        @test block_length(grid_kind, i) == c - cprev
     end
 end
 
@@ -25,11 +25,11 @@ end
                     2 => [3, 1, 5, 2, 4],
                     3 => vcat([5, 1, 9, 3, 7], 2:2:8),
                     4 => vcat([9, 1, 17, 5, 13], 3:4:17, 2:2:17)])
-    kind = InteriorGrid()
+    grid_kind = InteriorGrid()
     for (b, i) in pairs(results)
         len = length(i)
-        @test len == cumulative_block_length(kind, b)
-        ι = block_shuffle(kind, len)
+        @test len == cumulative_block_length(grid_kind, b)
+        ι = block_shuffle(grid_kind, len)
         @test length(ι) == len
         @test @inferred eltype(ι) == Int
         @test collect(ι) == i
@@ -44,11 +44,11 @@ end
 Naive implementation of Smolyan index iteration, traversing a `CartesianIndices` and keeping
 valid indexes. For testing/comparison. Returns a vector of `indexes => blocks` pairs.
 """
-function smolyak_indices_check(N, B, kind, M)
-    m = cumulative_block_length(kind, M)
+function smolyak_indices_check(N, B, grid_kind, M)
+    m = cumulative_block_length(grid_kind, M)
     b_table = fill(M, m)
     for b in (M-1):(-1):0
-        b_table[1:cumulative_block_length(kind, b)] .= b
+        b_table[1:cumulative_block_length(grid_kind, b)] .= b
     end
     T = NTuple{N,Int}
     result = Vector{Pair{T,T}}()
@@ -63,14 +63,14 @@ function smolyak_indices_check(N, B, kind, M)
 end
 
 @testset "Smolyak indices" begin
-    kind = InteriorGrid()
+    grid_kind = InteriorGrid()
     for B in 0:3
         for M in 0:B
             for N in 1:4
-                ι = SmolyakIndices{N,B}(kind, M)
+                ι = SmolyakIndices{N,B}(grid_kind, M)
                 x1 = @inferred collect(ι)
-                x2 = first.(smolyak_indices_check(N, B, kind, M))
-                len = @inferred smolyak_length(Val(N), Val(B), kind, M)
+                x2 = first.(smolyak_indices_check(N, B, grid_kind, M))
+                len = @inferred smolyak_length(Val(N), Val(B), grid_kind, M)
                 @test x1 == x2
                 @test len == length(x1) == length(ι) == length(x2)
             end
@@ -91,12 +91,12 @@ end
 end
 
 @testset "Smolyak product primitives" begin
-    kind = InteriorGrid()
+    grid_kind = InteriorGrid()
     for B in 0:3
         for M in 0:B
             for N in 1:4
-                ι = SmolyakIndices{N,B}(kind, M)
-                ℓ = cumulative_block_length(kind, min(B,M))
+                ι = SmolyakIndices{N,B}(grid_kind, M)
+                ℓ = cumulative_block_length(grid_kind, min(B,M))
                 sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
                 P = SmolyakProduct(ι, sources)
                 @test length(ι) == length(P)

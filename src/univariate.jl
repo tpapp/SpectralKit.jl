@@ -78,9 +78,9 @@ function basis_at(basis::UnivariateBasis, x::Real)
     basis_at(parent, to_domain(transformation, parent, x))
 end
 
-function gridpoint(::Type{T}, basis::UnivariateBasis, kind, i) where T
+function gridpoint(::Type{T}, basis::UnivariateBasis, grid_kind, i) where T
     @unpack parent, transformation = basis
-    from_domain(transformation, parent, gridpoint(T, parent, kind, i))
+    from_domain(transformation, parent, gridpoint(T, parent, grid_kind, i))
 end
 
 ####

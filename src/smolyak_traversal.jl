@@ -15,7 +15,7 @@ Internal implementation of the Smolyak indexing iterator.
 
 - `M`: upper bound on each block index, remains constant during the iteration.
 
-- `kind`: used in [`cumulative_block_length`](@ref), remains constant during the iteration.
+- `grid_kind`: used in [`cumulative_block_length`](@ref), remains constant during the iteration.
 
 - `slack`: `B - sum(blocks)`, cached
 
@@ -37,7 +37,7 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-function __inc(M::Int, kind, slack::Int, indices::NTuple{N,Int},
+function __inc(M::Int, grid_kind, slack::Int, indices::NTuple{N,Int},
                blocks::NTuple{N,Int}, limits::NTuple{N,Int}) where N
     i1, iτ... = indices
     b1, bτ... = blocks
@@ -46,23 +46,23 @@ function __inc(M::Int, kind, slack::Int, indices::NTuple{N,Int},
         true, 1, 0, (i1 + 1, iτ...), blocks, limits
     elseif b1 < M && slack > 0  # increment i1, next block
         b1′ = b1 + 1
-        true, 1, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_length(kind, b1′), lτ...)
+        true, 1, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_length(grid_kind, b1′), lτ...)
     else
         if N == 1               # end of the line, arbitrary value since !valid
             false, 0, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, C, Δτ, iτ′, bτ′, lτ′ = __inc(M, kind, slack + Δ1, iτ, bτ, lτ)
+            valid, C, Δτ, iτ′, bτ′, lτ′ = __inc(M, grid_kind, slack + Δ1, iτ, bτ, lτ)
             (valid, C + 1, Δ1 + Δτ, (1, iτ′...), (0, bτ′...),
-             (cumulative_block_length(kind, 0), lτ′...))
+             (cumulative_block_length(grid_kind, 0), lτ′...))
         end
     end
 end
 
-function __inc_init(::Val{N}, ::Val{B}, kind) where {N,B}
+function __inc_init(::Val{N}, ::Val{B}, grid_kind) where {N,B}
     indices = ntuple(_ -> 1, Val(N))
     blocks = ntuple(_ -> 0, Val(N))
-    l = cumulative_block_length(kind, 0)
+    l = cumulative_block_length(grid_kind, 0)
     limits = ntuple(_ -> l, Val(N))
     slack = B
     slack, indices, blocks, limits
@@ -73,17 +73,17 @@ $(SIGNATURES)
 
 Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
 """
-function smolyak_length(::Val{N}, ::Val{B}, kind, M::Int) where {N,B}
+function smolyak_length(::Val{N}, ::Val{B}, grid_kind, M::Int) where {N,B}
     # implicit assumption: M ≤ B
     c = zeros(MVector{B+1,Int}) # indexed as 0, …, B
     for b in 0:M
-        c[b + 1] = block_length(kind, b)
+        c[b + 1] = block_length(grid_kind, b)
     end
     for n in 2:N
         for b in B:(-1):0            # blocks with indices that sum to b
             s = 0
             for a in 0:min(b, M)
-                s += block_length(kind, a) * c[b - a + 1]
+                s += block_length(grid_kind, a) * c[b - a + 1]
             end
             # can safely overwrite since they will not be used again for n + 1
             c[b + 1] = s
@@ -93,7 +93,7 @@ function smolyak_length(::Val{N}, ::Val{B}, kind, M::Int) where {N,B}
 end
 
 struct SmolyakIndices{N,B,H,K}
-    kind::K
+    grid_kind::K
     M::Int
     len::Int
     @doc """
@@ -109,7 +109,7 @@ struct SmolyakIndices{N,B,H,K}
 
     # Arguments
 
-    - `kind` (eg [`InteriorGrid`]) for calculating block sizes
+    - `grid_kind` (eg [`InteriorGrid`]) for calculating block sizes
 
     - `M`: upper bound on each block index
 
@@ -117,7 +117,7 @@ struct SmolyakIndices{N,B,H,K}
 
     Consider positive integer indices `(i1, …, iN)`, each starting at one.
 
-    Let `ℓ(b) = cumulative_block_length(kind, b)`, and `b1` denote the smallest integer such
+    Let `ℓ(b) = cumulative_block_length(grid_kind, b)`, and `b1` denote the smallest integer such
     that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with `ℓ(-1) = 0` for the
     purposes of notation.
 
@@ -129,12 +129,12 @@ struct SmolyakIndices{N,B,H,K}
 
     Visited indexes are in *column-major* order.
     """
-    function SmolyakIndices{N,B}(kind::K, M::Int) where {N,B,K}
+    function SmolyakIndices{N,B}(grid_kind::K, M::Int) where {N,B,K}
         @argcheck N ≥ 1
         @argcheck B ≥ M ≥ 0
-        H = cumulative_block_length(kind, min(M,B))
-        len = smolyak_length(Val(N), Val(B), kind, M)
-        new{N,B,H,K}(kind, M, len)
+        H = cumulative_block_length(grid_kind, min(M,B))
+        len = smolyak_length(Val(N), Val(B), grid_kind, M)
+        new{N,B,H,K}(grid_kind, M, len)
     end
 end
 
@@ -145,12 +145,12 @@ Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 @inline Base.length(ι::SmolyakIndices) = ι.len
 
 @inline function Base.iterate(ι::SmolyakIndices{N,B}) where {N,B}
-    slack, indices, blocks, limits = __inc_init(Val(N), Val(B), ι.kind)
+    slack, indices, blocks, limits = __inc_init(Val(N), Val(B), ι.grid_kind)
     indices, (slack, indices, blocks, limits)
 end
 
 @inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, _, Δ, indices′, blocks′, limits′ = __inc(ι.M, ι.kind, slack, indices, blocks, limits)
+    valid, _, Δ, indices′, blocks′, limits′ = __inc(ι.M, ι.grid_kind, slack, indices, blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
@@ -217,8 +217,8 @@ Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
 
 @inline function Base.iterate(smolyak_product::SmolyakProduct{<:SmolyakIndices{N,B}}) where {N,B}
     @unpack smolyak_indices, sources = smolyak_product
-    @unpack kind = smolyak_indices
-    slack, indices, blocks, limits = __inc_init(Val(N), Val(B), kind)
+    @unpack grid_kind = smolyak_indices
+    slack, indices, blocks, limits = __inc_init(Val(N), Val(B), grid_kind)
     products = __initialize_products(Val(N), sources)
     first(products), (slack, indices, blocks, limits, products)
 end
@@ -226,8 +226,8 @@ end
 @inline function Base.iterate(smolyak_product::SmolyakProduct,
                               (slack, indices, blocks, limits, products))
     @unpack smolyak_indices, sources = smolyak_product
-    @unpack M, kind = smolyak_indices
-    valid, C, Δ, indices′, blocks′, limits′ = __inc(M, kind, slack, indices, blocks, limits)
+    @unpack M, grid_kind = smolyak_indices
+    valid, C, Δ, indices′, blocks′, limits′ = __inc(M, grid_kind, slack, indices, blocks, limits)
     valid || return nothing
     products′ = __update_products(C, indices′, sources, products)
     slack′ = slack + Δ

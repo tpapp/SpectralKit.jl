@@ -117,23 +117,23 @@ The actual type can be broadened as required. Methods are type stable.
 
 !!! note
     Not all grids have this method defined, especially if it is impractical. See
-    [`grid`](@ref).
+    [`grid`](@ref), which is part of the API, this function isn't.
 """
-gridpoint(basis, kind, i) = gridpoint(Float64, basis, kind, i)
+gridpoint(basis, grid_kind, i) = gridpoint(Float64, basis, grid_kind, i)
 
 """
-`$(FUNCTIONNAME)([T], basis, kind)`
+`$(FUNCTIONNAME)([T], basis, grid_kind)`
 
-Return a grid the given `kind`, recommended for collocation, with `dimension(basis)`
+Return a grid the given `grid_kind`, recommended for collocation, with `dimension(basis)`
 elements.
 
 `T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
 The actual type can be broadened as required. Methods are type stable.
 """
-grid(basis, kind) = grid(Float64, basis, kind)
+grid(basis, grid_kind) = grid(Float64, basis, grid_kind)
 
-function grid(::Type{T}, basis, kind) where {T<:Real}
-    map(i -> gridpoint(T, basis, kind, i), 1:dimension(basis))
+function grid(::Type{T}, basis, grid_kind) where {T<:Real}
+    map(i -> gridpoint(T, basis, grid_kind, i), 1:dimension(basis))
 end
 
 """

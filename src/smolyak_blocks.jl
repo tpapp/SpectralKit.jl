@@ -12,14 +12,14 @@ $(SIGNATURES)
 
 Length of each block `b`.
 """
-block_length(kind::InteriorGrid, b::Int) = b ≤ 1 ? b + 1 : 2^(b - 1)
+block_length(grid_kind::InteriorGrid, b::Int) = b ≤ 1 ? b + 1 : 2^(b - 1)
 
 """
 $(SIGNATURES)
 
 Cumulative block length at block `b`.
 """
-cumulative_block_length(kind::InteriorGrid, b::Int) =  b == 0 ? 1 : (2^b + 1)
+cumulative_block_length(grid_kind::InteriorGrid, b::Int) =  b == 0 ? 1 : (2^b + 1)
 
 struct InteriorGridShuffle
     len::Int
@@ -58,7 +58,7 @@ $(SIGNATURES)
 Return an iterator of indices for picking elements from a grid of length `H`, which should
 be a valid cumulative block length.
 """
-function block_shuffle(kind::InteriorGrid, H::Int)
+function block_shuffle(grid_kind::InteriorGrid, H::Int)
     @argcheck H ≥ 0
     InteriorGridShuffle(H)
 end
