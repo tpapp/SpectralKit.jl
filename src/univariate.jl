@@ -52,7 +52,7 @@ Create a univariate basis from `parent`, transforming the domain with `transform
 
 `parent` is a univariate basis, `transformation` is a univariate transformation (supporting
 the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
-subtype).
+subtype). Univariate bases support [`gridpoint`](@ref).
 
 # Example
 
@@ -78,15 +78,14 @@ function basis_at(basis::UnivariateBasis, x::Real)
     basis_at(parent, to_domain(transformation, parent, x))
 end
 
-function grid(::Type{T}, basis::UnivariateBasis, kind) where T
+function gridpoint(::Type{T}, basis::UnivariateBasis, kind, i) where T
     @unpack parent, transformation = basis
-    map(x -> from_domain(transformation, parent, x), grid(T, parent, kind))
+    from_domain(transformation, parent, gridpoint(T, parent, kind, i))
 end
 
 ####
 #### transformations
 ####
-
 
 ###
 ### bounded linear

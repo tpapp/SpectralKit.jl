@@ -1,8 +1,12 @@
-using SpectralKit: ChebyshevOpen, block_length, cumulative_block_length, SmolyakIndices,
-    smolyak_length, nested_extrema_indices, __update_products, SmolyakProduct, Repeating
+using SpectralKit: block_length, cumulative_block_length, SmolyakIndices,
+    smolyak_length, block_shuffle, __update_products, SmolyakProduct
 
-@testset "Smolyak length" begin
-    kind = ChebyshevOpen()
+####
+#### blocks
+####
+
+@testset "block length" begin
+    kind = InteriorGrid()
     @test cumulative_block_length(kind, 0) == 1
     @test cumulative_block_length(kind, 1) == 1 + 2
     @test cumulative_block_length(kind, 2) == 1 + 2 + 2
@@ -14,6 +18,27 @@ using SpectralKit: ChebyshevOpen, block_length, cumulative_block_length, Smolyak
         @test block_length(kind, i) == c - cprev
     end
 end
+
+@testset "block shuffle" begin
+    results = Dict([0 => [1],
+                    1 => [2, 1, 3],
+                    2 => [3, 1, 5, 2, 4],
+                    3 => vcat([5, 1, 9, 3, 7], 2:2:8),
+                    4 => vcat([9, 1, 17, 5, 13], 3:4:17, 2:2:17)])
+    kind = InteriorGrid()
+    for (b, i) in pairs(results)
+        len = length(i)
+        @test len == cumulative_block_length(kind, b)
+        ι = block_shuffle(kind, len)
+        @test length(ι) == len
+        @test @inferred eltype(ι) == Int
+        @test collect(ι) == i
+    end
+end
+
+####
+#### traversal
+####
 
 """
 Naive implementation of Smolyan index iteration, traversing a `CartesianIndices` and keeping
@@ -38,7 +63,7 @@ function smolyak_indices_check(N, B, kind, M)
 end
 
 @testset "Smolyak indices" begin
-    kind = ChebyshevOpen()
+    kind = InteriorGrid()
     for B in 0:3
         for M in 0:B
             for N in 1:4
@@ -50,20 +75,6 @@ end
                 @test len == length(x1) == length(ι) == length(x2)
             end
         end
-    end
-end
-
-@testset "nested extrema indexing" begin
-    results = Dict([0 => [1],
-                    1 => [2, 1, 3],
-                    2 => [3, 1, 5, 2, 4],
-                    3 => vcat([5, 1, 9, 3, 7], 2:2:8),
-                    4 => vcat([9, 1, 17, 5, 13], 3:4:17, 2:2:17)])
-    for (b, i) in pairs(results)
-        ι = nested_extrema_indices(ChebyshevOpen(), b)
-        @test length(ι) == length(i)
-        @test @inferred eltype(ι) == Int
-        @test collect(ι) == i
     end
 end
 
@@ -80,32 +91,32 @@ end
 end
 
 @testset "Smolyak product primitives" begin
-    kind = ChebyshevOpen()
+    kind = InteriorGrid()
     for B in 0:3
         for M in 0:B
             for N in 1:4
                 ι = SmolyakIndices{N,B}(kind, M)
                 ℓ = cumulative_block_length(kind, min(B,M))
-
-                # non-repeated sources
                 sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
-                P = SmolyakProduct{N,B}(kind, M, sources)
+                P = SmolyakProduct(ι, sources)
                 @test length(ι) == length(P)
                 @test eltype(P) == Float64
                 for (i, p) in zip(ι, P)
                     @test prod(getindex.(sources, i)) ≈ p
                 end
-
-                # repeated sources
-                x = rand(SVector{ℓ, Float64})
-                ι = SmolyakIndices{N,B}(kind, M)
-                P = SmolyakProduct{N,B}(kind, M, Repeating(x))
-                @test length(ι) == length(P)
-                @test eltype(P) == Float64
-                for (i, p) in zip(ι, P)
-                    @test prod(getindex.(Ref(x), i)) ≈ p
-                end
             end
         end
     end
+end
+
+####
+#### api
+####
+
+@testset "Smolyak API" begin
+    basis = smolyak_basis(Chebyshev, InteriorGrid(),
+                          Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
+    @test domain(basis) == ((0, 4), (0, 3))
+    x = grid(Float64, basis, InteriorGrid())
+    M = collocation_matrix(basis, x)
 end

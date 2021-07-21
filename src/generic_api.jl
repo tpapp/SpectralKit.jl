@@ -108,6 +108,20 @@ Grid that includes endpoints (eg Gauss-Lobatto).
 struct EndpointGrid end
 
 """
+$(SIGNATURES)
+
+Return a gridpoint for collocation, with `1 ≤ i ≤ dimension(basis)`.
+
+`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
+The actual type can be broadened as required. Methods are type stable.
+
+!!! note
+    Not all grids have this method defined, especially if it is impractical. See
+    [`grid`](@ref).
+"""
+gridpoint(basis, kind, i) = gridpoint(Float64, basis, kind, i)
+
+"""
 `$(FUNCTIONNAME)([T], basis, kind)`
 
 Return a grid the given `kind`, recommended for collocation, with `dimension(basis)`
@@ -117,6 +131,10 @@ elements.
 The actual type can be broadened as required. Methods are type stable.
 """
 grid(basis, kind) = grid(Float64, basis, kind)
+
+function grid(::Type{T}, basis, kind) where {T<:Real}
+    map(i -> gridpoint(T, basis, kind, i), 1:dimension(basis))
+end
 
 """
 $(SIGNATURES)

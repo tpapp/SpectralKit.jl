@@ -53,13 +53,15 @@ end
 #### grids
 ####
 
-function grid(::Type{T}, basis::Chebyshev, ::InteriorGrid) where {T <: Real}
+function gridpoint(::Type{T}, basis::Chebyshev, ::InteriorGrid, i::Integer) where {T <: Real}
     @unpack N = basis
-    cospi.(((2 * N - 1):-2:1) ./ T(2 * N))
+    @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
+    cospi((2*(N - i) + 1) / T(2 * N))
 end
 
-function grid(::Type{T}, basis::Chebyshev, ::EndpointGrid) where {T <: Real}
+function gridpoint(::Type{T}, basis::Chebyshev, ::EndpointGrid, i::Integer) where {T <: Real}
     @unpack N = basis
-    @argcheck N ≥ 2
-    cospi.(((N-1):-1:0) ./ T(N - 1))
+    @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
+    @argcheck N ≥ 2             # FIXME move validation to constructor
+    cospi((N - i) ./ T(N - 1))
 end
