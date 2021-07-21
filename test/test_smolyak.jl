@@ -114,9 +114,24 @@ end
 ####
 
 @testset "Smolyak API" begin
+    f(x) = (x[1] - 3) * (x[2] + 5)
     basis = smolyak_basis(Chebyshev, InteriorGrid(),
                           Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
-    @test domain(basis) == ((0, 4), (0, 3))
-    x = grid(Float64, basis)
-    M = collocation_matrix(basis, x)
+    @test @inferred(domain(basis)) == ((0, 4), (0, 3))
+    x = @inferred grid(Float64, basis)
+    M = @inferred collocation_matrix(basis, x)
+    θ = M \ f.(x)
+    @test sum(abs.(θ) .> 1e-8) == 4
+    y1, y2 = range(domain(basis)[1]...; length = 100), range(domain(basis)[2]...; length = 100)
+    for y1 in y1
+        for y2 in y2
+            y = SVector(y1, y2)
+            @test linear_combination(basis, θ, y) ≈ f(y)
+        end
+    end
+
+    let y = SVector(1.0, 2.0)
+        @inferred linear_combination(basis, θ, y)
+        @test @ballocated(linear_combination($basis, $θ, $y)) == 0
+    end
 end
