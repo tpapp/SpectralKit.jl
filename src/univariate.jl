@@ -48,7 +48,8 @@ end
 """
 $(SIGNATURES)
 
-Create a univariate basis from `parent`, transforming the domain with `transformation`.
+Create a univariate basis from `univariate_family`, with the specified `grid_kind` and
+dimension `N`, transforming the domain with `transformation`.
 
 `parent` is a univariate basis, `transformation` is a univariate transformation (supporting
 the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
@@ -57,13 +58,20 @@ subtype). Univariate bases support [`gridpoint`](@ref).
 # Example
 
 The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
-``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4`:
-```julia
-univariate_basis(Chebyshev(10), SemiInfRational(3.0, 4.0))
+``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4` and an interior grid:
+
+```jldoctest
+julia> univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0));
+
+julia> dimension(basis)
+10
+
+julia> domain(basis)
+(3.0, Inf)
 ```
 """
-function univariate_basis(parent, transformation)
-    UnivariateBasis(parent, transformation)
+function univariate_basis(univariate_family, grid_kind, N::Integer, transformation)
+    UnivariateBasis(univariate_family(grid_kind, Int(N)), transformation)
 end
 
 @inline dimension(basis::UnivariateBasis) = dimension(basis.parent)
@@ -78,9 +86,9 @@ function basis_at(basis::UnivariateBasis, x::Real)
     basis_at(parent, to_domain(transformation, parent, x))
 end
 
-function gridpoint(::Type{T}, basis::UnivariateBasis, grid_kind, i) where T
+function gridpoint(::Type{T}, basis::UnivariateBasis, i) where T
     @unpack parent, transformation = basis
-    from_domain(transformation, parent, gridpoint(T, parent, grid_kind, i))
+    from_domain(transformation, parent, gridpoint(T, parent, i))
 end
 
 ####

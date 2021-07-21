@@ -117,6 +117,6 @@ end
     basis = smolyak_basis(Chebyshev, InteriorGrid(),
                           Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
     @test domain(basis) == ((0, 4), (0, 3))
-    x = grid(Float64, basis, InteriorGrid())
+    x = grid(Float64, basis)
     M = collocation_matrix(basis, x)
 end

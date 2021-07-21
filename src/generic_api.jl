@@ -119,7 +119,7 @@ The actual type can be broadened as required. Methods are type stable.
     Not all grids have this method defined, especially if it is impractical. See
     [`grid`](@ref), which is part of the API, this function isn't.
 """
-gridpoint(basis, grid_kind, i) = gridpoint(Float64, basis, grid_kind, i)
+gridpoint(basis, i) = gridpoint(Float64, basis, i)
 
 """
 `$(FUNCTIONNAME)([T], basis, grid_kind)`
@@ -130,10 +130,10 @@ elements.
 `T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
 The actual type can be broadened as required. Methods are type stable.
 """
-grid(basis, grid_kind) = grid(Float64, basis, grid_kind)
+grid(basis) = grid(Float64, basis)
 
-function grid(::Type{T}, basis, grid_kind) where {T<:Real}
-    map(i -> gridpoint(T, basis, grid_kind, i), 1:dimension(basis))
+function grid(::Type{T}, basis) where {T<:Real}
+    map(i -> gridpoint(T, basis, i), 1:dimension(basis))
 end
 
 """
