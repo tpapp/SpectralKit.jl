@@ -97,7 +97,7 @@ end
 #### api
 ####
 
-@testset "Smolyak API" begin
+@testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5)
     basis = smolyak_basis(Chebyshev, InteriorGrid(),
                           Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
@@ -113,9 +113,13 @@ end
             @test linear_combination(basis, θ, y) ≈ f(y)
         end
     end
+end
 
-    let y = SVector(1.0, 2.0)
-        @inferred linear_combination(basis, θ, y)
-        @test @ballocated(linear_combination($basis, $θ, $y)) == 0
-    end
+@testset "Smolyak API allocations" begin
+    basis = smolyak_basis(Chebyshev, InteriorGrid(),
+                          Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
+    y = SVector(1.0, 2.0)
+    θ = randn(dimension(basis))
+    @inferred linear_combination(basis, θ, y)
+    @test @ballocated(linear_combination($basis, $θ, $y)) == 0
 end
