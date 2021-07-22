@@ -249,18 +249,10 @@ Base.length(smolyak_product::SmolyakProduct) = length(smolyak_product.smolyak_in
 
 Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
 
-@inline function Base.iterate(smolyak_product::SmolyakProduct{<:SmolyakIndices{N,B}}) where {N,B}
+@inline function Base.iterate(smolyak_product::SmolyakProduct{<:SmolyakIndices{N,B}}, state...) where {N,B}
     @unpack smolyak_indices, sources = smolyak_product
-    slack, indices, blocks, limits = __inc_init(Val(N), Val(B))
-    prod(getindex.(sources, indices)), (slack, indices, blocks, limits)
-end
-
-@inline function Base.iterate(smolyak_product::SmolyakProduct,
-                              (slack, indices, blocks, limits))
-    @unpack smolyak_indices, sources = smolyak_product
-    @unpack M = smolyak_indices
-    valid, C, Δ, indices′, blocks′, limits′ = __inc(M, slack, indices, blocks, limits)
-    valid || return nothing
-    slack′ = slack + Δ
-    prod(getindex.(sources, indices′)), (slack′, indices′, blocks′, limits′)
+    itr = iterate(smolyak_indices, state...)
+    itr ≡ nothing && return nothing
+    indices, state′ = itr
+    prod(getindex.(sources, indices)), state′
 end
