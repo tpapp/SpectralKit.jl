@@ -63,11 +63,6 @@ end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
-struct SmolyakBasisAt{S,A}
-    smolyak_basis::S
-    univariate_bases_at::A
-end
-
 function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}},
                   x::SVector{N,<:Real}) where {N,B,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis

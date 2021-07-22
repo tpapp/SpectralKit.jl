@@ -1,5 +1,5 @@
 using SpectralKit: __block_length, __cumulative_block_length, SmolyakIndices,
-    __smolyak_length, SmolyakGridShuffle, __update_products, SmolyakProduct
+    __smolyak_length, SmolyakGridShuffle, SmolyakProduct
 
 ####
 #### blocks
@@ -73,18 +73,6 @@ end
             end
         end
     end
-end
-
-@testset "__update_products" begin
-    N = 7
-    M = 6
-    sources = SVector{N}([rand(SVector{M,Float64}) for _ in 1:N])
-    indices = SVector{N}([rand(1:M) for _ in 1:N])
-    products = reverse(cumprod(reverse(getindex.(sources, indices))))
-    @test products == @inferred __update_products(0, indices, sources, products)
-    @test products == @inferred __update_products(1, indices, sources, zero_upto(products, 1))
-    @test products == @inferred __update_products(2, indices, sources, zero_upto(products, 2))
-    @test products == @inferred __update_products(N, indices, sources, zero_upto(products, N))
 end
 
 @testset "Smolyak product primitives" begin

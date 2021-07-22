@@ -219,31 +219,6 @@ end
 #### product traversal
 ####
 
-"""
-$(SIGNATURES)
-
-Return the reverse cumulative products of the first elements of `sources`.
-"""
-function __initialize_products(::Val{N}, sources::SVector{N}) where N
-    reverse(cumprod(reverse(map(first, sources))))
-end
-
-"""
-$(SIGNATURES)
-
-Return the reverse cumulative products of `getindex.(sources, indices)`, assuming that
-`products[(C+1):end]` already has the correct cumulative product.
-"""
-function __update_products(C, indices, sources, products::SVector{N,T}) where {N,T}
-    result = MVector(products)
-    Π = C >= N ? one(T) : products[C + 1]
-    for j in C:-1:firstindex(result)
-        Π *= sources[j][indices[j]]
-        result[j] = Π
-    end
-    SVector(result)
-end
-
 struct SmolyakProduct{I<:SmolyakIndices,S}
     smolyak_indices::I
     sources::S
@@ -277,17 +252,15 @@ Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
 @inline function Base.iterate(smolyak_product::SmolyakProduct{<:SmolyakIndices{N,B}}) where {N,B}
     @unpack smolyak_indices, sources = smolyak_product
     slack, indices, blocks, limits = __inc_init(Val(N), Val(B))
-    products = __initialize_products(Val(N), sources)
-    first(products), (slack, indices, blocks, limits, products)
+    prod(getindex.(sources, indices)), (slack, indices, blocks, limits)
 end
 
 @inline function Base.iterate(smolyak_product::SmolyakProduct,
-                              (slack, indices, blocks, limits, products))
+                              (slack, indices, blocks, limits))
     @unpack smolyak_indices, sources = smolyak_product
     @unpack M = smolyak_indices
     valid, C, Δ, indices′, blocks′, limits′ = __inc(M, slack, indices, blocks, limits)
     valid || return nothing
-    products′ = __update_products(C, indices′, sources, products)
     slack′ = slack + Δ
-    first(products′), (slack′, indices′, blocks′, limits′, products′)
+    prod(getindex.(sources, indices′)), (slack′, indices′, blocks′, limits′)
 end
