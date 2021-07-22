@@ -45,6 +45,12 @@ struct UnivariateBasis{P,T} <: FunctionBasis
     transformation::T
 end
 
+function Base.show(io::IO, univariate_basis::UnivariateBasis)
+    @unpack parent, transformation = univariate_basis
+    print(io, parent, "\n  on ", transformation)
+end
+
+
 """
 $(SIGNATURES)
 
@@ -53,7 +59,7 @@ dimension `N`, transforming the domain with `transformation`.
 
 `parent` is a univariate basis, `transformation` is a univariate transformation (supporting
 the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
-subtype). Univariate bases support [`gridpoint`](@ref).
+subtype). Univariate bases support [`SpectralKit.gridpoint`](@ref).
 
 # Example
 
@@ -61,7 +67,9 @@ The following is a basis with 10 transformed Chebyshev polynomials of the first 
 ``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4` and an interior grid:
 
 ```jldoctest
-julia> univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0));
+julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
+Chebyshev polynomials (1st kind), interior grid, dimension: 10
+  on (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
 10
@@ -70,7 +78,8 @@ julia> domain(basis)
 (3.0, Inf)
 ```
 """
-function univariate_basis(univariate_family, grid_kind, N::Integer, transformation)
+function univariate_basis(univariate_family, grid_kind::AbstractGrid, N::Integer,
+                          transformation)
     UnivariateBasis(univariate_family(grid_kind, Int(N)), transformation)
 end
 
@@ -114,6 +123,11 @@ struct BoundedLinear{T <: Real} <: UnivariateTransformation
     end
 end
 
+function Base.show(io::IO, transformation::BoundedLinear)
+    @unpack m, s = transformation
+    print(io, "(", m - s, ",", m + s, ") [linear transformation]")
+end
+
 """
 $(TYPEDEF)
 
@@ -146,6 +160,16 @@ struct SemiInfRational{T <: Real} <: UnivariateTransformation
         @argcheck L ≠ 0
         new{T}(A, L)
     end
+end
+
+function Base.show(io::IO, transformation::SemiInfRational)
+    @unpack A, L = transformation
+    if L > 0
+        D = "($A,∞)"
+    else
+        D = "(-∞,A)"
+    end
+    print(io, D, " [rational transformation with scale ", L, "]")
 end
 
 """
@@ -186,8 +210,13 @@ struct InfRational{T <: Real} <: UnivariateTransformation
     end
 end
 
+function Base.show(io::IO, transformation::InfRational)
+    @unpack A, L = transformation
+    print(io, "(-∞,∞) [rational transformation with center ", A, ", scale ", L, "]")
+end
+
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Chebyshev polynomials transformed to the domain `(-Inf, Inf)`
 using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.

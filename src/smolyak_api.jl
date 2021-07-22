@@ -10,6 +10,16 @@ struct SmolyakBasis{I<:SmolyakIndices,U,T<:Tuple} <: FunctionBasis
     transformations::T
 end
 
+function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
+    @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
+    print(io, "Sparse multivariate basis on ℝ^$N\n  ", smolyak_indices,
+          "\n  using ", univariate_parent,
+          "\n  transformations")
+    for transformation in transformations
+        print(io, "\n    ", transformation)
+    end
+end
+
 """
 $(SIGNATURES)
 
@@ -22,7 +32,13 @@ applied coordinate-wise.
 
 ```jldoctest
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), Val(3),
-                             (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)));
+                             (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
+Sparse multivariate basis on ℝ^2
+  Smolyak indexing, 3 total blocks, capped at 3, dimension 29
+  using Chebyshev polynomials (1st kind), interior grid, dimension: 9
+  transformations
+    (2.0,3.0) [linear transformation]
+    (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
 29
@@ -31,8 +47,8 @@ julia> domain(basis)
 ((2.0, 3.0), (3.0, Inf))
 ```
 """
-function smolyak_basis(univariate_family, grid_kind, ::Val{B}, transformations::NTuple{N,Any},
-                       M = B) where {B,N}
+function smolyak_basis(univariate_family, grid_kind::AbstractGrid, ::Val{B},
+                       transformations::NTuple{N,Any}, M = B) where {B,N}
     smolyak_indices = SmolyakIndices{N,B}(grid_kind, M)
     univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
     SmolyakBasis(smolyak_indices, univariate_parent, transformations)

@@ -138,6 +138,11 @@ struct SmolyakIndices{N,B,H,K}
     end
 end
 
+function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,B}) where {N,B}
+    @unpack M, len = smolyak_indices
+    print(io, "Smolyak indexing, $(B) total blocks, capped at $(M), dimension $(len)")
+end
+
 @inline highest_visited_index(::SmolyakIndices{N,B,H}) where {N,B,H} = H
 
 Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}

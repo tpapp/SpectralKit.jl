@@ -31,6 +31,9 @@ Test if the argument is a *function basis*, supporting the following interface:
 
 - [`grid`](@ref) to obtain collocation points.
 
+[`linear_combination`](@ref) and [`collocation_matrix`](@ref) are also supported, building
+on the above.
+
 Can be used on both types (preferred) and values (for convenience).
 """
 is_function_basis(T::Type) = false
@@ -42,7 +45,8 @@ is_function_basis(f) = is_function_basis(typeof(f))
 """
 `$(FUNCTIONNAME)(basis)`
 
-The domain of a function basis. Can be an arbitrary object, but has to be constant.
+The domain of a function basis. A tuple of numbers (of arbitrary type, but usually
+`Float64`), or a tuple the latter.
 """
 function domain end
 
@@ -96,16 +100,27 @@ linear_combination(basis, θ) = LinearCombination(basis, θ)
 """
 $(TYPEDEF)
 
+Abstract type for all grid specifications.
+"""
+abstract type AbstractGrid end
+
+"""
+$(TYPEDEF)
+
 Grid with interior points (eg Gauss-Chebyshev).
 """
-struct InteriorGrid end
+struct InteriorGrid <: AbstractGrid end
+
+Base.show(io::IO, ::InteriorGrid) = print(io, "interior grid")
 
 """
 $(TYPEDEF)
 
 Grid that includes endpoints (eg Gauss-Lobatto).
 """
-struct EndpointGrid end
+struct EndpointGrid <: AbstractGrid end
+
+Base.show(io::IO, ::EndpointGrid) = print(io, "grid w/ endpoints")
 
 """
 $(SIGNATURES)
@@ -122,10 +137,9 @@ The actual type can be broadened as required. Methods are type stable.
 gridpoint(basis, i) = gridpoint(Float64, basis, i)
 
 """
-`$(FUNCTIONNAME)([T], basis, grid_kind)`
+`$(FUNCTIONNAME)([T], basis)`
 
-Return a grid the given `grid_kind`, recommended for collocation, with `dimension(basis)`
-elements.
+Return a grid recommended for collocation, with `dimension(basis)` elements.
 
 `T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
 The actual type can be broadened as required. Methods are type stable.

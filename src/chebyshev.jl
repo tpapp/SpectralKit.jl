@@ -35,6 +35,11 @@ end
 
 @inline domain(::Chebyshev) = (-1, 1)
 
+function Base.show(io::IO, chebyshev::Chebyshev)
+    @unpack grid_kind, N = chebyshev
+    print(io, "Chebyshev polynomials (1st kind), ", grid_kind, ", dimension: ", N)
+end
+
 ####
 #### basis function iterator
 ####
