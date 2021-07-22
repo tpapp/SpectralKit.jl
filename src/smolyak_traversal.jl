@@ -22,7 +22,7 @@ $(SIGNATURES)
 
 Cumulative block length at block `b`.
 """
-__cumulative_block_length(b::Int) =  b == 0 ? 1 : (2^b + 1)
+__cumulative_block_length(b::Int) = b == 0 ? 1 : (2^b + 1)
 
 """
 $(TYPEDEF)
@@ -80,7 +80,7 @@ Internal implementation of the Smolyak indexing iterator.
 
 - `blocks`: block indexes
 
-- `limits`: `ℓ.(blocks)`, cached
+- `limits`: `__cumulative_block_length.(blocks)`, cached
 
 # Return values
 
@@ -94,8 +94,8 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-function __inc(M::Int, slack::Int, indices::NTuple{N,Int},
-               blocks::NTuple{N,Int}, limits::NTuple{N,Int}) where N
+@inline function __inc(M::Int, slack::Int, indices::NTuple{N,Int},
+                       blocks::NTuple{N,Int}, limits::NTuple{N,Int}) where N
     i1, iτ... = indices
     b1, bτ... = blocks
     l1, lτ... = limits
