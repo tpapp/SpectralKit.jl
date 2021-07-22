@@ -47,7 +47,7 @@ end
 
 function Base.show(io::IO, univariate_basis::UnivariateBasis)
     @unpack parent, transformation = univariate_basis
-    print(io, parent, "\n  on ", transformation)
+    print(io, parent, "\n  domain ", transformation)
 end
 
 
@@ -69,7 +69,7 @@ The following is a basis with 10 transformed Chebyshev polynomials of the first 
 ```jldoctest
 julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
 Chebyshev polynomials (1st kind), interior grid, dimension: 10
-  on (3.0,∞) [rational transformation with scale 4.0]
+  domain (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
 10
