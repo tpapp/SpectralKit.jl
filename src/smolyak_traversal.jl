@@ -15,14 +15,14 @@ Length of each block `b`.
     Smolyak grids use “blocks” of polynomials, each indexed by ``b == 0, …, B`, with an
     increasing number of points in each.
 """
-__block_length(b::Int) = b ≤ 1 ? b + 1 : 2^(b - 1)
+@inline __block_length(b::Int) = b ≤ 1 ? b + 1 : 1 << (b - 1)
 
 """
 $(SIGNATURES)
 
 Cumulative block length at block `b`.
 """
-__cumulative_block_length(b::Int) = b == 0 ? 1 : (2^b + 1)
+@inline __cumulative_block_length(b::Int) = b == 0 ? 1 : ((1 << b) + 1)
 
 """
 $(TYPEDEF)
