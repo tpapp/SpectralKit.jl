@@ -49,7 +49,7 @@ julia> domain(basis)
 """
 function smolyak_basis(univariate_family, grid_kind::AbstractGrid, ::Val{B},
                        transformations::NTuple{N,Any}, M = B) where {B,N}
-    smolyak_indices = SmolyakIndices{N,B}(grid_kind, M)
+    smolyak_indices = SmolyakIndices{N,B}(M)
     univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
     SmolyakBasis(smolyak_indices, univariate_parent, transformations)
 end
@@ -82,7 +82,7 @@ function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}}) where {T<:Real,N,B,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
     x = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
-                  for i in block_shuffle(smolyak_indices.grid_kind, H))
+                  for i in SmolyakGridShuffle(H))
     ys = map(transformation -> from_domain.(Ref(transformation), Ref(univariate_parent), x),
              transformations)
     [SVector{N}(getindex.(ys, ι)) for ι in smolyak_indices]
