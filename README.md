@@ -55,3 +55,9 @@ Let's zoom out a bit to see convergence at -∞ and ∞.
 Derivatives die out slower than for the [0,∞) transformation.
 
 <img src="docs/plots/inf_deriv.png" width="50%">
+
+### A Smolyak grid
+
+With `B = 3`.
+
+<img src="docs/plots/smolyak_grid.png" width="50%">
