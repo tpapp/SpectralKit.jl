@@ -126,21 +126,26 @@ end
 
 @testset "Smolyak approximation" begin
     function f(x)               # cross-exp is particularly nasty for Smolyak
-        x1, x2 = x
-        exp(0.3 * (x1 - 2.0) * (x2 - 1.0))
+        x1, x2, x3, x4 = x
+        exp(0.3 * (x1 - 2.0) * (x2 - 1.0)) + exp(-x3 * (x2 + 5)) - 1 / log(x4^2 + 10)
     end
     basis = smolyak_basis(Chebyshev, InteriorGrid(), Val(5),
-                          (BoundedLinear(0, 4), BoundedLinear(-2.0, 2.0)))
+                          (BoundedLinear(0, 4), BoundedLinear(-2.0, 2.0),
+                           SemiInfRational(1.0, 2.0), InfRational(0, 4)))
     x = grid(basis)
     θ = collocation_matrix(basis, x) \ f.(x)
-    s = SobolSeq([0, -2], [4, 2])
+    s = SobolSeq([0, -2, 1, -10], [4, 2, 5, 10])
     for x in x
         @test linear_combination(basis, θ, x) ≈ f(x) atol = 1e-10
     end
     skip(s, 1 << 5)
-    Δ = maximum(((xS = SVector{2}(x);
-                  fxS = f(xS);
-                  abs(fxS - linear_combination(basis, θ, xS)) / (abs(fxS) + 1))
-                 for x in Iterators.take(s, 10^5)))
-    @test Δ ≤ 2e-4
+    Δabs, Δrel = mapreduce((x, y) -> max.(x, y), Iterators.take(s, 10^5)) do x
+        xS = SVector{4}(x)
+        fxS = f(xS)
+        Δabs = abs(fxS - linear_combination(basis, θ, xS))
+        Δrel = Δabs / (1 + abs(fxS))
+        Δabs, Δrel
+    end
+    @test Δabs ≤ 1e-3
+    @test Δrel ≤ 5e-4
 end
