@@ -73,6 +73,10 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}},
     SmolyakProduct(smolyak_indices, univariate_bases_at)
 end
 
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}, x) where N
+    basis_at(smolyak_basis, SVector{N}(x))
+end
+
 function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}}) where {T<:Real,N,B,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis

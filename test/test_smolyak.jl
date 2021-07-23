@@ -134,18 +134,33 @@ end
                            SemiInfRational(1.0, 2.0), InfRational(0, 4)))
     x = grid(basis)
     θ = collocation_matrix(basis, x) \ f.(x)
-    s = SobolSeq([0, -2, 1, -10], [4, 2, 5, 10])
     for x in x
         @test linear_combination(basis, θ, x) ≈ f(x) atol = 1e-10
     end
+    s = SobolSeq([0, -2, 1, -10], [4, 2, 5, 10])
     skip(s, 1 << 5)
     Δabs, Δrel = mapreduce((x, y) -> max.(x, y), Iterators.take(s, 10^5)) do x
-        xS = SVector{4}(x)
-        fxS = f(xS)
-        Δabs = abs(fxS - linear_combination(basis, θ, xS))
-        Δrel = Δabs / (1 + abs(fxS))
+        fx = f(x)
+        Δabs = abs(fx - linear_combination(basis, θ, x))
+        Δrel = Δabs / (1 + abs(fx))
         Δabs, Δrel
     end
     @test Δabs ≤ 1e-3
     @test Δrel ≤ 5e-4
+end
+
+@testset "Smolyak derivatives" begin
+    function f(x)
+        x1, x2 = x
+        7.0 + x1 + 2*x2 + 3*x2*x1
+    end
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), Val(2),
+                          (BoundedLinear(0, 4), BoundedLinear(-5.0, 5.0)))
+    x = grid(basis)
+    θ = collocation_matrix(basis, x) \ f.(x)
+    F = linear_combination(basis, θ)
+    for x in x
+        @test F(x) ≈ f(x) atol = 1e-10
+        @test gradient(F, x) ≈ gradient(f, x)
+    end
 end
