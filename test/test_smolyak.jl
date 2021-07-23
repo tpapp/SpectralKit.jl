@@ -98,7 +98,7 @@ end
 ####
 
 @testset "Smolyak API sanity checks" begin
-    f(x) = (x[1] - 3) * (x[2] + 5)
+    f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
     basis = smolyak_basis(Chebyshev, InteriorGrid(),
                           Val(3), (BoundedLinear(0, 4), BoundedLinear(0, 3)))
     @test @inferred(domain(basis)) == ((0, 4), (0, 3))
@@ -122,4 +122,25 @@ end
     θ = randn(dimension(basis))
     @inferred linear_combination(basis, θ, y)
     @test @ballocated(linear_combination($basis, $θ, $y)) == 0
+end
+
+@testset "Smolyak approximation" begin
+    function f(x)               # cross-exp is particularly nasty for Smolyak
+        x1, x2 = x
+        exp(0.3 * (x1 - 2.0) * (x2 - 1.0))
+    end
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), Val(5),
+                          (BoundedLinear(0, 4), BoundedLinear(-2.0, 2.0)))
+    x = grid(basis)
+    θ = collocation_matrix(basis, x) \ f.(x)
+    s = SobolSeq([0, -2], [4, 2])
+    for x in x
+        @test linear_combination(basis, θ, x) ≈ f(x) atol = 1e-10
+    end
+    skip(s, 1 << 5)
+    Δ = maximum(((xS = SVector{2}(x);
+                  fxS = f(xS);
+                  abs(fxS - linear_combination(basis, θ, xS)) / (abs(fxS) + 1))
+                 for x in Iterators.take(s, 10^5)))
+    @test Δ ≤ 2e-4
 end

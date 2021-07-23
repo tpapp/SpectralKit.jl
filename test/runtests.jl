@@ -1,5 +1,5 @@
 using SpectralKit
-using Test, DocStringExtensions, StaticArrays, BenchmarkTools
+using Test, DocStringExtensions, StaticArrays, BenchmarkTools, Sobol
 using ForwardDiff: derivative
 
 include("utilities.jl")
