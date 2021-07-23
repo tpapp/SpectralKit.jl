@@ -61,8 +61,9 @@ jobs:
             Pkg.instantiate()'
       - run: |
           julia --project=docs -e '
-            using Documenter: doctest
+            using Documenter: doctest, DocMeta
             using SpectralKit
+            DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit); recursive=true)
             doctest(SpectralKit)'
       - run: julia --project=docs docs/make.jl
         env:

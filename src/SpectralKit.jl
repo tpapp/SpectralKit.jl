@@ -8,6 +8,7 @@ using UnPack: @unpack
 include("generic_api.jl")
 include("chebyshev.jl")
 include("univariate.jl")
-include("smolyak.jl")
+include("smolyak_traversal.jl")
+include("smolyak_api.jl")
 
 end # module

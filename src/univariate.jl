@@ -45,25 +45,42 @@ struct UnivariateBasis{P,T} <: FunctionBasis
     transformation::T
 end
 
+function Base.show(io::IO, univariate_basis::UnivariateBasis)
+    @unpack parent, transformation = univariate_basis
+    print(io, parent, "\n  domain ", transformation)
+end
+
+
 """
 $(SIGNATURES)
 
-Create a univariate basis from `parent`, transforming the domain with `transformation`.
+Create a univariate basis from `univariate_family`, with the specified `grid_kind` and
+dimension `N`, transforming the domain with `transformation`.
 
 `parent` is a univariate basis, `transformation` is a univariate transformation (supporting
 the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
-subtype).
+subtype). Univariate bases support [`SpectralKit.gridpoint`](@ref).
 
 # Example
 
 The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
-``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4`:
-```julia
-univariate_basis(Chebyshev(10), SemiInfRational(3.0, 4.0))
+``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4` and an interior grid:
+
+```jldoctest
+julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
+Chebyshev polynomials (1st kind), interior grid, dimension: 10
+  domain (3.0,∞) [rational transformation with scale 4.0]
+
+julia> dimension(basis)
+10
+
+julia> domain(basis)
+(3.0, Inf)
 ```
 """
-function univariate_basis(parent, transformation)
-    UnivariateBasis(parent, transformation)
+function univariate_basis(univariate_family, grid_kind::AbstractGrid, N::Integer,
+                          transformation)
+    UnivariateBasis(univariate_family(grid_kind, Int(N)), transformation)
 end
 
 @inline dimension(basis::UnivariateBasis) = dimension(basis.parent)
@@ -78,15 +95,14 @@ function basis_at(basis::UnivariateBasis, x::Real)
     basis_at(parent, to_domain(transformation, parent, x))
 end
 
-function grid(::Type{T}, basis::UnivariateBasis, kind) where T
+function gridpoint(::Type{T}, basis::UnivariateBasis, i) where T
     @unpack parent, transformation = basis
-    map(x -> from_domain(transformation, parent, x), grid(T, parent, kind))
+    from_domain(transformation, parent, gridpoint(T, parent, i))
 end
 
 ####
 #### transformations
 ####
-
 
 ###
 ### bounded linear
@@ -105,6 +121,11 @@ struct BoundedLinear{T <: Real} <: UnivariateTransformation
         m, s = promote(m, s)
         new{typeof(m)}(m, s)
     end
+end
+
+function Base.show(io::IO, transformation::BoundedLinear)
+    @unpack m, s = transformation
+    print(io, "(", m - s, ",", m + s, ") [linear transformation]")
 end
 
 """
@@ -139,6 +160,16 @@ struct SemiInfRational{T <: Real} <: UnivariateTransformation
         @argcheck L ≠ 0
         new{T}(A, L)
     end
+end
+
+function Base.show(io::IO, transformation::SemiInfRational)
+    @unpack A, L = transformation
+    if L > 0
+        D = "($A,∞)"
+    else
+        D = "(-∞,A)"
+    end
+    print(io, D, " [rational transformation with scale ", L, "]")
 end
 
 """
@@ -179,8 +210,13 @@ struct InfRational{T <: Real} <: UnivariateTransformation
     end
 end
 
+function Base.show(io::IO, transformation::InfRational)
+    @unpack A, L = transformation
+    print(io, "(-∞,∞) [rational transformation with center ", A, ", scale ", L, "]")
+end
+
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Chebyshev polynomials transformed to the domain `(-Inf, Inf)`
 using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
