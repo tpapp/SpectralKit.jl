@@ -173,40 +173,46 @@ and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
     SmolyakParameters{Int(B),Int(M)}()
 end
 
+"""
+$(TYPEDEF)
+
+Indexing specification in a Smolyak basis/interpolation.
+
+# Type parameters
+
+- `N`: the dimension of indices
+
+- `H`: highest index visited for all dimensions
+
+- `B ≥ 0`: sum of block indices, starting from `0` (ie `B = 0` has just one element),
+
+- `M`: upper bound on each block index
+
+# Constructor
+
+Takes the dimension `N` as a parameter and a `SmolyakParameters` object, calculating
+everything else.
+
+# Details
+
+Consider positive integer indices `(i1, …, iN)`, each starting at one.
+
+Let `ℓ(b) = __cumulative_block_length(b)`, and `b1` denote the smallest integer such
+that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with `ℓ(-1) = 0` for the
+purposes of notation.
+
+An index `(i1, …, iN)` is visited iff all of the following hold:
+
+1. `1 ≤ i1 ≤ ℓ(M)`, …, `1 ≤ iN ≤ ℓ(M)`,
+2. `0 ≤ b1 ≤ M`, …, `1 ≤ bN ≤ M`,
+3. `b1 + … + bN ≤ B`
+
+Visited indexes are in *column-major* order.
+"""
+
 struct SmolyakIndices{N,H,B,M}
     len::Int
     cumulative_block_lengths::NTuple{M,Int}
-    @doc """
-    Indexing specification in a Smolyak basis/interpolation.
-
-    # Type parameters
-
-    - `N`: the dimension of indices
-
-    - `B ≥ 0`: sum of block indices, starting from `0` (ie `B = 0` has just one element),
-
-    - `H`: highest index visited for all dimensions
-
-    # Arguments
-
-    - `M`: upper bound on each block index
-
-    # Details
-
-    Consider positive integer indices `(i1, …, iN)`, each starting at one.
-
-    Let `ℓ(b) = __cumulative_block_length(b)`, and `b1` denote the smallest integer such
-    that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with `ℓ(-1) = 0` for the
-    purposes of notation.
-
-    An index `(i1, …, iN)` is visited iff all of the following hold:
-
-    1. `1 ≤ i1 ≤ ℓ(M)`, …, `1 ≤ iN ≤ ℓ(M)`,
-    2. `0 ≤ b1 ≤ M`, …, `1 ≤ bN ≤ M`,
-    3. `b1 + … + bN ≤ B`
-
-    Visited indexes are in *column-major* order.
-    """
     function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
         @argcheck N ≥ 1
         H = __cumulative_block_length(M)
