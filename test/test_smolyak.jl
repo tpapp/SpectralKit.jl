@@ -64,7 +64,7 @@ end
     for B in 0:3
         for M in 0:B
             for N in 1:4
-                ι = SmolyakIndices{N}(SmolyakParameters{B}(M))
+                ι = SmolyakIndices{N}(SmolyakParameters(B, M))
                 x1 = @inferred collect(ι)
                 x2 = first.(smolyak_indices_check(N, B, M))
                 len = @inferred __smolyak_length(Val(N), Val(B), M)
@@ -79,7 +79,7 @@ end
     for B in 0:3
         for M in 0:B
             for N in 1:4
-                ι = SmolyakIndices{N}(SmolyakParameters{B}(M))
+                ι = SmolyakIndices{N}(SmolyakParameters(B, M))
                 ℓ = __cumulative_block_length(min(B,M))
                 sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
                 P = SmolyakProduct(ι, sources)
@@ -99,7 +99,7 @@ end
 
 @testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters{3}(3),
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                           (BoundedLinear(0, 4), BoundedLinear(0, 3)))
     @test @inferred(domain(basis)) == ((0, 4), (0, 3))
     x = @inferred grid(Float64, basis)
@@ -116,7 +116,7 @@ end
 end
 
 @testset "Smolyak API allocations" begin
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters{3}(3),
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                           (BoundedLinear(0, 4), BoundedLinear(0, 3)))
     y = SVector(1.0, 2.0)
     θ = randn(dimension(basis))
@@ -129,7 +129,7 @@ end
         x1, x2, x3, x4 = x
         exp(0.3 * (x1 - 2.0) * (x2 - 1.0)) + exp(-x3 * (x2 + 5)) - 1 / log(x4^2 + 10)
     end
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters{5}(5),
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(5),
                           (BoundedLinear(0, 4), BoundedLinear(-2.0, 2.0),
                            SemiInfRational(1.0, 2.0), InfRational(0, 4)))
     x = grid(basis)
@@ -154,7 +154,7 @@ end
         x1, x2 = x
         7.0 + x1 + 2*x2 + 3*x2*x1
     end
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters{2}(2),
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2),
                           (BoundedLinear(0, 4), BoundedLinear(-5.0, 5.0)))
     x = grid(basis)
     θ = collocation_matrix(basis, x) \ f.(x)

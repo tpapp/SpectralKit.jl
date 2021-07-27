@@ -96,8 +96,9 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-@inline function __inc(M::Int, slack::Int, indices::NTuple{N,Int},
-                       blocks::NTuple{N,Int}, limits::NTuple{N,Int}) where N
+@inline function __inc(cumulative_block_lengths::NTuple{M,Int}, slack::Int,
+                       indices::NTuple{N,Int}, blocks::NTuple{N,Int},
+                       limits::NTuple{N,Int}) where {M,N}
     i1, iτ... = indices
     b1, bτ... = blocks
     l1, lτ... = limits
@@ -105,13 +106,13 @@ Internal implementation of the Smolyak indexing iterator.
         true, 1, 0, (i1 + 1, iτ...), blocks, limits
     elseif b1 < M && slack > 0  # increment i1, next block
         b1′ = b1 + 1
-        true, 1, -1, (i1 + 1, iτ...), (b1′, bτ...), (__cumulative_block_length(b1′), lτ...)
+        true, 1, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_lengths[b1′], lτ...)
     else
         if N == 1               # end of the line, arbitrary value since !valid
             false, 0, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, C, Δτ, iτ′, bτ′, lτ′ = __inc(M, slack + Δ1, iτ, bτ, lτ)
+            valid, C, Δτ, iτ′, bτ′, lτ′ = __inc(cumulative_block_lengths, slack + Δ1, iτ, bτ, lτ)
             (valid, C + 1, Δ1 + Δτ, (1, iτ′...), (0, bτ′...),
              (__cumulative_block_length(0), lτ′...))
         end
@@ -151,13 +152,11 @@ function __smolyak_length(::Val{N}, ::Val{B}, M::Int) where {N,B}
     sum(c)
 end
 
-struct SmolyakParameters{B}
-    M::Int
-    function SmolyakParameters{B}(M::Int) where {B}
+struct SmolyakParameters{B,M}
+    function SmolyakParameters{B,M}() where {B,M}
         @argcheck B isa Int && B ≥ 0
-        @argcheck M ≥ 0
-        M = min(B, M)           # maintain M ≤ B
-        new{B}(M)
+        @argcheck M isa Int && M ≥ 0
+        new{B,min(B,M)}()       # maintain M ≤ B
     end
 end
 
@@ -171,12 +170,12 @@ corresponding gridpoints), indexed with a *block index* `b` that starts at `0`. 
 and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
 """
 @inline function SmolyakParameters(B::Integer, M::Integer = B)
-    SmolyakParameters{Int(B)}(Int(M))
+    SmolyakParameters{Int(B),Int(M)}()
 end
 
-struct SmolyakIndices{N,H,B}
-    M::Int
+struct SmolyakIndices{N,H,B,M}
     len::Int
+    cumulative_block_lengths::NTuple{M,Int}
     @doc """
     Indexing specification in a Smolyak basis/interpolation.
 
@@ -208,17 +207,16 @@ struct SmolyakIndices{N,H,B}
 
     Visited indexes are in *column-major* order.
     """
-    function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B}) where {N,B}
+    function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
         @argcheck N ≥ 1
-        @unpack M = smolyak_parameters
         H = __cumulative_block_length(M)
         len = __smolyak_length(Val(N), Val(B), M)
-        new{N,H,B}(M, len)
+        new{N,H,B,M}(len, ntuple(__cumulative_block_length, Val(M)))
     end
 end
 
-function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B}) where {N,H,B}
-    @unpack M, len = smolyak_indices
+function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B,M}) where {N,H,B,M}
+    @unpack len = smolyak_indices
     print(io, "Smolyak indexing, B=$(B) total blocks, capped at M=$(M), dimension $(len)")
 end
 
@@ -234,7 +232,7 @@ Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 end
 
 @inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, _, Δ, indices′, blocks′, limits′ = __inc(ι.M, slack, indices, blocks, limits)
+    valid, _, Δ, indices′, blocks′, limits′ = __inc(ι.cumulative_block_lengths, slack, indices, blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
