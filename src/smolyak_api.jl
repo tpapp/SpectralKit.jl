@@ -63,8 +63,8 @@ end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}},
-                  x::SVector{N,<:Real}) where {N,B,H}
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
+                  x::SVector{N,<:Real}) where {N,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
     function _f(transformation, x)
         sacollect(SVector{H}, basis_at(UnivariateBasis(univariate_parent, transformation), x))
@@ -78,7 +78,7 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}, x) where N
 end
 
 function grid(::Type{T},
-              smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,B,H}}) where {T<:Real,N,B,H}
+              smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
     x = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
                   for i in SmolyakGridShuffle(H))

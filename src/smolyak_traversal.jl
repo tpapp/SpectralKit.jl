@@ -149,7 +149,7 @@ function __smolyak_length(::Val{N}, ::Val{B}, M::Int) where {N,B}
     sum(c)
 end
 
-struct SmolyakIndices{N,B,H}
+struct SmolyakIndices{N,H,B}
     M::Int
     len::Int
     @doc """
@@ -188,22 +188,22 @@ struct SmolyakIndices{N,B,H}
         @argcheck B ≥ M ≥ 0
         H = __cumulative_block_length(min(M,B))
         len = __smolyak_length(Val(N), Val(B), M)
-        new{N,B,H}(M, len)
+        new{N,H,B}(M, len)
     end
 end
 
-function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,B}) where {N,B}
+function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B}) where {N,H,B}
     @unpack M, len = smolyak_indices
     print(io, "Smolyak indexing, $(B) total blocks, capped at $(M), dimension $(len)")
 end
 
-@inline highest_visited_index(::SmolyakIndices{N,B,H}) where {N,B,H} = H
+@inline highest_visited_index(::SmolyakIndices{N,H}) where {N,H} = H
 
 Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 
 @inline Base.length(ι::SmolyakIndices) = ι.len
 
-@inline function Base.iterate(ι::SmolyakIndices{N,B}) where {N,B}
+@inline function Base.iterate(ι::SmolyakIndices{N,H,B}) where {N,H,B}
     slack, indices, blocks, limits = __inc_init(Val(N), Val(B))
     indices, (slack, indices, blocks, limits)
 end
@@ -249,7 +249,7 @@ Base.length(smolyak_product::SmolyakProduct) = length(smolyak_product.smolyak_in
 
 Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
 
-@inline function Base.iterate(smolyak_product::SmolyakProduct{<:SmolyakIndices{N,B}}, state...) where {N,B}
+@inline function Base.iterate(smolyak_product::SmolyakProduct, state...)
     @unpack smolyak_indices, sources = smolyak_product
     itr = iterate(smolyak_indices, state...)
     itr ≡ nothing && return nothing
