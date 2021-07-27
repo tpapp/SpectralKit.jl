@@ -2,6 +2,8 @@
 ##### Smolyak implementation details
 #####
 
+export SmolyakParameters
+
 ####
 #### Block sizes and shuffling
 ####
@@ -149,6 +151,29 @@ function __smolyak_length(::Val{N}, ::Val{B}, M::Int) where {N,B}
     sum(c)
 end
 
+struct SmolyakParameters{B}
+    M::Int
+    function SmolyakParameters{B}(M::Int) where {B}
+        @argcheck B isa Int && B ≥ 0
+        @argcheck M ≥ 0
+        M = min(B, M)           # maintain M ≤ B
+        new{B}(M)
+    end
+end
+
+"""
+$(SIGNATURES)
+
+Parameters for Smolyak grids that are independent of the dimension of the domain.
+
+Polynomials are organized into blocks of `1, 2, 2, 4, 8, 16, …` polynomials (and
+corresponding gridpoints), indexed with a *block index* `b` that starts at `0`. `B ≥ ∑ bᵢ`
+and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
+"""
+@inline function SmolyakParameters(B::Integer, M::Integer = B)
+    SmolyakParameters{Int(B)}(Int(M))
+end
+
 struct SmolyakIndices{N,H,B}
     M::Int
     len::Int
@@ -183,10 +208,10 @@ struct SmolyakIndices{N,H,B}
 
     Visited indexes are in *column-major* order.
     """
-    function SmolyakIndices{N,B}(M::Int) where {N,B}
+    function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B}) where {N,B}
         @argcheck N ≥ 1
-        @argcheck B ≥ M ≥ 0
-        H = __cumulative_block_length(min(M,B))
+        @unpack M = smolyak_parameters
+        H = __cumulative_block_length(M)
         len = __smolyak_length(Val(N), Val(B), M)
         new{N,H,B}(M, len)
     end
@@ -194,7 +219,7 @@ end
 
 function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B}) where {N,H,B}
     @unpack M, len = smolyak_indices
-    print(io, "Smolyak indexing, $(B) total blocks, capped at $(M), dimension $(len)")
+    print(io, "Smolyak indexing, B=$(B) total blocks, capped at M=$(M), dimension $(len)")
 end
 
 @inline highest_visited_index(::SmolyakIndices{N,H}) where {N,H} = H

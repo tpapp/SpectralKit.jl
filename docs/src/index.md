@@ -73,6 +73,7 @@ univariate_basis
 ### Multivariate bases
 
 ```@docs
+SmolyakParameters
 smolyak_basis
 ```
 

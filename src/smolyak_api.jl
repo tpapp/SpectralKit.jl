@@ -31,10 +31,10 @@ applied coordinate-wise.
 ## Example
 
 ```jldoctest
-julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), Val(3),
+julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                              (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
 Sparse multivariate basis on ℝ^2
-  Smolyak indexing, 3 total blocks, capped at 3, dimension 29
+  Smolyak indexing, B=3 total blocks, capped at M=3, dimension 29
   using Chebyshev polynomials (1st kind), interior grid, dimension: 9
   domain transformations
     (2.0,3.0) [linear transformation]
@@ -47,9 +47,10 @@ julia> domain(basis)
 ((2.0, 3.0), (3.0, Inf))
 ```
 """
-function smolyak_basis(univariate_family, grid_kind::AbstractGrid, ::Val{B},
-                       transformations::NTuple{N,Any}, M = B) where {B,N}
-    smolyak_indices = SmolyakIndices{N,B}(M)
+function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
+                       smolyak_parameters::SmolyakParameters,
+                       transformations::NTuple{N,Any}) where {N}
+    smolyak_indices = SmolyakIndices{N}(smolyak_parameters)
     univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
     SmolyakBasis(smolyak_indices, univariate_parent, transformations)
 end
