@@ -1,7 +1,7 @@
 name = "SpectralKit"
 uuid = "5c252ae7-b5b6-46ab-a016-b0e3d78320b7"
 authors = ["Tamas K. Papp <tkpapp@gmail.com>"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -19,8 +19,8 @@ julia = "^1.2"
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Sobol = "ed01d8cd-4d21-5b2a-85b4-cc3bdc58bad4"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["BenchmarkTools", "Test", "ForwardDiff", "Sobol"]

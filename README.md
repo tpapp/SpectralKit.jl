@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://tpapp.github.io/SpectralKit.jl/stable)
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)](https://tpapp.github.io/SpectralKit.jl/dev)
 
-Building blocks of spectral methods for Julia.
+Building blocks of spectral methods for Julia. Currently includes Chebyshev polynomials on univariate and Smolyak (multivariate) grids, with domain transformations to semi-infinite and infinite domains.
 
 ## Introduction
 
@@ -17,6 +17,10 @@ Mostly useful for algorithms along the lines of
 The aim is to provide simple, well-tested, robust, and fast *building blocks* for spectral algorithms, which can be easily combined into algorithms.
 
 At the moment, the package API is experimental and subject to change.
+
+## Help
+
+Asking for help in [issues](https://github.com/tpapp/SpectralKit.jl/issues) is fine, you can also ping me as `@Tamas_Papp` on the [Discourse forum](https://discourse.julialang.org/)
 
 ## Pretty pictures
 
