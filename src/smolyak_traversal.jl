@@ -89,8 +89,6 @@ Internal implementation of the Smolyak indexing iterator.
 - `valid::Bool`: `false` iff there is no next element, in which case the following values
   should be ignored
 
-- `C::Int`: index of the last element in `indices′` that changed compared to `indices`
-
 - `Δ::Int`: change in `slack`
 
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
@@ -103,18 +101,17 @@ Internal implementation of the Smolyak indexing iterator.
     b1, bτ... = blocks
     l1, lτ... = limits
     if i1 < l1                  # increment i1, same block
-        true, 1, 0, (i1 + 1, iτ...), blocks, limits
+        true, 0, (i1 + 1, iτ...), blocks, limits
     elseif b1 < M && slack > 0  # increment i1, next block
         b1′ = b1 + 1
-        true, 1, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_lengths[b1′], lτ...)
+        true, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_lengths[b1′], lτ...)
     else
-        if N == 1               # end of the line, arbitrary value since !valid
-            false, 0, 0, indices, blocks, limits
+        if N == 1               # end of iteration, arbitrary value since !valid
+            false, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, C, Δτ, iτ′, bτ′, lτ′ = __inc(cumulative_block_lengths, slack + Δ1, iτ, bτ, lτ)
-            (valid, C + 1, Δ1 + Δτ, (1, iτ′...), (0, bτ′...),
-             (__cumulative_block_length(0), lτ′...))
+            valid, Δτ, iτ′, bτ′, lτ′ = __inc(cumulative_block_lengths, slack + Δ1, iτ, bτ, lτ)
+            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (__cumulative_block_length(0), lτ′...)
         end
     end
 end
@@ -238,7 +235,7 @@ Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 end
 
 @inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, _, Δ, indices′, blocks′, limits′ = __inc(ι.cumulative_block_lengths, slack, indices, blocks, limits)
+    valid, Δ, indices′, blocks′, limits′ = __inc(ι.cumulative_block_lengths, slack, indices, blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
