@@ -31,7 +31,7 @@ basis = univariate_basis(Chebyshev, EndpointGrid(), # 5 Chebyshev polynomials on
                          5, BoundedLinear(0, 2))
 is_function_basis(basis) # tells us that we support the interface below
 dimension(basis) # number of basis functions
-domain(basis)            # endpoints 
+domain(basis)            # domain
 grid(basis) # Gauss-Lobatto grid
 collect(basis_at(basis, 0.41)) # iterator for basis functions at 0.41
 θ = [1, 0.5, 0.2, 0.3, 0.001] # a vector of coefficients
@@ -103,6 +103,8 @@ collocation_matrix
 
 ## Internals
 
+This section of the documentation is probably only relevant to contributors and others who want to understand the internals.
+
 ### Simplified API for adding custom transformations
 
 ```@docs
@@ -116,4 +118,3 @@ SpectralKit.from_domain
 ```@docs
 SpectralKit.gridpoint
 ```
-

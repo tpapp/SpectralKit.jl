@@ -12,6 +12,10 @@ struct SmolyakParameters{B,M}
     end
 end
 
+function Base.show(io::IO, ::SmolyakParameters{B,M}) where {B,M}
+    print(io, "Smolyak parameters, ∑bᵢ ≤ $(B), all bᵢ ≤ $(M)")
+end
+
 """
 $(SIGNATURES)
 
@@ -75,7 +79,7 @@ end
 
 function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B,M}) where {N,H,B,M}
     @unpack len = smolyak_indices
-    print(io, "Smolyak indexing, B=$(B) total blocks, capped at M=$(M), dimension $(len)")
+    print(io, "Smolyak indexing, ∑bᵢ ≤ $(B), all bᵢ ≤ $(M), dimension $(len)")
 end
 
 @inline highest_visited_index(::SmolyakIndices{N,H}) where {N,H} = H
@@ -168,7 +172,7 @@ applied coordinate-wise.
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                              (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
 Sparse multivariate basis on ℝ^2
-  Smolyak indexing, B=3 total blocks, capped at M=3, dimension 29
+  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 29
   using Chebyshev polynomials (1st kind), interior grid, dimension: 9
   domain transformations
     (2.0,3.0) [linear transformation]
