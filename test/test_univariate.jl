@@ -52,6 +52,13 @@ end
     N = 11
     trans = SemiInfRational(A, L)
 
+    @testset "example mappings" begin
+        basis0 = Chebyshev(InteriorGrid(), 10)
+        @test from_domain(trans, basis0, 0) ≈ A + L
+        @test from_domain(trans, basis0, -0.5) ≈ A + L / 3
+        @test from_domain(trans, basis0, 0.5) ≈ A + 3 * L
+    end
+
     for grid_kind in (InteriorGrid(), EndpointGrid())
         basis0 = Chebyshev(grid_kind, N)
         basis = univariate_basis(Chebyshev, grid_kind, N, trans)
@@ -97,6 +104,13 @@ end
     L = 1.0
     N = 20
     trans = InfRational(A, L)
+
+    @testset "example mappings" begin
+        basis0 = Chebyshev(InteriorGrid(), 10)
+        @test from_domain(trans, basis0, 0) ≈ A
+        @test from_domain(trans, basis0, -0.5) ≈ A - L / √3
+        @test from_domain(trans, basis0, 0.5) ≈ A + L / √3
+    end
 
     for grid_kind in (InteriorGrid(), EndpointGrid())
         basis0 = Chebyshev(grid_kind, N)

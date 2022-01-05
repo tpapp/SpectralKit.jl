@@ -179,6 +179,12 @@ $(SIGNATURES)
 (when `L < 0`) using ``y = A + L ⋅ (1 + x) / (1 - x)``.
 
 When used with Chebyshev polynomials, also known as a “rational Chebyshev” basis.
+
+# Example mappings
+
+- ``-1/2 ↦ A + L / 3``
+- ``0 ↦ A + L``
+- ``1/2 ↦ A + 3 ⋅ L``
 """
 SemiInfRational(A::Real, L::Real) = SemiInfRational(promote(A, L)...)
 
@@ -221,7 +227,10 @@ $(SIGNATURES)
 Chebyshev polynomials transformed to the domain `(-Inf, Inf)`
 using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
 
-`0` is mapped to `A`.
+# Example mappings
+
+- ``0 ↦ A``
+- ``±0.5 ↦ A ± L / √3``
 """
 InfRational(A::Real, L::Real) = InfRational(promote(A, L)...)
 
