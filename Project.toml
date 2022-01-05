@@ -1,7 +1,7 @@
 name = "SpectralKit"
 uuid = "5c252ae7-b5b6-46ab-a016-b0e3d78320b7"
 authors = ["Tamas K. Papp <tkpapp@gmail.com>"]
-version = "0.5.0"
+version = "0.5.1"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -10,11 +10,11 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-ArgCheck = "1, 2.0"
+ArgCheck = "1, 2"
 DocStringExtensions = "0.8"
 StaticArrays = "1"
 UnPack = "0.1, 1"
-julia = "^1.2"
+julia = "1.2"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
