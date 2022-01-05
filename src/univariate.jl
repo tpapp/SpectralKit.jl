@@ -114,10 +114,10 @@ struct BoundedLinear{T <: Real} <: UnivariateTransformation
     "Scale `s`."
     s::T
     function BoundedLinear(a::T, b::T) where {T <: Real}
-        @argcheck isfinite(a) && isfinite(b)
+        @argcheck isfinite(a) && isfinite(b) DomainError
         s = (b - a) / 2
         m = (a + b) / 2
-        @argcheck s > 0 "Need `a < b`."
+        @argcheck s > 0 DomainError((; a, b), "Need `a < b`.")
         m, s = promote(m, s)
         new{typeof(m)}(m, s)
     end
@@ -157,7 +157,8 @@ struct SemiInfRational{T <: Real} <: UnivariateTransformation
     "Scale factor `L ≠ 0`."
     L::T
     function SemiInfRational(A::T, L::T) where {T <: Real}
-        @argcheck L ≠ 0
+        @argcheck isfinite(A) DomainError
+        @argcheck isfinite(L) && L ≠ 0 DomainError
         new{T}(A, L)
     end
 end
@@ -211,7 +212,8 @@ struct InfRational{T <: Real} <: UnivariateTransformation
     "Scale factor `L > 0`."
     L::T
     function InfRational(A::T, L::T) where {T <: Real}
-        @argcheck L > 0
+        @argcheck isfinite(A) DomainError
+        @argcheck isfinite(L) && L > 0 DomainError
         new{T}(A, L)
     end
 end

@@ -1,6 +1,9 @@
 using SpectralKit: to_domain, from_domain
 
 @testset "Chebyshev bounded" begin
+    @test_throws DomainError BoundedLinear(-1.0, Inf)
+    @test_throws DomainError BoundedLinear(-1.0, -2.0)
+
     f(x) = exp(-3*x)
     f′(x) = -3*f(x)
     A, B = 1, 5
@@ -43,6 +46,10 @@ using SpectralKit: to_domain, from_domain
 end
 
 @testset "Chebyshev semi-infinite" begin
+    @test_throws DomainError SemiInfRational(-1.0, Inf)
+    @test_throws DomainError SemiInfRational(-1.0, 0.0)
+    @test_throws DomainError SemiInfRational(NaN, 2.0)
+
     f(x) = exp(-3*x)
     f′(x) = -3*f(x)
     grid_dense = range(3.1, 8, length = 100)
@@ -97,6 +104,11 @@ end
 end
 
 @testset "Chebyshev infinite" begin
+    @test_throws DomainError InfRational(1.0, Inf)
+    @test_throws DomainError InfRational(1.0, 0.0)
+    @test_throws DomainError InfRational(1.0, -2.0)
+    @test_throws DomainError InfRational(NaN, 1)
+
     f(x) = exp(-4*abs2(x))
     f′(x) = -8*x*f(x)
     grid_dense = range(-1, 2, length = 100)
