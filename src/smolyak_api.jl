@@ -24,6 +24,8 @@ Parameters for Smolyak grids that are independent of the dimension of the domain
 Polynomials are organized into blocks of `1, 2, 2, 4, 8, 16, …` polynomials (and
 corresponding gridpoints), indexed with a *block index* `b` that starts at `0`. `B ≥ ∑ bᵢ`
 and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
+
+`M > B` is not an error, but will be normalized to `M = B`.
 """
 @inline function SmolyakParameters(B::Integer, M::Integer = B)
     SmolyakParameters{Int(B),Int(M)}()
@@ -67,7 +69,9 @@ Visited indexes are in *column-major* order.
 """
 
 struct SmolyakIndices{N,H,B,M}
+    "number of coefficients (cached)"
     len::Int
+    "cumulative block lengths (cached)"
     cumulative_block_lengths::NTuple{M,Int}
     function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
         @argcheck N ≥ 1
