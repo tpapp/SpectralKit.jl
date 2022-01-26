@@ -24,6 +24,8 @@ A basis is constructed using
 
 4. transformation(s) that project the domain of a primitive family into the domain.
 
+A set of coordinates for a particular basis can be augmented for a wider basis with [`augment_coefficients`](@ref).
+
 The following example provides an overview of the interface for univariate function families:
 ```@repl
 using SpectralKit
@@ -37,6 +39,9 @@ collect(basis_at(basis, 0.41)) # iterator for basis functions at 0.41
 θ = [1, 0.5, 0.2, 0.3, 0.001] # a vector of coefficients
 linear_combination(basis, θ, 0.41) # combination at some value
 linear_combination(basis, θ)(0.41) # also as a callable
+basis2 = univariate_basis(Chebyshev, EndpointGrid(), # 8 Chebyshev polynomials on [0,2]
+                          8, BoundedLinear(0, 2))
+augment_coefficients(basis, basis2, θ)
 ```
 
 ## Constructing bases
@@ -99,6 +104,12 @@ linear_combination
 ```@docs
 grid
 collocation_matrix
+```
+
+### Augment coordinates for a wider basis
+
+```@docs
+augment_coefficients
 ```
 
 ## Internals
