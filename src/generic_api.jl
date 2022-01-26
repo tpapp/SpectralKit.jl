@@ -46,7 +46,7 @@ is_function_basis(f) = is_function_basis(typeof(f))
 `$(FUNCTIONNAME)(basis)`
 
 The domain of a function basis. A tuple of numbers (of arbitrary type, but usually
-`Float64`), or a tuple the latter.
+`Float64`), or a tuple of domains by coordinate.
 """
 function domain end
 
