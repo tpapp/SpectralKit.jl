@@ -164,3 +164,42 @@ end
         @test gradient(F, x) ≈ gradient(f, x)
     end
 end
+
+###
+### augment coefficients
+###
+
+@testset "Smolyak augment coefficients" begin
+    basis1 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2),
+                           (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    θ1 = randn(dimension(basis1))
+
+    # grid ≠
+    basis2_G = smolyak_basis(Chebyshev, EndpointGrid(),
+                             SmolyakParameters(2, 3), (BoundedLinear(0, 4.0),
+                                                       BoundedLinear(0, 4.0)))
+    @test !is_subset_basis(basis1, basis2_G)
+    @test_throws ArgumentError augment_coefficients(basis1, basis2_G, θ1)
+
+    # smolyak_parameters <
+    basis2_P = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 1),
+                             (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    @test !is_subset_basis(basis1, basis2_P)
+    @test_throws ArgumentError augment_coefficients(basis1, basis2_P, θ1)
+
+    # transformations ≠
+    basis2_T = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3, 2),
+                             (BoundedLinear(-3, 4.0), BoundedLinear(0, 4.0)))
+    @test !is_subset_basis(basis1, basis2_T)
+    @test_throws ArgumentError augment_coefficients(basis1, basis2_T, θ1)
+
+    basis2 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3, 2),
+                           (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    θ2 = @inferred augment_coefficients(basis1, basis2, θ1)
+    @test length(θ2) == dimension(basis2)
+    @test eltype(θ2) == eltype(θ1)
+    for _ in 1:100
+        x = (rand(), rand()) .* 4
+        @test linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
+    end
+end

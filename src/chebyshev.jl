@@ -82,3 +82,18 @@ function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where 
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
     cospi((N - i) ./ T(N - 1))
 end
+
+####
+#### augmenting
+####
+
+function augment_coefficients(basis1::Chebyshev{K1}, basis2::Chebyshev{K2},
+                              θ1::AbstractVector) where {K1,K2}
+    @argcheck is_subset_basis(basis1, basis2)
+    @argcheck length(θ1) == dimension(basis1)
+    vcat(θ1, zeros(eltype(θ1), basis2.N - basis1.N))
+end
+
+function is_subset_basis(basis1::Chebyshev{K1}, basis2::Chebyshev{K2}) where {K1,K2}
+    K1 == K2 && basis2.N ≥ basis1.N
+end

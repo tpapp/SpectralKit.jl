@@ -3,7 +3,8 @@
 #####
 
 export is_function_basis, dimension, domain, basis_at, linear_combination,
-    InteriorGrid, EndpointGrid, grid, collocation_matrix
+    InteriorGrid, EndpointGrid, grid, collocation_matrix, augment_coefficients,
+    is_subset_basis
 
 """
 $(TYPEDEF)
@@ -46,7 +47,7 @@ is_function_basis(f) = is_function_basis(typeof(f))
 `$(FUNCTIONNAME)(basis)`
 
 The domain of a function basis. A tuple of numbers (of arbitrary type, but usually
-`Float64`), or a tuple the latter.
+`Float64`), or a tuple of domains by coordinate.
 """
 function domain end
 
@@ -167,3 +168,30 @@ function collocation_matrix(basis, x)
     end
     C
 end
+
+"""
+`$(FUNCTIONNAME)(basis1, basis2, θ1)`
+
+Return a set of coefficients `θ2` for `basis2` such that
+```julia
+linear_combination(basis1, θ1, x) == linear_combination(basis2, θ2, x)
+```
+for any `x` in the domain. In practice this means padding with zeros.
+
+Throw a `ArgumentError` if the bases are incompatible with each other or `x`, or this is not
+possible. Methods may not be defined for incompatible bases, compatibility between bases can
+be checked with [`is_subset_basis`](@ref).
+"""
+function augment_coefficients end
+
+"""
+$(SIGNATURES)
+
+Return a `Bool` indicating whether coefficients in `basis1` can be augmented to `basis2`
+with [`augment_coefficients`](@ref).
+
+!!! note
+    `true` does not mean that coefficients from `basis1` can just be padded with zeros,
+    since they may be in different positions. Always use [`augment_coefficients`](@ref).
+"""
+is_subset_basis(basis1::FunctionBasis, basis2::FunctionBasis) = false

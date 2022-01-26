@@ -159,3 +159,30 @@ end
         end
     end
 end
+
+@testset "augmentation" begin
+    grids = (InteriorGrid(), EndpointGrid())
+    Ns = 4:5
+    transformations = (BoundedLinear(2.0, 3.0), BoundedLinear(1.0, 2.0),
+                       SemiInfRational(1.0, 3.0), InfRational(4.0, 5.0))
+    for (grid1, grid2, N1, N2, t1, t2) in Iterators.product(grids, grids, Ns, Ns,
+                                                            transformations, transformations)
+        basis1 = univariate_basis(Chebyshev, grid1, N1, t1)
+        basis2 = univariate_basis(Chebyshev, grid2, N2, t2)
+        θ1 = randn(dimension(basis1))
+        x = rand_in_domain(3, domain(basis1)...)
+        if grid1 == grid2 && t1 == t2
+            if N1 ≤ N2
+                θ2 = @inferred augment_coefficients(basis1, basis2, θ1)
+                @test is_subset_basis(basis1, basis2)
+                @test linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
+            else                # fewer
+                @test !is_subset_basis(basis1, basis2)
+                @test_throws ArgumentError augment_coefficients(basis1, basis2, θ1)
+            end
+        else                    # incompatible bases
+            @test !is_subset_basis(basis1, basis2)
+            @test_throws ArgumentError augment_coefficients(basis1, basis2, θ1)
+        end
+    end
+end
