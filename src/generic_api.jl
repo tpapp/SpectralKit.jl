@@ -3,7 +3,8 @@
 #####
 
 export is_function_basis, dimension, domain, basis_at, linear_combination,
-    InteriorGrid, EndpointGrid, grid, collocation_matrix, augment_coefficients
+    InteriorGrid, EndpointGrid, grid, collocation_matrix, augment_coefficients,
+    is_subset_basis
 
 """
 $(TYPEDEF)
@@ -178,6 +179,19 @@ linear_combination(basis1, θ1, x) == linear_combination(basis2, θ2, x)
 for any `x` in the domain. In practice this means padding with zeros.
 
 Throw a `ArgumentError` if the bases are incompatible with each other or `x`, or this is not
-possible. Methods may not be defined for incompatible bases.
+possible. Methods may not be defined for incompatible bases, compatibility between bases can
+be checked with [`is_subset_basis`](@ref).
 """
 function augment_coefficients end
+
+"""
+$(SIGNATURES)
+
+Return a `Bool` indicating whether coefficients in `basis1` can be augmented to `basis2`
+with [`augment_coefficients`](@ref).
+
+!!! note
+    `true` does not mean that coefficients from `basis1` can just be padded with zeros,
+    since they may be in different positions. Always use [`augment_coefficients`](@ref).
+"""
+is_subset_basis(basis1::FunctionBasis, basis2::FunctionBasis) = false

@@ -89,9 +89,11 @@ end
 
 function augment_coefficients(basis1::Chebyshev{K1}, basis2::Chebyshev{K2},
                               θ1::AbstractVector) where {K1,K2}
-    @argcheck K1 == K2 "incompatible grids"
+    @argcheck is_subset_basis(basis1, basis2)
     @argcheck length(θ1) == dimension(basis1)
-    Δ = basis2.N - basis1.N
-    @argcheck Δ ≥ 0 "destination basis does not contain source basis"
-    vcat(θ1, zeros(eltype(θ1), Δ))
+    vcat(θ1, zeros(eltype(θ1), basis2.N - basis1.N))
+end
+
+function is_subset_basis(basis1::Chebyshev{K1}, basis2::Chebyshev{K2}) where {K1,K2}
+    K1 == K2 && basis2.N ≥ basis1.N
 end

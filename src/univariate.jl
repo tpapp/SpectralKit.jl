@@ -100,6 +100,11 @@ function gridpoint(::Type{T}, basis::UnivariateBasis, i) where T
     from_domain(transformation, parent, gridpoint(T, parent, i))
 end
 
+function is_subset_basis(basis1::UnivariateBasis, basis2::UnivariateBasis)
+    (is_subset_basis(basis1.parent, basis2.parent) &&
+        basis1.transformation == basis2.transformation)
+end
+
 function augment_coefficients(basis1::UnivariateBasis, basis2::UnivariateBasis,
                               θ1::AbstractVector)
     @argcheck basis1.transformation == basis2.transformation

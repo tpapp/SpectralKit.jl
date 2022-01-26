@@ -41,6 +41,7 @@ linear_combination(basis, θ, 0.41) # combination at some value
 linear_combination(basis, θ)(0.41) # also as a callable
 basis2 = univariate_basis(Chebyshev, EndpointGrid(), # 8 Chebyshev polynomials on [0,2]
                           8, BoundedLinear(0, 2))
+is_subset_basis(basis, basis2)
 augment_coefficients(basis, basis2, θ)
 ```
 
@@ -110,6 +111,7 @@ collocation_matrix
 
 ```@docs
 augment_coefficients
+is_subset_basis
 ```
 
 ## Internals

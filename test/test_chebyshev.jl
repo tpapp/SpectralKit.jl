@@ -60,10 +60,14 @@
         basis = Chebyshev(InteriorGrid(), 5)
         θ = randn(5)
         # incompatible grids
-        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(EndpointGrid(), 6), θ)
+        basis2_G = Chebyshev(EndpointGrid(), 6)
+        @test !is_subset_basis(basis, basis2_G)
+        @test_throws ArgumentError augment_coefficients(basis, basis2_G, θ)
         # fewer dimensions
-        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(InteriorGrid(), 4), θ)
+        basis2_N = Chebyshev(InteriorGrid(), 4)
+        @test !is_subset_basis(basis, basis2_N)
+        @test_throws ArgumentError augment_coefficients(basis, basis2_N, θ)
         # too few coefficients
-        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(InteriorGrid(), 4), randn(4))
+        @test_throws ArgumentError augment_coefficients(basis, basis, randn(4))
     end
 end
