@@ -14,6 +14,7 @@
             @test is_function_basis(typeof(basis))
             @test dimension(basis) == N
 
+            # check linear combinations
             for i in 1:100
                 x = rand_in_domain(i, -1, 1)
                 bx = @inferred basis_at(basis, x)
@@ -29,6 +30,7 @@
                     sum(chebyshev_cos_deriv(x, i) * θ for (i,θ) in enumerate(θ))
             end
 
+            # check grid
             g = @inferred grid(basis)
             @test length(g) == N
             if grid_kind ≡ InteriorGrid()
@@ -39,6 +41,29 @@
                 @test g[1] == -1
                 @test g[end] == 1
             end
+
+            # augmentat coefficients
+            for i in 1:100
+                x = rand_in_domain(i, -1, 1)
+                θ = rand(N)
+                destination_basis = Chebyshev(grid_kind, N + 5)
+                destination_θ = augment_coefficients(basis, destination_basis, θ)
+                @test linear_combination(basis, θ, x) ≈
+                    linear_combination(destination_basis, destination_θ, x)
+            end
+
         end
+    end
+
+    # incompatible grids
+    @testset "augment Chebyshev coefficients — errors" begin
+        basis = Chebyshev(InteriorGrid(), 5)
+        θ = randn(5)
+        # incompatible grids
+        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(EndpointGrid(), 6), θ)
+        # fewer dimensions
+        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(InteriorGrid(), 4), θ)
+        # too few coefficients
+        @test_throws ArgumentError augment_coefficients(basis, Chebyshev(InteriorGrid(), 4), randn(4))
     end
 end

@@ -82,3 +82,16 @@ function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where 
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
     cospi((N - i) ./ T(N - 1))
 end
+
+####
+#### augmenting
+####
+
+function augment_coefficients(basis1::Chebyshev{K1}, basis2::Chebyshev{K2},
+                              θ1::AbstractVector) where {K1,K2}
+    @argcheck K1 == K2 "incompatible grids"
+    @argcheck length(θ1) == dimension(basis1)
+    Δ = basis2.N - basis1.N
+    @argcheck Δ ≥ 0 "destination basis does not contain source basis"
+    vcat(θ1, zeros(eltype(θ1), Δ))
+end
