@@ -68,7 +68,7 @@ The following is a basis with 10 transformed Chebyshev polynomials of the first 
 
 ```jldoctest
 julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
-Chebyshev polynomials (1st kind), interior grid, dimension: 10
+Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 10
   domain (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)

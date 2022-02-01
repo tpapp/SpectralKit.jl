@@ -112,8 +112,6 @@ Grid with interior points (eg Gauss-Chebyshev).
 """
 struct InteriorGrid <: AbstractGrid end
 
-Base.show(io::IO, ::InteriorGrid) = print(io, "interior grid (factor 3)")
-
 """
 $(TYPEDEF)
 
@@ -124,8 +122,6 @@ Grid that includes endpoints (eg Gauss-Lobatto).
 """
 struct EndpointGrid <: AbstractGrid end
 
-Base.show(io::IO, ::EndpointGrid) = print(io, "grid w/ endpoints")
-
 """
 $(TYPEDEF)
 
@@ -133,8 +129,6 @@ Grid with interior points that results in smaller grids than `InteriorGrid` when
 Equivalent to an `EndpointGrid` with endpoints dropped.
 """
 struct InteriorGrid2 <: AbstractGrid end
-
-Base.show(io::IO, ::InteriorGrid2) = print(io, "interior grid (factor 2)")
 
 """
 $(SIGNATURES)
