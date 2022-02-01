@@ -67,22 +67,21 @@ An index `(i1, …, iN)` is visited iff all of the following hold:
 
 Visited indexes are in *column-major* order.
 """
-struct SmolyakIndices{N,H,B,M}
+struct SmolyakIndices{N,H,B,M,Mp1}
     "number of coefficients (cached)"
     len::Int
-    "first block length (cached)"
-    first_block_length::Int
-    "subsequent cumulative block lengths (cached)"
-    cumulative_block_lengths::NTuple{M,Int}
+    "nesting total lengths (cached)"
+    nesting_total_lengths::NTuple{Mp1,Int}
     function SmolyakIndices{N}(grid_kind::AbstractGrid,
                                smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
         @argcheck N ≥ 1
+        Mp1 = M + 1
         len = __smolyak_length(grid_kind, Val(N), Val(B), M)
         first_block_length = nesting_total_length(Chebyshev, grid_kind, 0)
-        cumulative_block_lengths = ntuple(b -> nesting_total_length(Chebyshev, grid_kind, b),
-                                          Val(M))
-        H = M > 0 ? last(cumulative_block_lengths) : first_block_length
-        new{N,H,B,M}(len, first_block_length, cumulative_block_lengths)
+        nesting_total_lengths = ntuple(bp1 -> nesting_total_length(Chebyshev, grid_kind, bp1 - 1),
+                                       Val(Mp1))
+        H = last(nesting_total_lengths)
+        new{N,H,B,M,Mp1}(len, nesting_total_lengths)
     end
 end
 
@@ -98,14 +97,13 @@ Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 @inline Base.length(ι::SmolyakIndices) = ι.len
 
 @inline function Base.iterate(ι::SmolyakIndices{N,H,B}) where {N,H,B}
-    slack, indices, blocks, limits = __inc_init(ι.first_block_length, Val(N), Val(B))
+    slack, indices, blocks, limits = __inc_init(ι.nesting_total_lengths, Val(N), Val(B))
     indices, (slack, indices, blocks, limits)
 end
 
 @inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, Δ, indices′, blocks′, limits′ = __inc(ι.first_block_length,
-                                                 ι.cumulative_block_lengths,
-                                                 slack, indices, blocks, limits)
+    valid, Δ, indices′, blocks′, limits′ = __inc(ι.nesting_total_lengths, slack, indices,
+                                                 blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)

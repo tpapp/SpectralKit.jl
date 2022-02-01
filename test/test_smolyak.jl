@@ -6,9 +6,9 @@ using SpectralKit: nesting_total_length, nesting_block_length, SmolyakIndices,
 ####
 
 @testset "block length" begin
-    for grid_kind in (EndpointGrid(), InteriorGrid)
+    for grid_kind in (EndpointGrid(), InteriorGrid())
         # NOTE starting from 1 as we currently disallow construction with N=0
-        for b in (grid_kind ≡ EndpointGrig() ? 1 : 0):5
+        for b in (grid_kind ≡ EndpointGrid() ? 1 : 0):5
             nA = nesting_total_length(Chebyshev, grid_kind, b)
             gA = grid(Chebyshev(grid_kind, nA))
             gB = grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b + 1)))

@@ -106,10 +106,10 @@ end
 #### index traversal
 ####
 
-function __inc_init(first_block_length, ::Val{N}, ::Val{B}) where {N,B}
+function __inc_init(nesting_total_lengths, ::Val{N}, ::Val{B}) where {N,B}
     indices = ntuple(_ -> 1, Val(N))
     blocks = ntuple(_ -> 0, Val(N))
-    l = first_block_length
+    l = first(nesting_total_lengths)
     limits = ntuple(_ -> l, Val(N))
     slack = B
     slack, indices, blocks, limits
@@ -122,7 +122,8 @@ Internal implementation of the Smolyak indexing iterator.
 
 # Arguments
 
-- `M`: upper bound on each block index, remains constant during the iteration.
+- `nesting_total_lengths`: precalculated nesting total lengths, constant during iteration,
+  indexes with an offset of `1`
 
 - `slack`: `B - sum(blocks)`, cached
 
@@ -130,7 +131,7 @@ Internal implementation of the Smolyak indexing iterator.
 
 - `blocks`: block indexes
 
-- `limits`: `nesting_total_length.(Chebyshev, blocks, grid_kind)`
+- `limits`: limit for each index (for column-major reset)
 
 # Return values
 
@@ -142,25 +143,24 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-@inline function __inc(first_block_length::Int, cumulative_block_lengths::NTuple{M,Int},
-                       slack::Int, indices::NTuple{N,Int}, blocks::NTuple{N,Int},
-                       limits::NTuple{N,Int}) where {M,N}
+@inline function __inc(nesting_total_lengths::NTuple{Mp1,Int}, slack::Int,
+                       indices::NTuple{N,Int}, blocks::NTuple{N,Int},
+                       limits::NTuple{N,Int}) where {Mp1,N}
     i1, iτ... = indices
     b1, bτ... = blocks
     l1, lτ... = limits
     if i1 < l1                  # increment i1, same block
         true, 0, (i1 + 1, iτ...), blocks, limits
-    elseif b1 < M && slack > 0  # increment i1, next block
+    elseif b1 < (Mp1 - 1) && slack > 0  # increment i1, next block
         b1′ = b1 + 1
-        true, -1, (i1 + 1, iτ...), (b1′, bτ...), (cumulative_block_lengths[b1′], lτ...)
+        true, -1, (i1 + 1, iτ...), (b1′, bτ...), (nesting_total_lengths[b1′ + 1], lτ...)
     else
         if N == 1               # end of iteration, arbitrary value since !valid
             false, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, Δτ, iτ′, bτ′, lτ′ = __inc(first_block_length, cumulative_block_lengths,
-                                             slack + Δ1, iτ, bτ, lτ)
-            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (first_block_length, lτ′...)
+            valid, Δτ, iτ′, bτ′, lτ′ = __inc(nesting_total_lengths, slack + Δ1, iτ, bτ, lτ)
+            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (nesting_total_lengths[1], lτ′...)
         end
     end
 end
@@ -171,7 +171,7 @@ $(SIGNATURES)
 Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
 """
 function __smolyak_length(grid_kind::AbstractGrid, ::Val{N}, ::Val{B}, M::Int) where {N,B}
-    # implicit assumption: M ≤ B
+    # implicit assumption: M ≤ B, enforced by the SmolyakParameters constructor
     _bl(b) = nesting_block_length(Chebyshev, grid_kind, b)
     c = zeros(MVector{B+1,Int}) # indexed as 0, …, B
     for b in 0:M
