@@ -4,7 +4,7 @@
 
 @testset "Chebyshev" begin
     @test_throws ArgumentError Chebyshev(InteriorGrid(), 0)
-    @test_throws ArgumentError Chebyshev(EndpointGrid(), 1)
+    @test_throws ArgumentError Chebyshev(EndpointGrid(), 0)
 
     for grid_kind in (InteriorGrid(), EndpointGrid())
         for N in (grid_kind ≡ InteriorGrid() ? 1 : 2):10

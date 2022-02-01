@@ -48,16 +48,16 @@ Indexing specification in a Smolyak basis/interpolation.
 
 # Constructor
 
-Takes the dimension `N` as a parameter and a `SmolyakParameters` object, calculating
-everything else.
+Takes the dimension `N` as a parameter, `grid_kind`, and a `SmolyakParameters` object,
+calculating everything else.
 
 # Details
 
 Consider positive integer indices `(i1, …, iN)`, each starting at one.
 
-Let `ℓ(b) = __cumulative_block_length(b)`, and `b1` denote the smallest integer such
-that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with `ℓ(-1) = 0` for the
-purposes of notation.
+Let `ℓ(b) = nesting_total_length(Chebyshev, grid_knid, kind, b)`, and `b1` denote the
+smallest integer such that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with
+`ℓ(-1) = 0` for the purposes of notation.
 
 An index `(i1, …, iN)` is visited iff all of the following hold:
 
@@ -67,17 +67,21 @@ An index `(i1, …, iN)` is visited iff all of the following hold:
 
 Visited indexes are in *column-major* order.
 """
-
-struct SmolyakIndices{N,H,B,M}
+struct SmolyakIndices{N,H,B,M,Mp1}
     "number of coefficients (cached)"
     len::Int
-    "cumulative block lengths (cached)"
-    cumulative_block_lengths::NTuple{M,Int}
-    function SmolyakIndices{N}(smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
+    "nesting total lengths (cached)"
+    nesting_total_lengths::NTuple{Mp1,Int}
+    function SmolyakIndices{N}(grid_kind::AbstractGrid,
+                               smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
         @argcheck N ≥ 1
-        H = __cumulative_block_length(M)
-        len = __smolyak_length(Val(N), Val(B), M)
-        new{N,H,B,M}(len, ntuple(__cumulative_block_length, Val(M)))
+        Mp1 = M + 1
+        len = __smolyak_length(grid_kind, Val(N), Val(B), M)
+        first_block_length = nesting_total_length(Chebyshev, grid_kind, 0)
+        nesting_total_lengths = ntuple(bp1 -> nesting_total_length(Chebyshev, grid_kind, bp1 - 1),
+                                       Val(Mp1))
+        H = last(nesting_total_lengths)
+        new{N,H,B,M,Mp1}(len, nesting_total_lengths)
     end
 end
 
@@ -93,12 +97,13 @@ Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
 @inline Base.length(ι::SmolyakIndices) = ι.len
 
 @inline function Base.iterate(ι::SmolyakIndices{N,H,B}) where {N,H,B}
-    slack, indices, blocks, limits = __inc_init(Val(N), Val(B))
+    slack, indices, blocks, limits = __inc_init(ι.nesting_total_lengths, Val(N), Val(B))
     indices, (slack, indices, blocks, limits)
 end
 
 @inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, Δ, indices′, blocks′, limits′ = __inc(ι.cumulative_block_lengths, slack, indices, blocks, limits)
+    valid, Δ, indices′, blocks′, limits′ = __inc(ι.nesting_total_lengths, slack, indices,
+                                                 blocks, limits)
     valid || return nothing
     slack′ = slack + Δ
     indices′, (slack′, indices′, blocks′, limits′)
@@ -176,23 +181,28 @@ applied coordinate-wise.
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                              (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
 Sparse multivariate basis on ℝ^2
-  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 29
-  using Chebyshev polynomials (1st kind), interior grid, dimension: 9
+  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
+  using Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 27
   domain transformations
     (2.0,3.0) [linear transformation]
     (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
-29
+81
 
 julia> domain(basis)
 ((2.0, 3.0), (3.0, Inf))
 ```
+
+## Properties
+
+*Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
+ contains points of the cruder grid.
 """
 function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
                        smolyak_parameters::SmolyakParameters,
                        transformations::NTuple{N,Any}) where {N}
-    smolyak_indices = SmolyakIndices{N}(smolyak_parameters)
+    smolyak_indices = SmolyakIndices{N}(grid_kind, smolyak_parameters)
     univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
     SmolyakBasis(smolyak_indices, univariate_parent, transformations)
 end
@@ -224,7 +234,7 @@ function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
     @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
     x = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
-                  for i in SmolyakGridShuffle(H))
+                  for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
     ys = map(transformation -> from_domain.(Ref(transformation), Ref(univariate_parent), x),
              transformations)
     [SVector{N}(getindex.(ys, ι)) for ι in smolyak_indices]
