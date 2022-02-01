@@ -181,23 +181,23 @@ applied coordinate-wise.
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
                              (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
 Sparse multivariate basis on ℝ^2
-  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 29
-  using Chebyshev polynomials (1st kind), interior grid, dimension: 9
+  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
+  using Chebyshev polynomials (1st kind), interior grid, dimension: 27
   domain transformations
     (2.0,3.0) [linear transformation]
     (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
-29
+81
 
 julia> domain(basis)
 ((2.0, 3.0), (3.0, Inf))
+```
 
 ## Properties
 
 *Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
  contains points of the cruder grid.
-```
 """
 function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
                        smolyak_parameters::SmolyakParameters,
