@@ -65,3 +65,9 @@ Derivatives die out slower than for the [0,∞) transformation.
 With `B = 3`.
 
 <img src="docs/plots/smolyak_grid.png" width="50%">
+
+## Bibliography
+
+- Boyd, J. P. (2001). Chebyshev and fourier spectral methods. Courier Corporation.
+
+- Xu, K. (2016). The chebyshev points of the first kind. Applied Numerical Mathematics, 102, 17–30.

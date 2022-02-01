@@ -74,7 +74,7 @@ end
 function gridpoint(::Type{T}, basis::Chebyshev{InteriorGrid}, i::Integer) where {T <: Real}
     @unpack N = basis
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
-    cospi((2*(N - i) + 1) / T(2 * N))
+    sinpi((N - 2 * i + 1) / T(2 * N)) # use formula Xu (2016)
 end
 
 function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where {T <: Real}

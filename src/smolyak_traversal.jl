@@ -3,8 +3,23 @@
 #####
 
 ####
-#### Block sizes and shuffling
+#### Nesting sizes and shuffling
 ####
+
+###
+### nesting grids
+###
+### NOTE: This is not exported as we have no API for nesting univariate bases, only
+### Smolyak. When refactoring, consider exporting with a unified API.
+
+"""
+$(SIGNATURES)
+
+Cumulative block length at block `b`.
+"""
+@inline function nesting_total_length(::Type{Chebyshev}, ::EndpointGrid, b::Int)
+    b == 0 ? 1 : ((1 << b) + 1)
+end
 
 """
 $(SIGNATURES)
@@ -15,14 +30,15 @@ Length of each block `b`.
     Smolyak grids use “blocks” of polynomials, each indexed by ``b == 0, …, B`, with an
     increasing number of points in each.
 """
-@inline __block_length(b::Int) = b ≤ 1 ? b + 1 : 1 << (b - 1)
+@inline function nesting_block_length(::Type{Chebyshev}, ::EndpointGrid, b::Int)
+    b ≤ 1 ? b + 1 : 1 << (b - 1)
+end
 
-"""
-$(SIGNATURES)
+@inline nesting_total_length(::Type{Chebyshev}, ::InteriorGrid, b::Int) = 3^b
 
-Cumulative block length at block `b`.
-"""
-@inline __cumulative_block_length(b::Int) = b == 0 ? 1 : ((1 << b) + 1)
+@inline function nesting_block_length(::Type{Chebyshev}, ::InteriorGrid, b::Int)
+    b == 0 ? 1 : 2 * 3^(b - 1)
+end
 
 """
 $(TYPEDEF)
@@ -30,21 +46,46 @@ $(TYPEDEF)
 An iterator of indices for picking elements from a grid of length `len`, which should be a
 valid cumulative block length.
 """
-struct SmolyakGridShuffle
+struct SmolyakGridShuffle{K}
+    grid_kind::K
     len::Int
 end
 
 Base.length(ι::SmolyakGridShuffle) = ι.len
 
-Base.eltype(::Type{SmolyakGridShuffle}) = Int
+Base.eltype(::Type{<:SmolyakGridShuffle}) = Int
 
-function Base.iterate(ι::SmolyakGridShuffle)
+function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid})
+    @unpack len = ι
+    i0 = (len + 1) ÷ 2          # first index at this level
+    Δ = len                     # basis for step size
+    a = 2                       # alternating as 2Δa and Δa
+    i0, (i0, i0, Δ, a)
+end
+
+function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid}, (i, i0, Δ, a))
+    @unpack len = ι
+    i′ = i + a * Δ
+    if i′ ≤ len
+        i′, (i′, i0, Δ, 3 - a)
+    else
+        if Δ == 1
+            nothing
+        else
+            Δ = Δ ÷ 3
+            i0 -= Δ
+            i0, (i0, i0, Δ, 2)
+        end
+    end
+end
+
+function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid})
     @unpack len = ι
     i = (len + 1) ÷ 2
     i, (0, 0)                   # step = 0 is special-cased
 end
 
-function Base.iterate(ι::SmolyakGridShuffle, (i, step))
+function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid}, (i, step))
     @unpack len = ι
     i == 0 && return len > 1 ? (1, (1, len - 1)) : nothing
     i′ = i + step
@@ -65,6 +106,15 @@ end
 #### index traversal
 ####
 
+function __inc_init(first_block_length, ::Val{N}, ::Val{B}) where {N,B}
+    indices = ntuple(_ -> 1, Val(N))
+    blocks = ntuple(_ -> 0, Val(N))
+    l = first_block_length
+    limits = ntuple(_ -> l, Val(N))
+    slack = B
+    slack, indices, blocks, limits
+end
+
 """
 $(SIGNATURES)
 
@@ -80,7 +130,7 @@ Internal implementation of the Smolyak indexing iterator.
 
 - `blocks`: block indexes
 
-- `limits`: `__cumulative_block_length.(blocks)`, cached
+- `limits`: `nesting_total_length.(Chebyshev, blocks, grid_kind)`
 
 # Return values
 
@@ -92,8 +142,8 @@ Internal implementation of the Smolyak indexing iterator.
 - `indices′`, `blocks′, `limits′`: next values for corresponding arguments above, each an
   `::NTuple{N,Int}`
 """
-@inline function __inc(cumulative_block_lengths::NTuple{M,Int}, slack::Int,
-                       indices::NTuple{N,Int}, blocks::NTuple{N,Int},
+@inline function __inc(first_block_length::Int, cumulative_block_lengths::NTuple{M,Int},
+                       slack::Int, indices::NTuple{N,Int}, blocks::NTuple{N,Int},
                        limits::NTuple{N,Int}) where {M,N}
     i1, iτ... = indices
     b1, bτ... = blocks
@@ -108,19 +158,11 @@ Internal implementation of the Smolyak indexing iterator.
             false, 0, indices, blocks, limits
         else                    # i1 = 1, increment tail if applicable
             Δ1 = b1
-            valid, Δτ, iτ′, bτ′, lτ′ = __inc(cumulative_block_lengths, slack + Δ1, iτ, bτ, lτ)
-            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (__cumulative_block_length(0), lτ′...)
+            valid, Δτ, iτ′, bτ′, lτ′ = __inc(first_block_length, cumulative_block_lengths,
+                                             slack + Δ1, iτ, bτ, lτ)
+            valid, Δ1 + Δτ, (1, iτ′...), (0, bτ′...), (first_block_length, lτ′...)
         end
     end
-end
-
-function __inc_init(::Val{N}, ::Val{B}) where {N,B}
-    indices = ntuple(_ -> 1, Val(N))
-    blocks = ntuple(_ -> 0, Val(N))
-    l = __cumulative_block_length(0)
-    limits = ntuple(_ -> l, Val(N))
-    slack = B
-    slack, indices, blocks, limits
 end
 
 """
@@ -128,17 +170,18 @@ $(SIGNATURES)
 
 Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
 """
-function __smolyak_length(::Val{N}, ::Val{B}, M::Int) where {N,B}
+function __smolyak_length(grid_kind::AbstractGrid, ::Val{N}, ::Val{B}, M::Int) where {N,B}
     # implicit assumption: M ≤ B
+    _bl(b) = nesting_block_length(Chebyshev, grid_kind, b)
     c = zeros(MVector{B+1,Int}) # indexed as 0, …, B
     for b in 0:M
-        c[b + 1] = __block_length(b)
+        c[b + 1] = _bl(b)
     end
     for n in 2:N
         for b in B:(-1):0            # blocks with indices that sum to b
             s = 0
             for a in 0:min(b, M)
-                s += __block_length(a) * c[b - a + 1]
+                s += _bl(a) * c[b - a + 1]
             end
             # can safely overwrite since they will not be used again for n + 1
             c[b + 1] = s

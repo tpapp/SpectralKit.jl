@@ -1,4 +1,4 @@
-using SpectralKit: __block_length, __cumulative_block_length, SmolyakIndices,
+using SpectralKit: nesting_total_length, nesting_block_length, SmolyakIndices,
     __smolyak_length, SmolyakGridShuffle, SmolyakProduct
 
 ####
@@ -6,31 +6,47 @@ using SpectralKit: __block_length, __cumulative_block_length, SmolyakIndices,
 ####
 
 @testset "block length" begin
-    @test __cumulative_block_length(0) == 1
-    @test __cumulative_block_length(1) == 1 + 2
-    @test __cumulative_block_length(2) == 1 + 2 + 2
-    @test __cumulative_block_length(3) == 1 + 2 + 2 + 4
-    @test __cumulative_block_length(4) == 1 + 2 + 2 + 4 + 8
-    for i in 1:10
-        c = __cumulative_block_length(i)
-        cprev = i == 0 ? 0 : __cumulative_block_length(i - 1)
-        @test __block_length(i) == c - cprev
+    for grid_kind in (EndpointGrid(), InteriorGrid)
+        # NOTE starting from 1 as we currently disallow construction with N=0
+        for b in (grid_kind ≡ EndpointGrig() ? 1 : 0):5
+            nA = nesting_total_length(Chebyshev, grid_kind, b)
+            gA = grid(Chebyshev(grid_kind, nA))
+            gB = grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b + 1)))
+            @test is_approximate_subset(gA, gB)
+            @test sum(b -> nesting_block_length(Chebyshev, grid_kind, b), 0:b) == nA
+        end
     end
 end
 
+"""
+Collect shuffled indices for the given `grid_kind` for block indices `0, …, b`, returned as
+a `Vector{Vector{Int}}`. For testing.
+"""
+function shuffled_indices_upto_b(grid_kind, b)
+    _grid(b) = b == 0 ? [0.0] :
+        grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b)))
+    g0 = _grid(b)
+    mask0 = ones(Bool, length(g0))
+    indices = Vector{Vector{Int}}()
+    for b in b:(-1):1
+        mask = @. is_approximately_in(g0, _grid(b)) & !is_approximately_in(g0, _grid(b - 1))
+        push!(indices, findall(mask))
+    end
+    push!(indices, [(length(g0) + 1) ÷ 2])
+    reverse(indices)
+end
+
 @testset "block shuffle" begin
-    results = Dict([0 => [1],
-                    1 => [2, 1, 3],
-                    2 => [3, 1, 5, 2, 4],
-                    3 => vcat([5, 1, 9, 3, 7], 2:2:8),
-                    4 => vcat([9, 1, 17, 5, 13], 3:4:17, 2:2:17)])
-    for (b, i) in pairs(results)
-        len = length(i)
-        @test len == __cumulative_block_length(b)
-        ι = SmolyakGridShuffle(len)
-        @test length(ι) == len
-        @test @inferred eltype(ι) == Int
-        @test collect(ι) == i
+    @testset "endpoint" begin
+        for grid_kind in (EndpointGrid(), InteriorGrid())
+            for b in 0:6
+                len = nesting_total_length(Chebyshev, grid_kind, b)
+                ι = SmolyakGridShuffle(grid_kind, len)
+                @test length(ι) == len
+                @test @inferred eltype(ι) == Int
+                @test collect(ι) == reduce(vcat, shuffled_indices_upto_b(grid_kind, b))
+            end
+        end
     end
 end
 
@@ -42,11 +58,11 @@ end
 Naive implementation of Smolyan index iteration, traversing a `CartesianIndices` and keeping
 valid indexes. For testing/comparison. Returns a vector of `indexes => blocks` pairs.
 """
-function smolyak_indices_check(N, B, M)
-    m = __cumulative_block_length(M)
+function smolyak_indices_check(grid_kind, N, B, M)
+    m = nesting_total_length(Chebyshev, grid_kind, M)
     b_table = fill(M, m)
     for b in (M-1):(-1):0
-        b_table[1:__cumulative_block_length(b)] .= b
+        b_table[1:nesting_total_length(Chebyshev, grid_kind, b)] .= b
     end
     T = NTuple{N,Int}
     result = Vector{Pair{T,T}}()
@@ -61,32 +77,36 @@ function smolyak_indices_check(N, B, M)
 end
 
 @testset "Smolyak indices" begin
-    for B in 0:3
-        for M in 0:B
-            for N in 1:4
-                ι = SmolyakIndices{N}(SmolyakParameters(B, M))
-                x1 = @inferred collect(ι)
-                x2 = first.(smolyak_indices_check(N, B, M))
-                len = @inferred __smolyak_length(Val(N), Val(B), M)
-                @test x1 == x2
-                @test len == length(x1) == length(ι) == length(x2)
+    for grid_kind in (EndpointGrid(), InteriorGrid())
+        for B in 0:3
+            for M in 0:B
+                for N in 1:4
+                    ι = SmolyakIndices{N}(grid_kind, SmolyakParameters(B, M))
+                    x1 = @inferred collect(ι)
+                    x2 = first.(smolyak_indices_check(grid_kind, N, B, M))
+                    len = @inferred __smolyak_length(grid_kind, Val(N), Val(B), M)
+                    @test x1 == x2
+                    @test len == length(x1) == length(ι) == length(x2)
+                end
             end
         end
     end
 end
 
 @testset "Smolyak product primitives" begin
-    for B in 0:3
-        for M in 0:B
-            for N in 1:4
-                ι = SmolyakIndices{N}(SmolyakParameters(B, M))
-                ℓ = __cumulative_block_length(min(B,M))
-                sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
-                P = SmolyakProduct(ι, sources)
-                @test length(ι) == length(P)
-                @test eltype(P) == Float64
-                for (i, p) in zip(ι, P)
-                    @test prod(getindex.(sources, i)) ≈ p
+    for grid_kind in (EndpointGrid(), InteriorGrid())
+        for B in 0:3
+            for M in 0:B
+                for N in 1:4
+                    ι = SmolyakIndices{N}(grid_kind, SmolyakParameters(B, M))
+                    ℓ = nesting_total_length(Chebyshev, grid_kind, min(B,M))
+                    sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
+                    P = SmolyakProduct(ι, sources)
+                    @test length(ι) == length(P)
+                    @test eltype(P) == Float64
+                    for (i, p) in zip(ι, P)
+                        @test prod(getindex.(sources, i)) ≈ p
+                    end
                 end
             end
         end
@@ -201,5 +221,23 @@ end
     for _ in 1:100
         x = (rand(), rand()) .* 4
         @test linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
+    end
+end
+
+@testset "Smolyak nesting" begin
+    transformations = (BoundedLinear(0.0, 3.0), SemiInfRational(1.0, 2.0))
+    grid_kind = InteriorGrid()
+    for M1 in 0:5
+        for M2 in (M1 + 1):5
+            for B1 in 0:M1
+                for B2 in (B1 + 1):M2
+                    basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1),
+                                           transformations)
+                    basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2),
+                                           transformations)
+                    @test is_approximate_subset(grid(basis1), grid(basis2))
+                end
+            end
+        end
     end
 end
