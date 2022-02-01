@@ -192,6 +192,11 @@ julia> dimension(basis)
 
 julia> domain(basis)
 ((2.0, 3.0), (3.0, Inf))
+
+## Properties
+
+*Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
+ contains points of the cruder grid.
 ```
 """
 function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
