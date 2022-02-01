@@ -2,8 +2,8 @@
 ##### Generic API
 #####
 
-export is_function_basis, dimension, domain, basis_at, linear_combination,
-    InteriorGrid, EndpointGrid, grid, collocation_matrix, augment_coefficients,
+export is_function_basis, dimension, domain, basis_at, linear_combination, InteriorGrid,
+    InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
     is_subset_basis
 
 """
@@ -112,16 +112,29 @@ Grid with interior points (eg Gauss-Chebyshev).
 """
 struct InteriorGrid <: AbstractGrid end
 
-Base.show(io::IO, ::InteriorGrid) = print(io, "interior grid")
+Base.show(io::IO, ::InteriorGrid) = print(io, "interior grid (factor 3)")
 
 """
 $(TYPEDEF)
 
 Grid that includes endpoints (eg Gauss-Lobatto).
+
+!!! note
+    For small dimensions may fall back to a grid that does not contain endpoints.
 """
 struct EndpointGrid <: AbstractGrid end
 
 Base.show(io::IO, ::EndpointGrid) = print(io, "grid w/ endpoints")
+
+"""
+$(TYPEDEF)
+
+Grid with interior points that results in smaller grids than `InteriorGrid` when nested.
+Equivalent to an `EndpointGrid` with endpoints dropped.
+"""
+struct InteriorGrid2 <: AbstractGrid end
+
+Base.show(io::IO, ::InteriorGrid2) = print(io, "interior grid (factor 2)")
 
 """
 $(SIGNATURES)

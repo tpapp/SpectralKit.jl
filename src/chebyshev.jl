@@ -15,18 +15,16 @@ struct Chebyshev{K} <: FunctionBasis
     "The number of basis functions."
     N::Int
     @doc """
-    Chebyshev polynomials (of the first kind) on ``[-1, 1]``.
+    $(SIGNATURES)
+    `N` Chebyshev polynomials (of the first kind) on ``[-1, 1]``, with the associated
+    grid of `grid_kind`.
 
     !!! note
         This is not meant to be used directly as a basis, but as a building block, eg in
         [`univariate_basis`](@ref) and [`smolyak_basis`](@ref).
     """
     function Chebyshev(grid_kind::K, N::Int) where K
-        if grid_kind ≡ EndpointGrid()
-            @argcheck N ≥ 2
-        else
-            @argcheck N ≥ 1
-        end
+        @argcheck N ≥ 1
         new{K}(grid_kind, N)
     end
 end
@@ -80,8 +78,19 @@ end
 function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where {T <: Real}
     @unpack N = basis
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
-    cospi((N - i) ./ T(N - 1))
+    if N == 1
+        cospi(1/T(2))           # 0.0 as a fallback, even though it does not have endpoints
+    else
+        cospi((N - i) ./ T(N - 1))
+    end
 end
+
+function gridpoint(::Type{T}, basis::Chebyshev{InteriorGrid2}, i::Integer) where {T <: Real}
+    @unpack N = basis
+    @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
+    cospi(((N - i + 1) ./ T(N + 1)))
+end
+
 
 ####
 #### augmenting

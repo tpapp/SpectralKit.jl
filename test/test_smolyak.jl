@@ -1,17 +1,20 @@
 using SpectralKit: nesting_total_length, nesting_block_length, SmolyakIndices,
     __smolyak_length, SmolyakGridShuffle, SmolyakProduct
 
+"grids we test on"
+GRIDS = (EndpointGrid(), InteriorGrid(), InteriorGrid2())
+
 ####
 #### blocks
 ####
 
 @testset "block length" begin
-    for grid_kind in (EndpointGrid(), InteriorGrid())
-        # NOTE starting from 1 as we currently disallow construction with N=0
-        for b in (grid_kind ≡ EndpointGrid() ? 1 : 0):5
+    for grid_kind in GRIDS
+        for b in 0:5
             nA = nesting_total_length(Chebyshev, grid_kind, b)
             gA = grid(Chebyshev(grid_kind, nA))
             gB = grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b + 1)))
+
             @test is_approximate_subset(gA, gB)
             @test sum(b -> nesting_block_length(Chebyshev, grid_kind, b), 0:b) == nA
         end
@@ -23,13 +26,13 @@ Collect shuffled indices for the given `grid_kind` for block indices `0, …, b`
 a `Vector{Vector{Int}}`. For testing.
 """
 function shuffled_indices_upto_b(grid_kind, b)
-    _grid(b) = b == 0 ? [0.0] :
-        grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b)))
+    _grid(b) = grid(Chebyshev(grid_kind, nesting_total_length(Chebyshev, grid_kind, b)))
     g0 = _grid(b)
-    mask0 = ones(Bool, length(g0))
     indices = Vector{Vector{Int}}()
     for b in b:(-1):1
-        mask = @. is_approximately_in(g0, _grid(b)) & !is_approximately_in(g0, _grid(b - 1))
+        in_b = is_approximately_in(g0, _grid(b))
+        notin_bm1 = .!is_approximately_in(g0, _grid(b - 1))
+        mask = in_b .& notin_bm1
         push!(indices, findall(mask))
     end
     push!(indices, [(length(g0) + 1) ÷ 2])
@@ -38,7 +41,7 @@ end
 
 @testset "block shuffle" begin
     @testset "endpoint" begin
-        for grid_kind in (EndpointGrid(), InteriorGrid())
+        for grid_kind in GRIDS
             for b in 0:6
                 len = nesting_total_length(Chebyshev, grid_kind, b)
                 ι = SmolyakGridShuffle(grid_kind, len)
@@ -77,7 +80,7 @@ function smolyak_indices_check(grid_kind, N, B, M)
 end
 
 @testset "Smolyak indices" begin
-    for grid_kind in (EndpointGrid(), InteriorGrid())
+    for grid_kind in GRIDS
         for B in 0:3
             for M in 0:B
                 for N in 1:4
@@ -94,7 +97,7 @@ end
 end
 
 @testset "Smolyak product primitives" begin
-    for grid_kind in (EndpointGrid(), InteriorGrid())
+    for grid_kind in GRIDS
         for B in 0:3
             for M in 0:B
                 for N in 1:4
@@ -226,16 +229,17 @@ end
 
 @testset "Smolyak nesting" begin
     transformations = (BoundedLinear(0.0, 3.0), SemiInfRational(1.0, 2.0))
-    grid_kind = InteriorGrid()
-    for M1 in 0:5
-        for M2 in (M1 + 1):5
-            for B1 in 0:M1
-                for B2 in (B1 + 1):M2
-                    basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1),
-                                           transformations)
-                    basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2),
-                                           transformations)
-                    @test is_approximate_subset(grid(basis1), grid(basis2))
+    for grid_kind in GRIDS
+        for M1 in 0:5
+            for M2 in (M1 + 1):5
+                for B1 in 0:M1
+                    for B2 in (B1 + 1):M2
+                        basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1),
+                                               transformations)
+                        basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2),
+                                               transformations)
+                        @test is_approximate_subset(grid(basis1), grid(basis2))
+                    end
                 end
             end
         end

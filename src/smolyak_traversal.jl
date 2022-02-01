@@ -5,12 +5,27 @@
 ####
 #### Nesting sizes and shuffling
 ####
+#### NOTE: This is not exported as we have no API for nesting univariate bases, only
+#### Smolyak. When refactoring, consider exporting with a unified API.
+
+"""
+$(TYPEDEF)
+
+An iterator of indices for picking elements from a grid of length `len`, which should be a
+valid cumulative block length.
+"""
+struct SmolyakGridShuffle{K}
+    grid_kind::K
+    len::Int
+end
+
+Base.length(ι::SmolyakGridShuffle) = ι.len
+
+Base.eltype(::Type{<:SmolyakGridShuffle}) = Int
 
 ###
-### nesting grids
+### endpoint grid: 1, 1, 2, 4, 8, …
 ###
-### NOTE: This is not exported as we have no API for nesting univariate bases, only
-### Smolyak. When refactoring, consider exporting with a unified API.
 
 """
 $(SIGNATURES)
@@ -34,26 +49,38 @@ Length of each block `b`.
     b ≤ 1 ? b + 1 : 1 << (b - 1)
 end
 
+function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid})
+    @unpack len = ι
+    i = (len + 1) ÷ 2
+    i, (0, 0)                   # step = 0 is special-cased
+end
+
+function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid}, (i, step))
+    @unpack len = ι
+    i == 0 && return len > 1 ? (1, (1, len - 1)) : nothing
+    i′ = i + step
+    if i′ ≤ len
+        i′, (i′, step)
+    else
+        step′ = step ÷ 2
+        if step′ ≥ 2
+            i′ = step′ ÷ 2 + 1
+            i′, (i′, step′)
+        else
+            nothing
+        end
+    end
+end
+
+###
+### interior grid: 1, 3, 9, 27, …
+###
+
 @inline nesting_total_length(::Type{Chebyshev}, ::InteriorGrid, b::Int) = 3^b
 
 @inline function nesting_block_length(::Type{Chebyshev}, ::InteriorGrid, b::Int)
     b == 0 ? 1 : 2 * 3^(b - 1)
 end
-
-"""
-$(TYPEDEF)
-
-An iterator of indices for picking elements from a grid of length `len`, which should be a
-valid cumulative block length.
-"""
-struct SmolyakGridShuffle{K}
-    grid_kind::K
-    len::Int
-end
-
-Base.length(ι::SmolyakGridShuffle) = ι.len
-
-Base.eltype(::Type{<:SmolyakGridShuffle}) = Int
 
 function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid})
     @unpack len = ι
@@ -79,22 +106,29 @@ function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid}, (i, i0, Δ, a))
     end
 end
 
-function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid})
+###
+### interior grid type 2: 1, 3, 7, …
+###
+
+@inline nesting_total_length(::Type{Chebyshev}, ::InteriorGrid2, b::Int) = (1 << (b + 1)) - 1
+
+@inline nesting_block_length(::Type{Chebyshev}, ::InteriorGrid2, b::Int) = 1 << b
+
+function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid2})
     @unpack len = ι
     i = (len + 1) ÷ 2
-    i, (0, 0)                   # step = 0 is special-cased
+    i, (i, 2 * i)
 end
 
-function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid}, (i, step))
+function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid2}, (i, step))
     @unpack len = ι
-    i == 0 && return len > 1 ? (1, (1, len - 1)) : nothing
     i′ = i + step
     if i′ ≤ len
         i′, (i′, step)
     else
         step′ = step ÷ 2
         if step′ ≥ 2
-            i′ = step′ ÷ 2 + 1
+            i′ = step′ ÷ 2
             i′, (i′, step′)
         else
             nothing

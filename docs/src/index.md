@@ -58,8 +58,9 @@ Chebyshev
 ### Grid specifications
 
 ```@docs
-InteriorGrid
 EndpointGrid
+InteriorGrid
+InteriorGrid2
 ```
 
 ### Transformations

@@ -60,7 +60,9 @@ end
 
 "Flags (`true`) for elements in `a` that are within `atol` of some element in `b`."
 function is_approximately_in(a, b; atol = √eps())
-    map(a -> any(b -> maximum(abs.(a .- b)) ≤ atol, b), a)
+    _same(a::Real, b::Real) = a == b || abs(a - b) ≤ atol # Inf = Inf, etc
+    _same(a::AbstractVector, b::AbstractVector) = all(_same.(a, b))
+    map(a -> any(b -> _same(a, b), b), a)
 end
 
 "Are elements in `a` in `b`, approximately."
