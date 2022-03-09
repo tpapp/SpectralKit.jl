@@ -5,6 +5,7 @@
 [![codecov.io](http://codecov.io/github/tpapp/SpectralKit.jl/coverage.svg?branch=master)](http://codecov.io/github/tpapp/SpectralKit.jl?branch=master)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://tpapp.github.io/SpectralKit.jl/stable)
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)](https://tpapp.github.io/SpectralKit.jl/dev)
+[![DOI](https://zenodo.org/badge/220448027.svg)](https://zenodo.org/badge/latestdoi/220448027)
 
 Building blocks of spectral methods for Julia. Currently includes Chebyshev polynomials on univariate and Smolyak (multivariate) grids, with domain transformations to semi-infinite and infinite domains.
 
