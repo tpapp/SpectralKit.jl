@@ -64,7 +64,8 @@ subtype). Univariate bases support [`SpectralKit.gridpoint`](@ref).
 # Example
 
 The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
-``(3,∞)``, with equal amounts of nodes on both sides of `7 = 3 + 4` and an interior grid:
+``(3,∞)``, with equal amounts of nodes on both sides of the midpoint `7 = 3 + 4`, and an
+interior grid:
 
 ```jldoctest
 julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
