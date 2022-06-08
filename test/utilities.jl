@@ -31,20 +31,15 @@ end
 """
 $(SIGNATURES)
 
-Return a random scalar in `(-1.0, 1.0)`, except when `i == 1`, return `-1.0`, when `i == 2`,
-return `1.0`.
+Return a random scalar in `(-1.0, 1.0)` (the default), except when `i == 1`, return `-1.0`,
+when `i == 2`, return `1.0`.
+
+The intention is to provide comprehensive testing for endpoints.
 """
-function rand_pm1(i)
+function rand_pm1(i = 3)
     i == 1 && return -1.0
     i == 2 && return 1.0
     rand() * 2 - 1.0
-end
-
-"Replace elements `[begin:C]` with zero, return the new vector."
-function zero_upto(x::SVector{N,T}, C) where {N,T}
-    y = MVector(x)
-    y[begin:C] .= zero(T)
-    SVector(y)
 end
 
 "Flags (`true`) for elements in `a` that are within `atol` of some element in `b`."

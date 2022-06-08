@@ -58,7 +58,7 @@ end
     t1 = BoundedLinear(2.0, 3.0)
     t2 = SemiInfRational(7.0, 1.0)
     ct = coordinate_transformations(t1, t2)
-    x = SVector(rand_pm1(5), rand_pm1(5))
+    x = SVector(rand_pm1(), rand_pm1())
     y = @inferred from_pm1(ct, x)
     @test y isa SVector{2}
     @test y == SVector(from_pm1(t1, x[1]), from_pm1(t2, x[2]))
