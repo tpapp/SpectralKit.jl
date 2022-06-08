@@ -32,24 +32,24 @@ Currenly, all bases have the domain ``[-1,1]`` or ``[-1,1]^n``. Facilities are p
 
 ```@repl
 using SpectralKit
-basis = univariate_basis(Chebyshev, EndpointGrid(), 5) # 5 Chebyshev polynomials
-is_function_basis(basis) # tells us that we support the interface below
-dimension(basis) # number of basis functions
-domain(basis)            # domain
-grid(basis) # Gauss-Lobatto grid
-collect(basis_at(basis, 0.41)) # iterator for basis functions at 0.41
-θ = [1, 0.5, 0.2, 0.3, 0.001] # a vector of coefficients
-linear_combination(basis, θ, 0.41) # combination at some value
-linear_combination(basis, θ)(0.41) # also as a callable
-basis2 = univariate_basis(Chebyshev, EndpointGrid(), 8) # 8 Chebyshev polynomials
-is_subset_basis(basis, basis2)
-augment_coefficients(basis, basis2, θ)
+basis = Chebyshev(EndpointGrid(), 5)   # 5 Chebyshev polynomials
+is_function_basis(basis)               # ie we support the interface below
+dimension(basis)                       # number of basis functions
+domain(basis)                          # domain
+grid(basis)                            # Gauss-Lobatto grid
+collect(basis_at(basis, 0.41))         # iterator for basis functions at 0.41
+θ = [1, 0.5, 0.2, 0.3, 0.001]          # a vector of coefficients
+linear_combination(basis, θ, 0.41)     # combination at some value
+linear_combination(basis, θ)(0.41)     # also as a callable
+basis2 = Chebyshev(EndpointGrid(), 8)  # 8 Chebyshev polynomials
+is_subset_basis(basis, basis2)         # we could augment θ …
+augment_coefficients(basis, basis2, θ) # … so let's do it
 ```
 
 ### Smolyak approximation on a transformed domain
 
 ```@repl
-using SpectralKit
+using SpectralKit, StaticArrays
 function f2(x)                  # bivariate function we approximate
     x1, x2 = x                  # takes vectors
     exp(x1) + exp(-abs2(x2))
