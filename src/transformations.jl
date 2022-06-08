@@ -75,8 +75,6 @@ $(SIGNATURES)
 Wrapper for coordinate-wise transformations.
 
 ```jldoctest
-julia> using StaticArrays
-
 julia> ct = coordinate_transformations(BoundedLinear(0, 2), SemiInfRational(2, 3))
 coordinate transformations
   (0.0,2.0) ↔ (-1, 1) [linear transformation]
