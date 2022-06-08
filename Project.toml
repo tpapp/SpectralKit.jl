@@ -11,7 +11,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
 ArgCheck = "1, 2"
-DocStringExtensions = "0.8"
+DocStringExtensions = "0.8, 0.9"
 StaticArrays = "1"
 UnPack = "0.1, 1"
 julia = "1.2"
