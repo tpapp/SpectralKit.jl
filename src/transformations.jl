@@ -1,11 +1,12 @@
 #####
-##### Transformation of the Chebyshev polynomials — generic code
+##### transformations
 #####
 
-export univariate_basis, BoundedLinear, InfRational, SemiInfRational
+export to_pm1, from_pm1, coordinate_transformations,
+    BoundedLinear, InfRational, SemiInfRational
 
 ####
-#### simplified transformation API
+#### generic api
 ####
 
 """
@@ -14,106 +15,106 @@ $(TYPEDEF)
 An abstract type for univariate transformations. Transformations are not required to be
 subtypes, this just documents the interface they need to support:
 
-- [`to_domain`](@ref)
+- [`to_pm1`](@ref)
 
-- [`from_domain`](@ref)
+- [`from_pm1`](@ref)
+
+- [`domain`](@ref)
+
+!!! NOTE
+    Abstract type used for code organization, not exported.
 """
 abstract type UnivariateTransformation end
 
+Broadcast.broadcastable(transformation::UnivariateTransformation) = Ref(transformation)
+
+function domain(transformation::UnivariateTransformation)
+    from_pm1.(transformation, (-1, 1))
+end
+
 """
-`$(FUNCTIONNAME)(transformation, parent, x)`
+`$(FUNCTIONNAME)(transformation, x)`
+
+Transform `x` to ``[-1, 1]`` using `transformation`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
-function to_domain end
+function to_pm1 end
 
 """
-`$(FUNCTIONNAME)(transformation, parent, x)`
+`$(FUNCTIONNAME)(transformation, x)`
+
+Transform `x` from ``[-1, 1]`` using `transformation`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
-function from_domain end
+function from_pm1 end
 
 ####
-#### univariate basis
+#### coordinate transformations
 ####
 
-struct UnivariateBasis{P,T} <: FunctionBasis
-    parent::P
-    transformation::T
+struct CoordinateTransformations{T<:Tuple}
+    transformations::T
 end
 
-function Base.show(io::IO, univariate_basis::UnivariateBasis)
-    @unpack parent, transformation = univariate_basis
-    print(io, parent, "\n  domain ", transformation)
+function Base.show(io::IO, ct::CoordinateTransformations)
+    print(io, "coordinate transformations")
+    for t in ct.transformations
+        print(io, "\n  ", t)
+    end
 end
 
+Broadcast.broadcastable(ct::CoordinateTransformations) = Ref(ct)
 
 """
 $(SIGNATURES)
 
-Create a univariate basis from `univariate_family`, with the specified `grid_kind` and
-dimension `N`, transforming the domain with `transformation`.
-
-`parent` is a univariate basis, `transformation` is a univariate transformation (supporting
-the interface described by [`UnivariateTransformation`](@ref), but not necessarily a
-subtype). Univariate bases support [`SpectralKit.gridpoint`](@ref).
-
-# Example
-
-The following is a basis with 10 transformed Chebyshev polynomials of the first kind on
-``(3,∞)``, with equal amounts of nodes on both sides of the midpoint `7 = 3 + 4`, and an
-interior grid:
+Wrapper for coordinate-wise transformations.
 
 ```jldoctest
-julia> basis = univariate_basis(Chebyshev, InteriorGrid(), 10, SemiInfRational(3.0, 4.0))
-Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 10
-  domain (3.0,∞) [rational transformation with scale 4.0]
+julia> ct = coordinate_transformations(BoundedLinear(0, 2), SemiInfRational(2, 3))
+coordinate transformations
+  (0.0,2.0) ↔ (-1, 1) [linear transformation]
+  (2,∞) ↔ (-1, 1) [rational transformation with scale 3]
 
-julia> dimension(basis)
-10
+julia> x = from_pm1(ct, SVector(0.4, 0.5))
+2-element SVector{2, Float64} with indices SOneTo(2):
+  1.4
+ 11.0
 
-julia> domain(basis)
-(3.0, Inf)
+julia> y = to_pm1(ct, x)
+2-element SVector{2, Float64} with indices SOneTo(2):
+ 0.3999999999999999
+ 0.5
 ```
 """
-function univariate_basis(univariate_family, grid_kind::AbstractGrid, N::Integer,
-                          transformation)
-    UnivariateBasis(univariate_family(grid_kind, Int(N)), transformation)
+function coordinate_transformations(transformations::Tuple)
+    CoordinateTransformations(transformations)
 end
 
-@inline dimension(basis::UnivariateBasis) = dimension(basis.parent)
+coordinate_transformations(transformations...) = coordinate_transformations(transformations)
 
-function domain(basis::UnivariateBasis)
-    @unpack parent, transformation = basis
-    from_domain.(Ref(transformation), Ref(parent), domain(parent))
+function to_pm1(ct::CoordinateTransformations, x::SVector{N}) where N
+    SVector{N}(map((t, x) -> to_pm1(t, x), ct.transformations, Tuple(x)))
 end
 
-function basis_at(basis::UnivariateBasis, x::Real)
-    @unpack parent, transformation = basis
-    basis_at(parent, to_domain(transformation, parent, x))
+function to_pm1(ct::CoordinateTransformations, x::AbstractVector)
+    to_pm1(ct, SVector{length(ct.transformations)}(x))
 end
 
-function gridpoint(::Type{T}, basis::UnivariateBasis, i) where T
-    @unpack parent, transformation = basis
-    from_domain(transformation, parent, gridpoint(T, parent, i))
+function from_pm1(ct::CoordinateTransformations, x::SVector{N}) where N
+    SVector{N}(map((t, x) -> from_pm1(t, x), ct.transformations, Tuple(x)))
 end
 
-function is_subset_basis(basis1::UnivariateBasis, basis2::UnivariateBasis)
-    (is_subset_basis(basis1.parent, basis2.parent) &&
-        basis1.transformation == basis2.transformation)
-end
-
-function augment_coefficients(basis1::UnivariateBasis, basis2::UnivariateBasis,
-                              θ1::AbstractVector)
-    @argcheck basis1.transformation == basis2.transformation
-    augment_coefficients(basis1.parent, basis2.parent, θ1)
+function from_pm1(ct::CoordinateTransformations, x::AbstractVector)
+    from_pm1(ct, SVector{length(ct.transformations)}(x))
 end
 
 ####
-#### transformations
+#### specific transformations
 ####
 
 ###
@@ -137,7 +138,7 @@ end
 
 function Base.show(io::IO, transformation::BoundedLinear)
     @unpack m, s = transformation
-    print(io, "(", m - s, ",", m + s, ") [linear transformation]")
+    print(io, "(", m - s, ",", m + s, ") ↔ (-1, 1) [linear transformation]")
 end
 
 """
@@ -149,12 +150,12 @@ Transform `x ∈ (-1,1)` to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
 """
 BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
 
-function from_domain(T::BoundedLinear, ::Chebyshev, x::Real)
+function from_pm1(T::BoundedLinear, x::Real)
     @unpack m, s = T
     x * s + m
 end
 
-function to_domain(T::BoundedLinear, ::Chebyshev, y::Real)
+function to_pm1(T::BoundedLinear, y::Real)
     @unpack m, s = T
     (y - m) / s
 end
@@ -182,7 +183,7 @@ function Base.show(io::IO, transformation::SemiInfRational)
     else
         D = "(-∞,A)"
     end
-    print(io, D, " [rational transformation with scale ", L, "]")
+    print(io, D, " ↔ (-1, 1) [rational transformation with scale ", L, "]")
 end
 
 """
@@ -201,9 +202,9 @@ When used with Chebyshev polynomials, also known as a “rational Chebyshev” b
 """
 SemiInfRational(A::Real, L::Real) = SemiInfRational(promote(A, L)...)
 
-from_domain(T::SemiInfRational, ::Chebyshev, x) = T.A + T.L * (1 + x) / (1 - x)
+from_pm1(T::SemiInfRational, x) = T.A + T.L * (1 + x) / (1 - x)
 
-function to_domain(T::SemiInfRational, ::Chebyshev, y)
+function to_pm1(T::SemiInfRational, y)
     @unpack A, L = T
     z = y - A
     x = (z - L) / (z + L)
@@ -232,7 +233,7 @@ end
 
 function Base.show(io::IO, transformation::InfRational)
     @unpack A, L = transformation
-    print(io, "(-∞,∞) [rational transformation with center ", A, ", scale ", L, "]")
+    print(io, "(-∞,∞) ↔ (-1, 1) [rational transformation with center ", A, ", scale ", L, "]")
 end
 
 """
@@ -248,9 +249,9 @@ using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
 """
 InfRational(A::Real, L::Real) = InfRational(promote(A, L)...)
 
-from_domain(T::InfRational, ::Chebyshev, x::Real) = T.A + T.L * x / √(1 - abs2(x))
+from_pm1(T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x))
 
-function to_domain(T::InfRational, ::Chebyshev, y::Real)
+function to_pm1(T::InfRational, y::Real)
     @unpack A, L = T
     z = y - A
     x = z / hypot(L, z)

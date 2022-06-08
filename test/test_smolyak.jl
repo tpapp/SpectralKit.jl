@@ -122,9 +122,8 @@ end
 
 @testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
-                          (BoundedLinear(0, 4), BoundedLinear(0, 3)))
-    @test @inferred(domain(basis)) == ((0, 4), (0, 3))
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
+    @test @inferred(domain(basis)) == ((-1, 1), (-1, 1))
     x = @inferred grid(Float64, basis)
     M = @inferred collocation_matrix(basis, x)
     θ = M \ f.(x)
@@ -139,53 +138,11 @@ end
 end
 
 @testset "Smolyak API allocations" begin
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
-                          (BoundedLinear(0, 4), BoundedLinear(0, 3)))
-    y = SVector(1.0, 2.0)
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
+    y = SVector(0.4, 0.7)
     θ = randn(dimension(basis))
     @inferred linear_combination(basis, θ, y)
     @test @ballocated(linear_combination($basis, $θ, $y)) == 0
-end
-
-@testset "Smolyak approximation" begin
-    function f(x)               # cross-exp is particularly nasty for Smolyak
-        x1, x2, x3, x4 = x
-        exp(0.3 * (x1 - 2.0) * (x2 - 1.0)) + exp(-x3 * (x2 + 5)) - 1 / log(x4^2 + 10)
-    end
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(5),
-                          (BoundedLinear(0, 4), BoundedLinear(-2.0, 2.0),
-                           SemiInfRational(1.0, 2.0), InfRational(0, 4)))
-    x = grid(basis)
-    θ = collocation_matrix(basis, x) \ f.(x)
-    for x in x
-        @test linear_combination(basis, θ, x) ≈ f(x) atol = 1e-10
-    end
-    s = SobolSeq([0, -2, 1, -10], [4, 2, 5, 10])
-    skip(s, 1 << 5)
-    Δabs, Δrel = mapreduce((x, y) -> max.(x, y), Iterators.take(s, 10^5)) do x
-        fx = f(x)
-        Δabs = abs(fx - linear_combination(basis, θ, x))
-        Δrel = Δabs / (1 + abs(fx))
-        Δabs, Δrel
-    end
-    @test Δabs ≤ 1e-3
-    @test Δrel ≤ 5e-4
-end
-
-@testset "Smolyak derivatives" begin
-    function f(x)
-        x1, x2 = x
-        7.0 + x1 + 2*x2 + 3*x2*x1
-    end
-    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2),
-                          (BoundedLinear(0, 4), BoundedLinear(-5.0, 5.0)))
-    x = grid(basis)
-    θ = collocation_matrix(basis, x) \ f.(x)
-    F = linear_combination(basis, θ)
-    for x in x
-        @test F(x) ≈ f(x) atol = 1e-10
-        @test gradient(F, x) ≈ gradient(f, x)
-    end
 end
 
 ###
@@ -193,31 +150,21 @@ end
 ###
 
 @testset "Smolyak augment coefficients" begin
-    basis1 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2),
-                           (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    basis1 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), 2)
     θ1 = randn(dimension(basis1))
 
     # grid ≠
-    basis2_G = smolyak_basis(Chebyshev, EndpointGrid(),
-                             SmolyakParameters(2, 3), (BoundedLinear(0, 4.0),
-                                                       BoundedLinear(0, 4.0)))
+    basis2_G = smolyak_basis(Chebyshev, EndpointGrid(), SmolyakParameters(2, 3), 2)
     @test !is_subset_basis(basis1, basis2_G)
     @test_throws ArgumentError augment_coefficients(basis1, basis2_G, θ1)
 
     # smolyak_parameters <
-    basis2_P = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 1),
-                             (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    basis2_P = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 1), 2)
     @test !is_subset_basis(basis1, basis2_P)
     @test_throws ArgumentError augment_coefficients(basis1, basis2_P, θ1)
 
-    # transformations ≠
-    basis2_T = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3, 2),
-                             (BoundedLinear(-3, 4.0), BoundedLinear(0, 4.0)))
-    @test !is_subset_basis(basis1, basis2_T)
-    @test_throws ArgumentError augment_coefficients(basis1, basis2_T, θ1)
-
-    basis2 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3, 2),
-                           (BoundedLinear(0, 4.0), BoundedLinear(0, 4.0)))
+    # compatible basis
+    basis2 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3, 2), 2)
     θ2 = @inferred augment_coefficients(basis1, basis2, θ1)
     @test length(θ2) == dimension(basis2)
     @test eltype(θ2) == eltype(θ1)
@@ -228,16 +175,13 @@ end
 end
 
 @testset "Smolyak nesting" begin
-    transformations = (BoundedLinear(0.0, 3.0), SemiInfRational(1.0, 2.0))
     for grid_kind in GRIDS
         for M1 in 0:5
             for M2 in (M1 + 1):5
                 for B1 in 0:M1
                     for B2 in (B1 + 1):M2
-                        basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1),
-                                               transformations)
-                        basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2),
-                                               transformations)
+                        basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1), 2)
+                        basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2), 2)
                         @test is_approximate_subset(grid(basis1), grid(basis2))
                     end
                 end

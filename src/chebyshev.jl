@@ -1,5 +1,5 @@
 ####
-#### Chebyshev on [-1,1]
+#### Chebyshev polynomials on [-1,1]
 ####
 
 export Chebyshev

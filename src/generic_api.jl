@@ -64,6 +64,10 @@ function dimension end
 Return an iterable with known element type and length (`Base.HasEltype()`,
 `Base.HasLength()`) of basis functions in `basis` evaluated at `x`.
 
+Univariate bases operate on real numbers, while for multivariate bases,
+`StaticArrays.SVector` is preferred for performance, though all `<:AbstractVector` types
+should work.
+
 Methods are type stable.
 
 !!! note
@@ -162,11 +166,12 @@ end
 $(SIGNATURES)
 
 Convenience function to obtain a collocation matrix at gridpoints `x`, which is assumed to
-have a concrete `eltype`.
+have a concrete `eltype`. The default is `x = grid(basis)`, specialized methods may exist
+for this when it makes sense.
 
 Methods are type stable.
 """
-function collocation_matrix(basis, x)
+function collocation_matrix(basis, x = grid(basis))
     @argcheck isconcretetype(eltype(x))
     N = dimension(basis)
     C = Matrix{eltype(basis_at(basis, first(x)))}(undef, N, N)

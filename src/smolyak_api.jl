@@ -151,78 +151,84 @@ Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
     prod(getindex.(sources, indices)), state′
 end
 
-struct SmolyakBasis{I<:SmolyakIndices,U,T<:Tuple} <: FunctionBasis
+struct SmolyakBasis{I<:SmolyakIndices,U} <: FunctionBasis
     smolyak_indices::I
     univariate_parent::U
-    transformations::T
 end
 
 function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-    @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
+    @unpack smolyak_indices, univariate_parent = smolyak_basis
     print(io, "Sparse multivariate basis on ℝ^$N\n  ", smolyak_indices,
-          "\n  using ", univariate_parent,
-          "\n  domain transformations")
-    for transformation in transformations
-        print(io, "\n    ", transformation)
-    end
+          "\n  using ", univariate_parent)
 end
 
 """
 $(SIGNATURES)
 
-Create a sparse Smolyak basis using `univariate_family` (eg `Chebyshev`), which takes
-`grid_kind` and a dimension parameter. `B > 0` caps the *sum* of blocks, while `M > 0` caps
-blocks along each dimension separately, and `transformations` is a tuple of transformations
-applied coordinate-wise.
+Create a sparse Smolyak basis.
+
+# Arguments
+
+- `univariate_family`: should be a callable that takes a `grid_kind` and a `dimension`
+  parameter, eg `Chebyshev`.
+
+- `grid_kind`: the grid kind, eg `InteriorGrid()` etc.
+
+- `smolyak_parameters`: the Smolyak grid specification parameters, see
+  [`SmolyakParameters`](@ref).
+
+- `N`: the dimension. wrapped in a `Val` for type stability, a convenience constructor also
+  takes integers.
 
 ## Example
 
 ```jldoctest
-julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3),
-                             (BoundedLinear(2, 3), SemiInfRational(3.0, 4.0)))
+julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
 Sparse multivariate basis on ℝ^2
   Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
   using Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 27
-  domain transformations
-    (2.0,3.0) [linear transformation]
-    (3.0,∞) [rational transformation with scale 4.0]
 
 julia> dimension(basis)
 81
 
 julia> domain(basis)
-((2.0, 3.0), (3.0, Inf))
+((-1, 1), (-1, 1))
 ```
 
 ## Properties
 
 *Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
- contains points of the cruder grid.
+contains points of the cruder grid.
 """
 function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
-                       smolyak_parameters::SmolyakParameters,
-                       transformations::NTuple{N,Any}) where {N}
+                       smolyak_parameters::SmolyakParameters, ::Val{N}) where {N}
+    @argcheck N ≥ 1
     smolyak_indices = SmolyakIndices{N}(grid_kind, smolyak_parameters)
     univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
-    SmolyakBasis(smolyak_indices, univariate_parent, transformations)
+    SmolyakBasis(smolyak_indices, univariate_parent)
 end
 
-function domain(smolyak_basis::SmolyakBasis)
-    @unpack univariate_parent, transformations = smolyak_basis
+# convenience constructor
+@inline function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
+                       smolyak_parameters::SmolyakParameters, N::Integer)
+    smolyak_basis(univariate_family, grid_kind, smolyak_parameters, Val(N))
+end
+
+function domain(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where {N}
+    @unpack univariate_parent= smolyak_basis
     D = domain(univariate_parent)
-    map(transformation -> from_domain.(Ref(transformation), Ref(univariate_parent), D),
-        transformations)
+    ntuple(_ -> D, Val(N))
 end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
 function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
                   x::SVector{N,<:Real}) where {N,H}
-    @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
-    function _f(transformation, x)
-        sacollect(SVector{H}, basis_at(UnivariateBasis(univariate_parent, transformation), x))
+    @unpack smolyak_indices, univariate_parent = smolyak_basis
+    function _f(x)
+        sacollect(SVector{H}, basis_at(univariate_parent, x))
     end
-    univariate_bases_at = SVector{N}(map(_f, transformations, Tuple(x)))
+    univariate_bases_at = SVector{N}(map(_f, Tuple(x)))
     SmolyakProduct(smolyak_indices, univariate_bases_at)
 end
 
@@ -232,12 +238,10 @@ end
 
 function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
-    @unpack smolyak_indices, univariate_parent, transformations = smolyak_basis
+    @unpack smolyak_indices, univariate_parent = smolyak_basis
     x = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
                   for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
-    ys = map(transformation -> from_domain.(Ref(transformation), Ref(univariate_parent), x),
-             transformations)
-    [SVector{N}(getindex.(ys, ι)) for ι in smolyak_indices]
+    [SVector{N}(map(i -> x[i], ι)) for ι in smolyak_indices]
 end
 
 """
@@ -251,7 +255,7 @@ end
 
 function is_subset_basis(basis1::SmolyakBasis{<:SmolyakIndices{N1,H1,B1,M1}},
                          basis2::SmolyakBasis{<:SmolyakIndices{N2,H2,B2,M2}}) where {N1,H1,B1,M1,N2,H2,B2,M2}
-    (N1 == N2 && B2 ≥ B1 && M2 ≥ M1 && basis1.transformations == basis2.transformations &&
+    (N1 == N2 && B2 ≥ B1 && M2 ≥ M1 &&
         # NOTE: traversal relies on the same (column major) ordering of indices in both
         # bases. Testing for this is currently innocuous, as Chebyshev has this property.
         # If some basis is added to the code which doesn't this should be tested for in

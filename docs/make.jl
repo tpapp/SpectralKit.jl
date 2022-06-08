@@ -1,5 +1,6 @@
 using Documenter, SpectralKit
-DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit); recursive=true)
+DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit, StaticArrays);
+                    recursive=true)
 
 makedocs(
     modules = [SpectralKit],
