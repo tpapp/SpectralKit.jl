@@ -1,5 +1,5 @@
 ####
-#### Chebyshev on [-1,1]
+#### Chebyshev polynomials on [-1,1]
 ####
 
 export Chebyshev
@@ -19,9 +19,11 @@ struct Chebyshev{K} <: FunctionBasis
     `N` Chebyshev polynomials (of the first kind) on ``[-1, 1]``, with the associated
     grid of `grid_kind`.
 
-    !!! note
-        This is not meant to be used directly as a basis, but as a building block, eg in
-        [`univariate_basis`](@ref) and [`smolyak_basis`](@ref).
+    # Example
+
+    ```julia
+    basis = Chebyshev(InteriorGrid(), 10)
+    ```
     """
     function Chebyshev(grid_kind::K, N::Int) where K
         @argcheck N ≥ 1

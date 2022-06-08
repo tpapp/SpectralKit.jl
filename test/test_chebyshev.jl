@@ -16,7 +16,7 @@
 
             # check linear combinations
             for i in 1:100
-                x = rand_in_domain(i, -1, 1)
+                x = rand_pm1(i)
                 bx = @inferred basis_at(basis, x)
 
                 @test length(bx) == N
@@ -42,9 +42,9 @@
                 @test g[end] == 1
             end
 
-            # augmentat coefficients
+            # augmented coefficients
             for i in 1:100
-                x = rand_in_domain(i, -1, 1)
+                x = rand_pm1(i)
                 θ = rand(N)
                 destination_basis = Chebyshev(grid_kind, N + 5)
                 destination_θ = augment_coefficients(basis, destination_basis, θ)
