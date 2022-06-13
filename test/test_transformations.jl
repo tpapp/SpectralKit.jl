@@ -70,3 +70,11 @@ end
     x2 = @inferred to_pm1(ct, Vector(y))
     @test x2 isa SVector{2,Float64} && x2 ≈ x
 end
+
+@testset "partial application" begin
+    t = SemiInfRational(7.0, 1.0)
+    x = rand_pm1()
+    y = from_pm1(t, x)
+    @test from_pm1(t)(x) == y
+    @test to_pm1(t)(y) == to_pm1(t, y)
+end
