@@ -72,7 +72,9 @@ InteriorGrid
 InteriorGrid2
 ```
 
-### Univariate transformations
+### Univariate and multivariate transformations
+
+Bases are defined on the domain ``[-1, 1]`` or ``[-1, 1]^n``. *Transformations* map other uni- and multivariate sets into these domains.
 
 ```@docs
 to_pm1

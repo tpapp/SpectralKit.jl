@@ -37,20 +37,29 @@ end
 
 Transform `x` to ``[-1, 1]`` using `transformation`.
 
+Supports partial application as `$(FUNCTIONNAME)(transformation)`.
+
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
 function to_pm1 end
+
+to_pm1(transformation) = Base.Fix1(to_pm1, transformation)
 
 """
 `$(FUNCTIONNAME)(transformation, x)`
 
 Transform `x` from ``[-1, 1]`` using `transformation`.
 
+Supports partial application as `$(FUNCTIONNAME)(transformation)`.
+
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
 function from_pm1 end
+
+from_pm1(transformation) = Base.Fix1(from_pm1, transformation)
+
 
 ####
 #### coordinate transformations
