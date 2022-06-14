@@ -165,18 +165,24 @@ end
 """
 $(SIGNATURES)
 
-Convenience function to obtain a collocation matrix at gridpoints `x`, which is assumed to
+Convenience function to obtain a “collocation matrix” at points `x`, which is assumed to
 have a concrete `eltype`. The default is `x = grid(basis)`, specialized methods may exist
 for this when it makes sense.
+
+The collocation matrix may not be an `AbstractMatrix`, all it needs to support is `C \\ y`
+for compatible vectors `y = f.(x)`.
 
 Methods are type stable.
 """
 function collocation_matrix(basis, x = grid(basis))
     @argcheck isconcretetype(eltype(x))
     N = dimension(basis)
-    C = Matrix{eltype(basis_at(basis, first(x)))}(undef, N, N)
-    for i in 1:N
-        foreach(((j, f),) -> C[i, j] = f, enumerate(basis_at(basis, x[i])))
+    M = length(x)
+    C = Matrix{eltype(basis_at(basis, first(x)))}(undef, M, N)
+    for (i, x) in enumerate(x)
+        for (j, f) in enumerate(basis_at(basis, x))
+            C[i, j] = f
+        end
     end
     C
 end
