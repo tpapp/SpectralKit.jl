@@ -75,6 +75,11 @@ Methods are type stable.
 """
 function basis_at end
 
+@inline function _linear_combination(basis, θ, x, _check)
+    _check && @argcheck dimension(basis) == length(θ)
+    mapreduce(*, +, θ, basis_at(basis, x))
+end
+
 """
 $(SIGNATURES)
 
@@ -83,17 +88,19 @@ the given order.
 
 The length of `θ` should equal `dimension(θ)`.
 """
-function linear_combination(basis, θ, x)
-    mapreduce(*, +, θ, basis_at(basis, x))
-end
+linear_combination(basis, θ, x) = _linear_combination(basis, θ, x, true)
 
 # FIXME define a nice Base.show method
 struct LinearCombination{B,T}
     basis::B
     θ::T
+    function LinearCombination(basis::B, θ::T) where {B,T}
+        @argcheck dimension(basis) == length(θ)
+        new{B,T}(basis, θ)
+    end
 end
 
-(l::LinearCombination)(x) = linear_combination(l.basis, l.θ, x)
+(l::LinearCombination)(x) = _linear_combination(l.basis, l.θ, x, false)
 
 """
 $(SIGNATURES)

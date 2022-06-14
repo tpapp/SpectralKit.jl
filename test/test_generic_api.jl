@@ -13,3 +13,10 @@ end
     y = range(-1, 1; length = 50) # test grid
     @test maximum(abs, f.(y) .- linear_combination.(basis, Ref(φ), y)) ≤ 1e-9
 end
+
+@testset "length checks" begin
+    basis = Chebyshev(InteriorGrid(), 5)
+    bad_θ = zeros(dimension(basis) + 1)
+    @test_throws ArgumentError linear_combination(basis, bad_θ, 0.0)
+    @test_throws ArgumentError linear_combination(basis, bad_θ)
+end
