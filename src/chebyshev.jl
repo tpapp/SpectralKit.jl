@@ -9,7 +9,7 @@ $(TYPEDEF)
 
 The first `N` Chebyhev polynomials of the first kind, defined on `[-1,1]`.
 """
-struct Chebyshev{K} <: FunctionBasis
+struct Chebyshev{K<:AbstractGrid} <: FunctionBasis
     "Grid specification."
     grid_kind::K
     "The number of basis functions."

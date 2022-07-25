@@ -8,6 +8,7 @@ struct SmolyakParameters{B,M}
     function SmolyakParameters{B,M}() where {B,M}
         @argcheck B isa Int && B ≥ 0
         @argcheck M isa Int && M ≥ 0
+        M > B && @warn "M > B replaced with M = B" M B
         new{B,min(B,M)}()       # maintain M ≤ B
     end
 end
@@ -25,7 +26,7 @@ Polynomials are organized into blocks of `1, 2, 2, 4, 8, 16, …` polynomials (a
 corresponding gridpoints), indexed with a *block index* `b` that starts at `0`. `B ≥ ∑ bᵢ`
 and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
 
-`M > B` is not an error, but will be normalized to `M = B`.
+`M > B` is not an error, but will be normalized to `M = B` with a warning.
 """
 @inline function SmolyakParameters(B::Integer, M::Integer = B)
     SmolyakParameters{Int(B),Int(M)}()
