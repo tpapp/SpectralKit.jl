@@ -120,6 +120,11 @@ end
 #### api
 ####
 
+@testset "Smolyak API checks" begin
+    @test_throws MethodError smolyak_basis(Chebyshev, :invalid_grid, SmolyakParameters(3), 2)
+    @test_logs (:warn, "M > B replaced with M = B") SmolyakParameters(2, 4)
+end
+
 @testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
     basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
