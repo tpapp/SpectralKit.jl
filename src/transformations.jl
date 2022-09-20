@@ -92,10 +92,10 @@ coordinate transformations
   (2,∞) ↔ (-1, 1) [rational transformation with scale 3]
 
 julia> x = from_pm1(ct, (0.4, 0.5))
-  (1.4, 11.0)
+(1.4, 11.0)
 
 julia> y = to_pm1(ct, x)
-  (0.3999999999999999, 0.5)
+(0.3999999999999999, 0.5)
 ```
 """
 function coordinate_transformations(transformations::Tuple)
