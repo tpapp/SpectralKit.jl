@@ -189,7 +189,7 @@ Create a sparse Smolyak basis.
 
 ```jldoctest
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
-Sparse multivariate basis on ℝ^2
+Sparse multivariate basis on ℝ²
   Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
   using Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 27
 
