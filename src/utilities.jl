@@ -10,7 +10,7 @@ function print_unicode_superscript(io::IO, k::Integer)
     if k < 10
         print(io, _SUPERSCRIPT_DIGITS[k + 1])
     else
-        for d in digits(l)
+        for d in reverse(digits(l))
             print(io, _SUPERSCRIPT_DIGITS[d + 1])
         end
     end

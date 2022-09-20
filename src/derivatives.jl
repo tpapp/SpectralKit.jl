@@ -27,6 +27,12 @@ end
 "Types accepted as scalars in this package."
 const Scalar = Union{Real,Derivatives}
 
+"""
+$(SIGNATURES)
+
+The highest `I` in the arguments `Derivatives{I}`, wrapped in a `Val`. `J` gives the lower
+bound. Internal.
+"""
 _highest_tag(::Val{J}, x::Real, xs...) where {J} = _highest_tag(Val(J), xs...)
 
 function _highest_tag(::Val{J}, x::Derivatives{I}, xs...) where {J,I}
@@ -35,8 +41,11 @@ end
 
 _highest_tag(::Val{J}) where {J} = Val(J)
 
-_increasing_tags(::Val{J}, acc) where {J} = acc
+"""
+$(SIGNATURES)
 
+Map `xs` to increasing tags when `0`, starting at `J`.
+"""
 function _increasing_tags(::Val{J}, acc, x::Derivatives{I}, xs...) where {J,I}
     if I == 0
         _increasing_tags(Val(J + 1), (acc..., Derivatives{J+1}(x.derivatives)), xs...)
@@ -48,6 +57,8 @@ end
 function _increasing_tags(::Val{J}, acc, x::Real, xs...) where {J}
     _increasing_tags(Val(J), (acc..., x), xs...)
 end
+
+_increasing_tags(::Val{J}, acc) where {J} = acc
 
 """
 $(SIGNATURES)
@@ -65,12 +76,12 @@ end
 Obtain `N` derivatives (and the function value) at a scalar `x`. The `i`th derivative can be
 accessed with `[i]` from results, with `[0]` for the function value.
 
-`I` is a tag for avoiding mixing different coordinates. Lower `I` always end up outside when
-nested. When the defaults are used in multiple coordinates, increasing numbers replace zeros
-from left to right, starting after the highest explicitly assigned tag.
+`I` is an integer “tag” for determining the nesting order. Lower `I` always end up outside
+when nested. When the defaults are used in multiple coordinates, increasing numbers replace
+zeros from left to right, starting after the highest explicitly assigned tag.
 
-For most applications, you only need to specify tags if you want a different nesting than
-left-to-right.
+Consequently, for most applications, you only need to specify tags if you want a different
+nesting than left-to-right.
 
 # Univariate example
 
@@ -98,7 +109,7 @@ Sparse multivariate basis on ℝ²
 
 julia> C = collect(basis_at(basis, (derivatives(0.1), derivatives(0.2, Val(2)))));
 
-julia> C[14][1][2]                     # ∂/∂x₁ ∂/∂x₂²
+julia> C[14][1][2]                  # ∂/∂x₁ ∂/∂x₂² of the 14th basis function at x
 4.0
 ```
 """

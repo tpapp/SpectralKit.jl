@@ -2,7 +2,7 @@
 
 This is a very simple package for *building blocks* of spectral methods. Its intended audience is users who are familiar with the theory and practice of these methods, and prefer to assemble their code from modular building blocks. If you need an introduction, a book like *Boyd (2001): Chebyshev and Fourier spectral methods* is a good place to start.
 
-The package is optimized for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. It uses [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops. Key functionality includes evaluating a set of basis functions, their linear combination at arbitrary points in a fast manner, for use in threaded code. These should work seamlessly with automatic differentiation frameworks, but also has its own primitives for obtaining derivatices of basis functions.
+The package is optimized for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. It uses [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops. Key functionality includes evaluating a set of basis functions, their linear combination at arbitrary points in a fast manner, for use in threaded code. These should work seamlessly with automatic differentiation frameworks, but also has its own primitives for obtaining derivatives of basis functions.
 
 ## Introduction
 
@@ -139,7 +139,7 @@ is_subset_basis
 !!! note
     API for derivatives is still experimental and subject to change.
 
-If derivatives along a coordinate are needed, use [`derivatives`](@ref). For multiple coordinates, the result will be nested in the order of increasing tags. When unspecified, tags are assigned automatically.
+If derivatives along a coordinate are needed, use [`derivatives`](@ref). For multiple coordinates, the result will be nested in the order of increasing tags. When unspecified, tags are assigned automatically from left to right.
 
 ```@docs
 derivatives
