@@ -64,8 +64,8 @@ function dimension end
 Return an iterable with known element type and length (`Base.HasEltype()`,
 `Base.HasLength()`) of basis functions in `basis` evaluated at `x`.
 
-Univariate bases operate on real numbers, while for multivariate bases,
-`StaticArrays.SVector` is preferred for performance, though all `<:AbstractVector` types
+Univariate bases operate on real numbers, while for multivariate bases, `Tuple`s or
+`StaticArrays.SVector` are preferred for performance, though all `<:AbstractVector` types
 should work.
 
 Methods are type stable.
