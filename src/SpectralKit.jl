@@ -5,6 +5,8 @@ using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
 using StaticArrays: MVector, SVector, sacollect
 using UnPack: @unpack
 
+include("utilities.jl")
+include("derivatives.jl")
 include("generic_api.jl")
 include("chebyshev.jl")
 include("smolyak_traversal.jl")

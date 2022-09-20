@@ -114,7 +114,7 @@ end
 #### product traversal
 ####
 
-struct SmolyakProduct{I<:SmolyakIndices,S}
+struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple}
     smolyak_indices::I
     sources::S
     @doc """
@@ -134,7 +134,7 @@ struct SmolyakProduct{I<:SmolyakIndices,S}
     `H` elements (cf type parameters of [`SmolyakIndices`](@ref)), this is not checked.
     """
     function SmolyakProduct(smolyak_indices::SmolyakIndices{N},
-                            sources::S) where {N,S<:SVector{N,<:SVector}}
+                            sources::S) where {N,S}
         @argcheck length(sources) == N
         new{typeof(smolyak_indices),S}(smolyak_indices, sources)
     end
@@ -142,14 +142,17 @@ end
 
 Base.length(smolyak_product::SmolyakProduct) = length(smolyak_product.smolyak_indices)
 
-Base.eltype(::SmolyakProduct{I,S}) where {I,S} = eltype(eltype(S))
+@generated function Base.eltype(::Type{SmolyakProduct{I,S}}) where {I,S}
+    T = mapfoldl(eltype, _mul_type, fieldtypes(S))
+    :($T)
+end
 
 @inline function Base.iterate(smolyak_product::SmolyakProduct, state...)
     @unpack smolyak_indices, sources = smolyak_product
     itr = iterate(smolyak_indices, state...)
     itr ≡ nothing && return nothing
     indices, state′ = itr
-    prod(getindex.(sources, indices)), state′
+    reduce(_mul, getindex.(sources, indices)), state′
 end
 
 struct SmolyakBasis{I<:SmolyakIndices,U} <: FunctionBasis
@@ -159,8 +162,9 @@ end
 
 function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
     @unpack smolyak_indices, univariate_parent = smolyak_basis
-    print(io, "Sparse multivariate basis on ℝ^$N\n  ", smolyak_indices,
-          "\n  using ", univariate_parent)
+    print(io, "Sparse multivariate basis on ℝ")
+    print_unicode_superscript(io, N)
+    print(io, "\n  ", smolyak_indices, "\n  using ", univariate_parent)
 end
 
 """
@@ -223,18 +227,14 @@ end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
-                  x::SVector{N,<:Real}) where {N,H}
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}, x) where {N,H}
+    @argcheck length(x) == N
     @unpack smolyak_indices, univariate_parent = smolyak_basis
     function _f(x)
         sacollect(SVector{H}, basis_at(univariate_parent, x))
     end
-    univariate_bases_at = SVector{N}(map(_f, Tuple(x)))
+    univariate_bases_at = map(_f, replace_zero_tags(Tuple(x)))
     SmolyakProduct(smolyak_indices, univariate_bases_at)
-end
-
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}, x) where N
-    basis_at(smolyak_basis, SVector{N}(x))
 end
 
 function grid(::Type{T},

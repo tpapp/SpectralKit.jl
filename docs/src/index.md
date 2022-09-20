@@ -2,7 +2,7 @@
 
 This is a very simple package for *building blocks* of spectral methods. Its intended audience is users who are familiar with the theory and practice of these methods, and prefer to assemble their code from modular building blocks. If you need an introduction, a book like *Boyd (2001): Chebyshev and Fourier spectral methods* is a good place to start.
 
-The package is optimized for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. It uses [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops. Key functionality includes evaluating a set of basis functions, their linear combination at arbitrary points in a fast manner, for use in threaded code. These should work seamlessly with automatic differentiation frameworks when derivatives are needed.
+The package is optimized for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. It uses [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops. Key functionality includes evaluating a set of basis functions, their linear combination at arbitrary points in a fast manner, for use in threaded code. These should work seamlessly with automatic differentiation frameworks, but also has its own primitives for obtaining derivatices of basis functions.
 
 ## Introduction
 
@@ -32,18 +32,19 @@ Currenly, all bases have the domain ``[-1,1]`` or ``[-1,1]^n``. Facilities are p
 
 ```@repl
 using SpectralKit
-basis = Chebyshev(EndpointGrid(), 5)   # 5 Chebyshev polynomials
-is_function_basis(basis)               # ie we support the interface below
-dimension(basis)                       # number of basis functions
-domain(basis)                          # domain
-grid(basis)                            # Gauss-Lobatto grid
-collect(basis_at(basis, 0.41))         # iterator for basis functions at 0.41
-θ = [1, 0.5, 0.2, 0.3, 0.001]          # a vector of coefficients
-linear_combination(basis, θ, 0.41)     # combination at some value
-linear_combination(basis, θ)(0.41)     # also as a callable
-basis2 = Chebyshev(EndpointGrid(), 8)  # 8 Chebyshev polynomials
-is_subset_basis(basis, basis2)         # we could augment θ …
-augment_coefficients(basis, basis2, θ) # … so let's do it
+basis = Chebyshev(EndpointGrid(), 5)       # 5 Chebyshev polynomials
+is_function_basis(basis)                   # ie we support the interface below
+dimension(basis)                           # number of basis functions
+domain(basis)                              # domain
+grid(basis)                                # Gauss-Lobatto grid
+collect(basis_at(basis, 0.41))             # iterator for basis functions at 0.41
+collect(basis_at(basis, derivatives(0.41)) # values and 1st derivatives
+θ = [1, 0.5, 0.2, 0.3, 0.001]              # a vector of coefficients
+linear_combination(basis, θ, 0.41)         # combination at some value
+linear_combination(basis, θ)(0.41)         # also as a callable
+basis2 = Chebyshev(EndpointGrid(), 8)      # 8 Chebyshev polynomials
+is_subset_basis(basis, basis2)             # we could augment θ …
+augment_coefficients(basis, basis2, θ)     # … so let's do it
 ```
 
 ### Smolyak approximation on a transformed domain
@@ -131,6 +132,17 @@ collocation_matrix
 ```@docs
 augment_coefficients
 is_subset_basis
+```
+
+## Derivatives
+
+!!! note
+    API for derivatives is still experimental and subject to change.
+    
+If derivatives along a coordinate are needed, use [`derivatives`](@ref). For multiple coordinates, the result will be nested in the order of increasing tags. When unspecified, tags are assigned automatically.
+
+```@docs
+derivatives
 ```
 
 ## Internals

@@ -103,7 +103,7 @@ end
                 for N in 1:4
                     ι = SmolyakIndices{N}(grid_kind, SmolyakParameters(B, M))
                     ℓ = nesting_total_length(Chebyshev, grid_kind, min(B,M))
-                    sources = SVector{N}([rand(SVector{ℓ, Float64}) for _ in 1:N])
+                    sources = ntuple(_ -> rand(SVector{ℓ, Float64}), Val(N))
                     P = SmolyakProduct(ι, sources)
                     @test length(ι) == length(P)
                     @test eltype(P) == Float64
