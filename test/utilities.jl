@@ -46,6 +46,7 @@ end
 function is_approximately_in(a, b; atol = √eps())
     _same(a::Real, b::Real) = a == b || abs(a - b) ≤ atol # Inf = Inf, etc
     _same(a::AbstractVector, b::AbstractVector) = all(_same.(a, b))
+    _same(a::Tuple, b::Tuple) = mapreduce((x, y) -> abs(x - y), max, a, b) ≤ atol
     map(a -> any(b -> _same(a, b), b), a)
 end
 
