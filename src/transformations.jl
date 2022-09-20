@@ -21,7 +21,7 @@ subtypes, this just documents the interface they need to support:
 
 - [`domain`](@ref)
 
-!!! NOTE
+!!! note
     Abstract type used for code organization, not exported.
 """
 abstract type UnivariateTransformation end
