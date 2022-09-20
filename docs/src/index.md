@@ -59,7 +59,7 @@ ct = coordinate_transformations(BoundedLinear(-1, 2.0), SemiInfRational(-3.0, 3.
 basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 x = grid(basis)
 θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
-z = SVector(0.5, 0.7)                                 # evaluate at this point
+z = (0.5, 0.7)                                        # evaluate at this point
 isapprox(f2(z), linear_combination(basis, θ, to_pm1(ct, z)), rtol = 0.005)
 ```
 
@@ -96,7 +96,7 @@ Chebyshev
 
 ### Multivariate bases
 
-Multivariate bases operate on vectors. `StaticArrays.SVector` is preferred for performance, but all `<:AbstractVector` types should work.
+Multivariate bases operate on tuples or vectors (`StaticArrays.SVector` is preferred for performance, but all `<:AbstractVector` types should work).
 
 ```@docs
 SmolyakParameters
