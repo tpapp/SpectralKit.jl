@@ -2,10 +2,17 @@
     @test !is_function_basis("a fish")
 end
 
+@testset "collocation matrix with default grid" begin
+    basis = Chebyshev(EndpointGrid(), 10)   # basis for approximation
+    @test collocation_matrix(basis) == collocation_matrix(basis, collect(grid(basis)))
+end
+
 @testset "non-square collocation matrix" begin
     f = exp                                 # function for comparison
     basis = Chebyshev(EndpointGrid(), 10)   # basis for approximation
-    x = grid(Chebyshev(EndpointGrid(), 20)) # denser grid for approximation
+    g = grid(Chebyshev(EndpointGrid(), 20))
+    iterator_sanity_checks(g)
+    x = @inferred collect(g) # denser grid for approximation
     C = collocation_matrix(basis, x)
     @test all(isfinite, C)
     @test size(C) == (20, 10)

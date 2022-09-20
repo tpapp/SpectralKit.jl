@@ -141,33 +141,18 @@ Equivalent to an `EndpointGrid` with endpoints dropped.
 """
 struct InteriorGrid2 <: AbstractGrid end
 
-"""
-$(SIGNATURES)
-
-Return a gridpoint for collocation, with `1 ≤ i ≤ dimension(basis)`.
-
-`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
-The actual type can be broadened as required. Methods are type stable.
-
-!!! note
-    Not all grids have this method defined, especially if it is impractical. See
-    [`grid`](@ref), which is part of the API, this function isn't.
-"""
 gridpoint(basis, i) = gridpoint(Float64, basis, i)
 
 """
 `$(FUNCTIONNAME)([T], basis)`
 
-Return a grid recommended for collocation, with `dimension(basis)` elements.
+Return an iterator for the grid recommended for collocation, with `dimension(basis)`
+elements.
 
-`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
-The actual type can be broadened as required. Methods are type stable.
+`T` for the element type of grid coordinates, and defaults to `Float64`.
+Methods are type stable.
 """
 grid(basis) = grid(Float64, basis)
-
-function grid(::Type{T}, basis) where {T<:Real}
-    map(i -> gridpoint(T, basis, i), 1:dimension(basis))
-end
 
 """
 $(SIGNATURES)
