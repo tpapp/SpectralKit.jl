@@ -70,4 +70,23 @@ $(SIGNATURES)
 
 Function and its derivative at `x`.
 """
-f_f′(f, x) = f(x), derivative(f, x)
+f_f′(f, x) = f(x), ForwardDiff.derivative(f, x)
+
+"""
+Helper function for ``∂^N f/∂x^N``.
+"""
+function ddn(f, x, ::Val{N}) where {N}
+    fn = foldl((f, _) -> x -> ForwardDiff.derivative(f, x),
+               ntuple(_ -> nothing, Val(N)); init = f)
+    fn(x)
+end
+
+"""
+Sanity checks for iterators.
+"""
+function iterator_sanity_checks(itr)
+    T = eltype(typeof(itr))
+    @test eltype(itr) ≡ T
+    @test all(x -> typeof(x) ≡ T, itr)
+    @test count(_ -> true, itr) == length(itr)
+end

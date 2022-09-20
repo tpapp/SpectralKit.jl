@@ -1,6 +1,6 @@
 using SpectralKit
 using Test, DocStringExtensions, StaticArrays, BenchmarkTools, Sobol
-using ForwardDiff: derivative, gradient
+import ForwardDiff
 
 include("utilities.jl")
 

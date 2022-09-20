@@ -39,7 +39,7 @@ end
     F = linear_combination(basis, θ)
     for x in x
         @test F(x) ≈ f(from_pm1(ct, x)) atol = 1e-10
-        @test gradient(F, x) ≈ gradient(x -> f(from_pm1(ct, x)), x)
+        @test ForwardDiff.gradient(F, x) ≈ ForwardDiff.gradient(x -> f(from_pm1(ct, x)), x)
     end
 end
 
@@ -55,14 +55,14 @@ end
         trans = SemiInfRational(1.0, 1.0)
         x = 1.0
         y = from_pm1(trans, x)
-        h′ = derivative(x -> from_pm1(trans, x), x)
+        h′ = ForwardDiff.derivative(x -> from_pm1(trans, x), x)
 
         for i in 1:N
             θ = e_i(basis, i)
             f = y -> linear_combination(basis, θ, to_pm1(trans, y))
             fy, f′y = f_f′(f, y)
             @test fy ≈ linear_combination(basis, θ, x)
-            @test f′y ≈ derivative(x -> linear_combination(basis, θ, x), x) / h′
+            @test f′y ≈ ForwardDiff.derivative(x -> linear_combination(basis, θ, x), x) / h′
         end
     end
 
@@ -70,14 +70,14 @@ end
         trans = InfRational(0.0, 1.0)
         for x ∈ (-1.0, 1.0)
             y = from_pm1(trans, x)
-            h′ = derivative(x -> from_pm1(trans, x), x)
+            h′ = ForwardDiff.derivative(x -> from_pm1(trans, x), x)
 
             for i in 1:N
                 θ = e_i(basis, i)
                 f = y -> linear_combination(basis, θ, to_pm1(trans, y))
                 fy, f′y = f_f′(f, y)
                 @test fy ≈ linear_combination(basis, θ, x)
-                @test f′y ≈ derivative(x -> linear_combination(basis, θ, x), x) / h′
+                @test f′y ≈ ForwardDiff.derivative(x -> linear_combination(basis, θ, x), x) / h′
             end
         end
     end

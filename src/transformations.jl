@@ -21,7 +21,7 @@ subtypes, this just documents the interface they need to support:
 
 - [`domain`](@ref)
 
-!!! NOTE
+!!! note
     Abstract type used for code organization, not exported.
 """
 abstract type UnivariateTransformation end
@@ -161,21 +161,21 @@ Transform `x ∈ (-1,1)` to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
 """
 BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
 
-function from_pm1(T::BoundedLinear, x::Real)
+function from_pm1(T::BoundedLinear, x::Scalar)
     @unpack m, s = T
-    x * s + m
+    _add(_mul(x, s), m)
 end
 
-function to_pm1(T::BoundedLinear, y::Real)
+function to_pm1(T::BoundedLinear, y::Scalar)
     @unpack m, s = T
-    (y - m) / s
+    _div(_sub(y, m), s)
 end
 
 ###
 ### semi-infinite interval
 ###
 
-struct SemiInfRational{T <: Real} <: UnivariateTransformation
+struct SemiInfRational{T<:Real} <: UnivariateTransformation
     "The finite endpoint `A`."
     A::T
     "Scale factor `L ≠ 0`."

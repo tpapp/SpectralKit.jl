@@ -77,7 +77,7 @@ function basis_at end
 
 @inline function _linear_combination(basis, θ, x, _check)
     _check && @argcheck dimension(basis) == length(θ)
-    mapreduce(*, +, θ, basis_at(basis, x))
+    mapreduce(_mul, _add, θ, basis_at(basis, x))
 end
 
 """

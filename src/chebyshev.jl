@@ -53,17 +53,19 @@ Base.eltype(::Type{<:ChebyshevIterator{T}}) where {T} = T
 
 Base.length(itr::ChebyshevIterator) = itr.N
 
-basis_at(basis::Chebyshev, x::Real) = ChebyshevIterator(x, basis.N)
+function basis_at(basis::Chebyshev, x::Scalar)
+    ChebyshevIterator(x, basis.N)
+end
 
 function Base.iterate(itr::ChebyshevIterator)
     @unpack x = itr
-    one(x), (2, one(x), x)
+    _one(x), (2, _one(x), x)
 end
 
 function Base.iterate(itr::ChebyshevIterator{T}, (i, fp, fpp)) where T
     @unpack x, N = itr
     i > N && return nothing
-    f = 2 * x * fp - fpp
+    f = _sub(_mul(2, x, fp), fpp)
     f::T, (i + 1, f, fp)
 end
 
