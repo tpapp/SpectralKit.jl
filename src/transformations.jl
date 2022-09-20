@@ -91,15 +91,11 @@ coordinate transformations
   (0.0,2.0) ↔ (-1, 1) [linear transformation]
   (2,∞) ↔ (-1, 1) [rational transformation with scale 3]
 
-julia> x = from_pm1(ct, SVector(0.4, 0.5))
-2-element SVector{2, Float64} with indices SOneTo(2):
-  1.4
- 11.0
+julia> x = from_pm1(ct, (0.4, 0.5))
+(1.4, 11.0)
 
 julia> y = to_pm1(ct, x)
-2-element SVector{2, Float64} with indices SOneTo(2):
- 0.3999999999999999
- 0.5
+(0.3999999999999999, 0.5)
 ```
 """
 function coordinate_transformations(transformations::Tuple)
@@ -108,20 +104,22 @@ end
 
 coordinate_transformations(transformations...) = coordinate_transformations(transformations)
 
-function to_pm1(ct::CoordinateTransformations, x::SVector{N}) where N
-    SVector{N}(map((t, x) -> to_pm1(t, x), ct.transformations, Tuple(x)))
+function to_pm1(ct::CoordinateTransformations, x::Tuple)
+    @argcheck length(ct.transformations) == length(x)
+    map((t, x) -> to_pm1(t, x), ct.transformations, x)
 end
 
 function to_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    to_pm1(ct, SVector{length(ct.transformations)}(x))
+    to_pm1(ct, Tuple(x))
 end
 
-function from_pm1(ct::CoordinateTransformations, x::SVector{N}) where N
-    SVector{N}(map((t, x) -> from_pm1(t, x), ct.transformations, Tuple(x)))
+function from_pm1(ct::CoordinateTransformations, x::Tuple)
+    @argcheck length(ct.transformations) == length(x)
+    map((t, x) -> from_pm1(t, x), ct.transformations, x)
 end
 
 function from_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    from_pm1(ct, SVector{length(ct.transformations)}(x))
+    from_pm1(ct, Tuple(x))
 end
 
 ####

@@ -129,7 +129,9 @@ end
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
     basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
     @test @inferred(domain(basis)) == ((-1, 1), (-1, 1))
-    x = @inferred grid(Float64, basis)
+    g = grid(Float64, basis)
+    iterator_sanity_checks(g)
+    x = @inferred collect(g)
     M = @inferred collocation_matrix(basis, x)
     θ = M \ f.(x)
     @test sum(abs.(θ) .> 1e-8) == 4
@@ -187,7 +189,7 @@ end
                     for B2 in (B1 + 1):M2
                         basis1 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B1, M1), 2)
                         basis2 = smolyak_basis(Chebyshev, grid_kind, SmolyakParameters(B2, M2), 2)
-                        @test is_approximate_subset(grid(basis1), grid(basis2))
+                        @test is_approximate_subset(collect(grid(basis1)), collect(grid(basis2)))
                     end
                 end
             end

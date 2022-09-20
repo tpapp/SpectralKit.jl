@@ -32,7 +32,7 @@
             end
 
             # check grid
-            g = @inferred grid(basis)
+            g = @inferred collect(grid(basis))
             @test length(g) == N
             if grid_kind ≡ InteriorGrid()
                 @test all(x -> isapprox(chebyshev_cos(x, N + 1), 0, atol = 1e-14), g)

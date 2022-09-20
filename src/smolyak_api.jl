@@ -237,12 +237,29 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}, x) where {
     SmolyakProduct(smolyak_indices, univariate_bases_at)
 end
 
+struct SmolyakGridIterator{T,I,S}
+    smolyak_indices::I
+    sources::S
+end
+
+Base.eltype(::Type{<:SmolyakGridIterator{T}}) where {T} = T
+
+Base.length(itr::SmolyakGridIterator) = length(itr.smolyak_indices)
+
 function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
     @unpack smolyak_indices, univariate_parent = smolyak_basis
-    x = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
-                  for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
-    [SVector{N}(map(i -> x[i], ι)) for ι in smolyak_indices]
+    sources = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
+                        for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
+    SmolyakGridIterator{NTuple{N,T},typeof(smolyak_indices),typeof(sources)}(smolyak_indices, sources)
+end
+
+function Base.iterate(itr::SmolyakGridIterator, state...)
+    @unpack smolyak_indices, sources = itr
+    result = iterate(smolyak_indices, state...)
+    result ≡ nothing && return nothing
+    ι, state′ = result
+    map(i -> sources[i], ι), state′
 end
 
 """
