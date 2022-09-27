@@ -60,15 +60,15 @@ end
     ct = coordinate_transformations(t1, t2)
     x = SVector(rand_pm1(), rand_pm1())
     y = @inferred from_pm1(ct, x)
-    @test y isa NTuple{2,Float64}
-    @test y == (from_pm1(t1, x[1]), from_pm1(t2, x[2]))
+    @test y isa SVector{2,Float64}
+    @test y == SVector(from_pm1(t1, x[1]), from_pm1(t2, x[2]))
 
     # handle generic inputs
     y2 = @inferred from_pm1(ct, Vector(x))
-    @test y2 isa NTuple{2,Float64} && y2 == y
+    @test y2 isa SVector{2,Float64} && y2 == y
 
     x2 = @inferred to_pm1(ct, [y...])
-    @test x2 isa NTuple{2,Float64} && all(x2 .≈ x)
+    @test x2 isa SVector{2,Float64} && all(x2 .≈ x)
 end
 
 @testset "partial application" begin
