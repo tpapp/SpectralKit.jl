@@ -110,7 +110,7 @@ function to_pm1(ct::CoordinateTransformations, x::Tuple)
 end
 
 function to_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    to_pm1(ct, Tuple(x))
+    SVector(to_pm1(ct, Tuple(x)))
 end
 
 function from_pm1(ct::CoordinateTransformations, x::Tuple)
@@ -119,7 +119,7 @@ function from_pm1(ct::CoordinateTransformations, x::Tuple)
 end
 
 function from_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    from_pm1(ct, Tuple(x))
+    SVector(from_pm1(ct, Tuple(x)))
 end
 
 ####
