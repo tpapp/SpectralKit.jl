@@ -83,6 +83,18 @@ zeros from left to right, starting after the highest explicitly assigned tag.
 Consequently, for most applications, you only need to specify tags if you want a different
 nesting than left-to-right.
 
+# Important note about transformations
+
+Always use `derivatives` *before* a transformation for correct results. For example, for some
+transformation `I` and value `x` in the transformed domain,
+```julia
+basis_at(basis2, to_pm1(I, derivatives(x))) # right
+```
+instead of
+```julia
+basis_at(basis2, derivatives(to_pm1(I, x))) # WRONG
+```
+
 # Univariate example
 
 ```jldoctest
