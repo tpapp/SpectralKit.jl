@@ -18,11 +18,12 @@ abstract type FunctionBasis end
 Broadcast.broadcastable(basis::FunctionBasis) = Ref(basis)
 
 """
-`$(FUNCTIONNAME)(F)`
+`$(FUNCTIONNAME)(::Type{F})`
 
 `$(FUNCTIONNAME)(f::F)`
 
-Test if the argument is a *function basis*, supporting the following interface:
+Test if the argument (value or type) is a *function basis*, supporting the following
+interface:
 
 - [`domain`](@ref) for querying the domain,
 
@@ -65,8 +66,8 @@ Return an iterable with known element type and length (`Base.HasEltype()`,
 `Base.HasLength()`) of basis functions in `basis` evaluated at `x`.
 
 Univariate bases operate on real numbers, while for multivariate bases, `Tuple`s or
-`StaticArrays.SVector` are preferred for performance, though all `<:AbstractVector` types
-should work.
+`StaticArrays.SVector` are preferred for performance, though all `<:AbstractVector`
+types should work.
 
 Methods are type stable.
 
