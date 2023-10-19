@@ -164,7 +164,7 @@ for this when it makes sense.
 The collocation matrix may not be an `AbstractMatrix`, all it needs to support is `C \\ y`
 for compatible vectors `y = f.(x)`.
 
-Methods are type stable.
+Methods are type stable. The elements of `x` can be [`derivatives`](@ref).
 """
 function collocation_matrix(basis, x = grid(basis))
     @argcheck isconcretetype(eltype(x))
