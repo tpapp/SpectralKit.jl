@@ -9,7 +9,7 @@ $(TYPEDEF)
 
 The first `N` Chebyhev polynomials of the first kind, defined on `[-1,1]`.
 """
-struct Chebyshev{K<:AbstractGrid} <: FunctionBasis
+struct Chebyshev{K<:AbstractGrid} <: UnivariateBasis
     "Grid specification."
     grid_kind::K
     "The number of basis functions."
@@ -33,7 +33,7 @@ end
 
 @inline dimension(basis::Chebyshev) = basis.N
 
-@inline domain(::Chebyshev) = (-1, 1)
+@inline domain(::Chebyshev) = PM1()
 
 function Base.show(io::IO, chebyshev::Chebyshev)
     @unpack grid_kind, N = chebyshev
@@ -88,7 +88,7 @@ The actual type can be broadened as required. Methods are type stable.
 function gridpoint(::Type{T}, basis::Chebyshev{InteriorGrid}, i::Integer) where {T <: Real}
     @unpack N = basis
     @argcheck 1 ≤ i ≤ N                  # FIXME use boundscheck
-    sinpi((N - 2 * i + 1) / T(2 * N))::T # use formula Xu (2016)
+    sinpi((N - 2 * i + 1) / T(2 * N))::T # use formula from Xu (2016)
 end
 
 function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where {T <: Real}

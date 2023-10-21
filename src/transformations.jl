@@ -45,6 +45,8 @@ struct PM1 <: AbstractUnivariateDomain end
 
 Base.extrema(::PM1) = (-1, 1)
 
+Base.show(io::IO, ::PM1) = print(io, "[-1,1]")
+
 ###
 ### multivariate domains
 ###
@@ -56,11 +58,21 @@ struct CoordinateDomains{T<:Tuple{Vararg{AbstractUnivariateDomain}}} <: Abstract
     domains::T
 end
 
-@inline Base.length(domain::CoordinateDomains) = length(domain.coordinate_domains)
+function Base.show(io::IO, domain::CoordinateDomains)
+    (; domains) = domain
+    if allequal(domains)
+        print(io, domains[1])
+        print_unicode_superscript(io, length(domains))
+    else
+        join(io, domains, "×")
+    end
+end
 
-@inline Base.getindex(domain::CoordinateDomains, i) = getindex(domain.coordinate_domains, i)
+@inline Base.length(domain::CoordinateDomains) = length(domain.domains)
 
-Base.Tuple(domain::CoordinateDomains) = domain.coordinate_domains
+@inline Base.getindex(domain::CoordinateDomains, i) = getindex(domain.domains, i)
+
+Base.Tuple(domain::CoordinateDomains) = domain.domains
 
 function coordinate_domains(domains::Tuple{Vararg{AbstractUnivariateDomain}})
     CoordinateDomains(domains)
@@ -122,7 +134,9 @@ function transform_from end
 #### coordinate transformations
 ####
 
-struct CoordinateTransformations{T<:Tuple}
+abstract type MultivariateTransformation end
+
+struct CoordinateTransformations{T<:Tuple} <: MultivariateTransformation
     transformations::T
 end
 
@@ -149,8 +163,8 @@ julia> using StaticArrays
 
 julia> ct = coordinate_transformations(BoundedLinear(0, 2), SemiInfRational(2, 3))
 coordinate transformations
-  (0.0,2.0) ↔ (-1, 1) [linear transformation]
-  (2,∞) ↔ (-1, 1) [rational transformation with scale 3]
+  (0.0,2.0) ↔ domain [linear transformation]
+  (2,∞) ↔ domain [rational transformation with scale 3]
 
 julia> x = from_pm1(ct, (0.4, 0.5))
 (1.4, 11.0)
@@ -289,7 +303,7 @@ function transform_to(::PM1, t::SemiInfRational, y)
     z = _sub(y, A)
     x = _div(_sub(z, L), _add(z, L))
     if (y == Inf && L > 0) || (y == -Inf && L < 0)
-        one(x)                  # FIXME may not work for Derivatives
+        one(x)                  # works for derivatives, because they are 0 at ±∞
     else
         x
     end
@@ -340,7 +354,7 @@ function transform_to(::PM1, t::InfRational, y::Real)
     @unpack A, L = t
     z = _sub(y, A)
     # FIXME implement for derivatives
-    x = z / hypot(L, z)
+    x = z / hypot(z, L)
     if isinf(y)
         y > 0 ? one(x) : -one(x)
     else
