@@ -133,17 +133,17 @@ end
 
 function (l::TransformedLinearCombination)(x)
     @unpack basis, θ, transformation = l
-    _linear_combination(basis, transform_to(domain(basis), transformation, x), false)
+    _linear_combination(basis, θ, transform_to(domain(basis), transformation, x), false)
 end
 
 function Base.:(∘)(l::LinearCombination{<:UnivariateBasis},
                    transformation::UnivariateTransformation)
-    TransformedLinearCombination(l.basis, l.θ, l.transformation)
+    TransformedLinearCombination(l.basis, l.θ, transformation)
 end
 
 function Base.:(∘)(l::LinearCombination{<:MultivariateBasis},
                    transformation::MultivariateTransformation)
-    TransformedLinearCombination(l.basis, l.θ, l.transformation)
+    TransformedLinearCombination(l.basis, l.θ, transformation)
 end
 
 """
