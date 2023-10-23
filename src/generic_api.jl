@@ -59,7 +59,8 @@ The (co)domain of a transformation. The “other” domain (codomain, depending 
 mapping) is provided explicitly for transformations, and should be compatible with
 the`domain` of the basis.
 
-For both kinds of methods, the return value is a subtype of [`AbstractDomain`](@ref).
+For both kinds of methods, the return value is a subtype of
+[`AbstractUnivariateDomain`](@ref) or a [`CoordinateDomain`](@ref).
 See [`PM1`](@ref) and [`coordinate_domains`](@ref).
 """
 function domain end

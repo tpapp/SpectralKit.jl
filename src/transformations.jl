@@ -9,11 +9,6 @@ export transform_to, transform_from, PM1, coordinate_domains,
 #### domains
 ####
 
-"""
-A supertype for domains. Not part of the API, only for organizing code.
-"""
-abstract type AbstractDomain end
-
 ###
 ### univariate domains
 ###
@@ -24,7 +19,7 @@ Univariate domain representation. Supports `extrema`, `minimum`, `maximum`.
 !!! note
     Implementations only need to define `extrema`.
 """
-abstract type AbstractUnivariateDomain <: AbstractDomain end
+abstract type AbstractUnivariateDomain end
 
 Broadcast.broadcastable(domain::AbstractUnivariateDomain) = Ref(domain)
 
@@ -57,7 +52,7 @@ Base.show(io::IO, ::PM1) = print(io, "[-1,1]")
 """
 Representation of a multivariate domain as the product of coordinate domains.
 """
-struct CoordinateDomains{T<:Tuple{Vararg{AbstractUnivariateDomain}}} <: AbstractDomain
+struct CoordinateDomains{T<:Tuple{Vararg{AbstractUnivariateDomain}}}
     domains::T
 end
 
@@ -116,20 +111,10 @@ end
 ####
 
 """
-A transformation maps values between a *domain*, usually specified by the basis, and the
-(co)domain that is specified by a transformation.  Transformations are not required to be
-subtypes, this just documents the interface they need to support:
-
-- [`transform_to`](@ref)
-
-- [`transform_from`](@ref)
-
-- [`domain`](@ref)
 
 !!! note
     Abstract type used for code organization, not exported.
 """
-abstract type AbstractTransformation end
 
 """
 $(TYPEDEF)

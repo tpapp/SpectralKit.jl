@@ -10,7 +10,6 @@ makedocs(
     pages = Any["index.md"],
     clean = true,
     checkdocs = :exports,
-    warnonly = Documenter.except(:cross_references),
 )
 
 deploydocs(

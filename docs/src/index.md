@@ -75,18 +75,27 @@ InteriorGrid2
 
 ### Domains and transformations
 
+A transformation maps values between a *domain*, usually specified by
+the basis, and the (co)domain that is specified by a transformation.
+Transformations are not required to be subtypes of anything, but need
+to support
+
+```@docs
+transform_to
+transform_from
+domain
+```
+
+Concrete domains.
+
 ```@docs
 PM1
 coordinate_domains
 ```
 
-Also see [`domain`](@ref).
-
 Bases are defined on a *canonical domain*, such as ``[-1, 1]`` for Chebyshev polynomials. *Transformations* map other uni- and multivariate sets into these domains.
 
 ```@docs
-transform_to
-transform_from
 BoundedLinear
 InfRational
 SemiInfRational
@@ -156,7 +165,19 @@ derivatives
 
 This section of the documentation is probably only relevant to contributors and others who want to understand the internals.
 
-### Simplified API for adding custom transformations
+### Type hierarchies
+
+Generally, the abstract types below are not part of the exposed API, and new types don't have to subtype them (unless they want to rely on the existing convenience methods). They are merely for code organization.
+
+#### Domains
+
+```@docs
+AbstractUnivariateDomain
+```
+
+#### Transformations
+
+
 
 ```@docs
 SpectralKit.UnivariateTransformation
