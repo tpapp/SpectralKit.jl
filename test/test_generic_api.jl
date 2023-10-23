@@ -1,5 +1,6 @@
 @testset "generic API sanity checks" begin
     @test !is_function_basis("a fish")
+    @test_throws MethodError domain_kind("a fish")
 end
 
 @testset "collocation matrix with default grid" begin

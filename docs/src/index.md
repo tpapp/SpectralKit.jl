@@ -89,7 +89,7 @@ domain
 Concrete domains.
 
 ```@docs
-PM1
+is_univariate_domain
 coordinate_domains
 ```
 
@@ -126,8 +126,9 @@ smolyak_basis
 ```@docs
 is_function_basis
 dimension
-domain
 ```
+
+See also [`domain`](@ref).
 
 ### Evaluation
 
@@ -172,12 +173,10 @@ Generally, the abstract types below are not part of the exposed API, and new typ
 #### Domains
 
 ```@docs
-AbstractUnivariateDomain
+SpectralKit.AbstractUnivariateDomain
 ```
 
 #### Transformations
-
-
 
 ```@docs
 SpectralKit.UnivariateTransformation

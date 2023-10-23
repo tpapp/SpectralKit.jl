@@ -2,109 +2,9 @@
 ##### transformations
 #####
 
-export transform_to, transform_from, PM1, coordinate_domains,
-    coordinate_transformations, BoundedLinear, InfRational, SemiInfRational
+export transform_to, transform_from, coordinate_transformations,
+    BoundedLinear, InfRational, SemiInfRational
 
-####
-#### domains
-####
-
-###
-### univariate domains
-###
-
-"""
-Univariate domain representation. Supports `extrema`, `minimum`, `maximum`.
-
-!!! note
-    Implementations only need to define `extrema`.
-"""
-abstract type AbstractUnivariateDomain end
-
-Broadcast.broadcastable(domain::AbstractUnivariateDomain) = Ref(domain)
-
-Base.minimum(domain::AbstractUnivariateDomain) = extrema(domain)[1]
-
-Base.maximum(domain::AbstractUnivariateDomain) = extrema(domain)[2]
-
-struct UnivariateDomain{T}
-    min::T
-    max::T
-end
-
-Base.extrema(domain::UnivariateDomain) = (domain.min, domain.max)
-
-"""
-Represents the interval ``[-1, 1]``.
-
-This is the domain of the Chebyshev polynomials.
-"""
-struct PM1 <: AbstractUnivariateDomain end
-
-Base.extrema(::PM1) = (-1, 1)
-
-Base.show(io::IO, ::PM1) = print(io, "[-1,1]")
-
-###
-### multivariate domains
-###
-
-"""
-Representation of a multivariate domain as the product of coordinate domains.
-"""
-struct CoordinateDomains{T<:Tuple{Vararg{AbstractUnivariateDomain}}}
-    domains::T
-end
-
-function Base.show(io::IO, domain::CoordinateDomains)
-    (; domains) = domain
-    if allequal(domains)
-        print(io, domains[1])
-        print_unicode_superscript(io, length(domains))
-    else
-        join(io, domains, "×")
-    end
-end
-
-@inline Base.length(domain::CoordinateDomains) = length(domain.domains)
-
-@inline Base.getindex(domain::CoordinateDomains, i) = getindex(domain.domains, i)
-
-Base.Tuple(domain::CoordinateDomains) = domain.domains
-
-"""
-$(SIGNATURES)
-
-Create domains which are the product of univariate domains. The result support `length`,
-indexing with integers, and `Tuple` for conversion.
-"""
-function coordinate_domains(domains::Tuple{Vararg{AbstractUnivariateDomain}})
-    CoordinateDomains(domains)
-end
-
-"""
-$(SIGNATURES)
-"""
-function coordinate_domains(domains::Vararg{AbstractUnivariateDomain})
-    CoordinateDomains(domains)
-end
-
-"""
-$(SIGNATURES)
-
-Create a coordinate domain which is the product of `domain` repeated `N` times.
-"""
-function coordinate_domains(::Val{N}, domain::AbstractUnivariateDomain) where N
-    @argcheck N isa Integer && N ≥ 1
-    CoordinateDomains(ntuple(_ -> domain, Val(N)))
-end
-
-"""
-$(SIGNATURES)
-"""
-@inline function coordinate_domains(N::Integer, domain::AbstractUnivariateDomain)
-    coordinate_domains(Val(N), domain)
-end
 
 ####
 #### generic api
@@ -121,9 +21,11 @@ $(TYPEDEF)
 
 An abstract type for univariate transformations.
 """
-abstract type UnivariateTransformation end
+abstract type AbstractUnivariateTransformation end
 
-Broadcast.broadcastable(transformation::UnivariateTransformation) = Ref(transformation)
+Broadcast.broadcastable(transformation::AbstractUnivariateTransformation) = Ref(transformation)
+
+domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
 """
 `$(FUNCTIONNAME)(domain, transformation, x)`
@@ -149,11 +51,11 @@ function transform_from end
 #### coordinate transformations
 ####
 
-abstract type MultivariateTransformation end
-
-struct CoordinateTransformations{T<:Tuple} <: MultivariateTransformation
+struct CoordinateTransformations{T<:Tuple}
     transformations::T
 end
+
+domain_kind(::Type{<:CoordinateTransformations}) = :multivariate
 
 function Base.Tuple(coordinate_transformations::CoordinateTransformations)
     coordinate_transformations.transformations
@@ -181,7 +83,9 @@ coordinate transformations
   (0.0,2.0) ↔ domain [linear transformation]
   (2,∞) ↔ domain [rational transformation with scale 3]
 
-julia> dom = coordinate_domains(PM1(), PM1())
+julia> d1 = domain(Chebyshev(InteriorGrid(), 5))
+
+julia> dom = coordinate_domains(d1, d1)
 [-1,1]²
 
 julia> x = transform_from(dom, ct, (0.4, 0.5))
@@ -228,7 +132,7 @@ end
 ### bounded linear
 ###
 
-struct BoundedLinear{T <: Real} <: UnivariateTransformation
+struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
     "Midpoint `m`."
     m::T
     "Scale `s`."
@@ -276,7 +180,7 @@ end
 ### semi-infinite interval
 ###
 
-struct SemiInfRational{T<:Real} <: UnivariateTransformation
+struct SemiInfRational{T<:Real} <: AbstractUnivariateTransformation
     "The finite endpoint `A`."
     A::T
     "Scale factor `L ≠ 0`."
@@ -337,7 +241,7 @@ end
 ### infinite interval
 ###
 
-struct InfRational{T <: Real} <: UnivariateTransformation
+struct InfRational{T <: Real} <: AbstractUnivariateTransformation
     "The center `A`."
     A::T
     "Scale factor `L > 0`."

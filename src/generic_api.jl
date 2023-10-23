@@ -59,9 +59,7 @@ The (co)domain of a transformation. The “other” domain (codomain, depending 
 mapping) is provided explicitly for transformations, and should be compatible with
 the`domain` of the basis.
 
-For both kinds of methods, the return value is a subtype of
-[`AbstractUnivariateDomain`](@ref) or a [`CoordinateDomain`](@ref).
-See [`PM1`](@ref) and [`coordinate_domains`](@ref).
+See [`domain_kind`](@ref) for the interface supported by domains.
 """
 function domain end
 
@@ -137,6 +135,7 @@ struct TransformedLinearCombination{B,C,T}
     transformation::T
     function TransformedLinearCombination(basis::B, θ::C, transformation::T) where {B,C,T}
         @argcheck dimension(basis) == length(θ)
+        @argcheck domain_kind(domain(basis)) ≡ domain_kind(T)
         new{B,C,T}(basis, θ, transformation)
     end
 end
@@ -146,13 +145,7 @@ function (l::TransformedLinearCombination)(x)
     _linear_combination(basis, θ, transform_to(domain(basis), transformation, x), false)
 end
 
-function Base.:(∘)(l::LinearCombination{<:UnivariateBasis},
-                   transformation::UnivariateTransformation)
-    TransformedLinearCombination(l.basis, l.θ, transformation)
-end
-
-function Base.:(∘)(l::LinearCombination{<:MultivariateBasis},
-                   transformation::MultivariateTransformation)
+function Base.:(∘)(l::LinearCombination, transformation)
     TransformedLinearCombination(l.basis, l.θ, transformation)
 end
 
