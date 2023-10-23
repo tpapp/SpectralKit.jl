@@ -2,7 +2,7 @@
 ##### Generic API
 #####
 
-export is_function_basis, dimension, basis_at, linear_combination, InteriorGrid,
+export is_function_basis, domain, dimension, basis_at, linear_combination, InteriorGrid,
     InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
     is_subset_basis
 
@@ -51,7 +51,16 @@ is_function_basis(f) = is_function_basis(typeof(f))
 """
 `$(FUNCTIONNAME)(basis)`
 
-The domain of a function basis, a subtype of [`AbstractDomain`](@ref).
+The domain of a function basis.
+
+`$(FUNCTIONNAME)(transformation)`
+
+The (co)domain of a transformation. The “other” domain (codomain, depending on the
+mapping) is provided explicitly for transformations, and should be compatible with
+the`domain` of the basis.
+
+For both kinds of methods, the return value is a subtype of [`AbstractDomain`](@ref).
+See [`PM1`](@ref) and [`coordinate_domains`](@ref).
 """
 function domain end
 

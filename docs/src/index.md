@@ -60,7 +60,7 @@ basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 x = grid(basis)
 θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
 z = (0.5, 0.7)                                        # evaluate at this point
-isapprox(f2(z), linear_combination(basis, θ, to_pm1(ct, z)), rtol = 0.005)
+isapprox(f2(z), linear_combination(basis, θ, transform_to(domain(basis), ct, z)), rtol = 0.005)
 ```
 
 ## Constructing bases
@@ -73,13 +73,20 @@ InteriorGrid
 InteriorGrid2
 ```
 
-### Univariate and multivariate transformations
-
-Bases are defined on the domain ``[-1, 1]`` or ``[-1, 1]^n``. *Transformations* map other uni- and multivariate sets into these domains.
+### Domains and transformations
 
 ```@docs
-to_pm1
-from_pm1
+PM1
+coordinate_domains
+```
+
+Also see [`domain`](@ref).
+
+Bases are defined on a *canonical domain*, such as ``[-1, 1]`` for Chebyshev polynomials. *Transformations* map other uni- and multivariate sets into these domains.
+
+```@docs
+transform_to
+transform_from
 BoundedLinear
 InfRational
 SemiInfRational

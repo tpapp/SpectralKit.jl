@@ -2,13 +2,16 @@
 ##### transformations
 #####
 
-export transform_to, transform_from, domain, PM1, coordinate_domains,
+export transform_to, transform_from, PM1, coordinate_domains,
     coordinate_transformations, BoundedLinear, InfRational, SemiInfRational
 
 ####
 #### domains
 ####
 
+"""
+A supertype for domains. Not part of the API, only for organizing code.
+"""
 abstract type AbstractDomain end
 
 ###
@@ -74,17 +77,38 @@ end
 
 Base.Tuple(domain::CoordinateDomains) = domain.domains
 
+"""
+$(SIGNATURES)
+
+Create domains which are the product of univariate domains. The result support `length`,
+indexing with integers, and `Tuple` for conversion.
+"""
 function coordinate_domains(domains::Tuple{Vararg{AbstractUnivariateDomain}})
     CoordinateDomains(domains)
 end
 
+"""
+$(SIGNATURES)
+"""
 function coordinate_domains(domains::Vararg{AbstractUnivariateDomain})
     CoordinateDomains(domains)
 end
 
+"""
+$(SIGNATURES)
+
+Create a coordinate domain which is the product of `domain` repeated `N` times.
+"""
 function coordinate_domains(::Val{N}, domain::AbstractUnivariateDomain) where N
     @argcheck N isa Integer && N ≥ 1
     CoordinateDomains(ntuple(_ -> domain, Val(N)))
+end
+
+"""
+$(SIGNATURES)
+"""
+@inline function coordinate_domains(N::Integer, domain::AbstractUnivariateDomain)
+    coordinate_domains(Val(N), domain)
 end
 
 ####
@@ -92,9 +116,8 @@ end
 ####
 
 """
-$(TYPEDEF)
-
-An abstract type for univariate transformations. Transformations are not required to be
+A transformation maps values between a *domain*, usually specified by the basis, and the
+(co)domain that is specified by a transformation.  Transformations are not required to be
 subtypes, this just documents the interface they need to support:
 
 - [`transform_to`](@ref)
@@ -105,6 +128,13 @@ subtypes, this just documents the interface they need to support:
 
 !!! note
     Abstract type used for code organization, not exported.
+"""
+abstract type AbstractTransformation end
+
+"""
+$(TYPEDEF)
+
+An abstract type for univariate transformations.
 """
 abstract type UnivariateTransformation end
 
@@ -166,10 +196,13 @@ coordinate transformations
   (0.0,2.0) ↔ domain [linear transformation]
   (2,∞) ↔ domain [rational transformation with scale 3]
 
-julia> x = from_pm1(ct, (0.4, 0.5))
+julia> dom = coordinate_domains(PM1(), PM1())
+[-1,1]²
+
+julia> x = transform_from(dom, ct, (0.4, 0.5))
 (1.4, 11.0)
 
-julia> y = transform_to(ct, x)
+julia> y = transform_to(dom, ct, x)
 (0.3999999999999999, 0.5)
 ```
 """
