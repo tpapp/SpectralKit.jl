@@ -60,8 +60,10 @@ basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 x = grid(basis)
 θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
 z = (0.5, 0.7)                                        # evaluate at this point
-isapprox(f2(z), linear_combination(basis, θ, transform_to(domain(basis), ct, z)), rtol = 0.005)
+isapprox(f2(z), (linear_combination(basis, θ) ∘ ct)(z)), rtol = 0.005)
 ```
+
+Note how the transformation can be combined with `∘` to a callable that evaluates a transformed linear combination at `z`.
 
 ## Constructing bases
 
@@ -86,7 +88,7 @@ transform_from
 domain
 ```
 
-Concrete domains.
+    In most cases you do not need to specify a domain directly: transformations specify their domains (eg from ``(0, ∞)``), and the codomain is determined by a basis. However, the following can be used to construct and query some concrete domains.
 
 ```@docs
 domain_kind
