@@ -84,6 +84,7 @@ coordinate transformations
   (2,∞) ↔ domain [rational transformation with scale 3]
 
 julia> d1 = domain(Chebyshev(InteriorGrid(), 5))
+[-1,1]
 
 julia> dom = coordinate_domains(d1, d1)
 [-1,1]²

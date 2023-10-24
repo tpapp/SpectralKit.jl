@@ -74,8 +74,12 @@ Base.show(io::IO, ::PM1) = print(io, "[-1,1]")
 """
 Representation of a multivariate domain as the product of coordinate domains.
 """
-struct CoordinateDomains{T<:Tuple{Vararg{AbstractUnivariateDomain}}}
+struct CoordinateDomains{T<:Tuple}
     domains::T
+    function CoordinateDomains(domains::Tuple)
+        @argcheck all(d -> domain_kind(d) ≡ :univariate, domains)
+        new{typeof(domains)}(domains)
+    end
 end
 
 @inline domain_kind(::Type{<:CoordinateDomains}) = :multivariate
@@ -102,14 +106,14 @@ $(SIGNATURES)
 Create domains which are the product of univariate domains. The result support `length`,
 indexing with integers, and `Tuple` for conversion.
 """
-function coordinate_domains(domains::Tuple{Vararg{AbstractUnivariateDomain}})
+function coordinate_domains(domains::Tuple)
     CoordinateDomains(domains)
 end
 
 """
 $(SIGNATURES)
 """
-function coordinate_domains(domains::Vararg{AbstractUnivariateDomain})
+function coordinate_domains(domains::Vararg)
     CoordinateDomains(domains)
 end
 
@@ -118,7 +122,7 @@ $(SIGNATURES)
 
 Create a coordinate domain which is the product of `domain` repeated `N` times.
 """
-function coordinate_domains(::Val{N}, domain::AbstractUnivariateDomain) where N
+function coordinate_domains(::Val{N}, domain) where N
     @argcheck N isa Integer && N ≥ 1
     CoordinateDomains(ntuple(_ -> domain, Val(N)))
 end
@@ -126,6 +130,6 @@ end
 """
 $(SIGNATURES)
 """
-@inline function coordinate_domains(N::Integer, domain::AbstractUnivariateDomain)
+@inline function coordinate_domains(N::Integer, domain)
     coordinate_domains(Val(N), domain)
 end

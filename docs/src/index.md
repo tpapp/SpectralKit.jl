@@ -89,7 +89,7 @@ domain
 Concrete domains.
 
 ```@docs
-is_univariate_domain
+domain_kind
 coordinate_domains
 ```
 
@@ -170,16 +170,8 @@ This section of the documentation is probably only relevant to contributors and 
 
 Generally, the abstract types below are not part of the exposed API, and new types don't have to subtype them (unless they want to rely on the existing convenience methods). They are merely for code organization.
 
-#### Domains
-
 ```@docs
 SpectralKit.AbstractUnivariateDomain
-```
-
-#### Transformations
-
-```@docs
-SpectralKit.UnivariateTransformation
 ```
 
 ### Grid internals
