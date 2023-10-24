@@ -7,10 +7,11 @@ using SimpleUnPack: @unpack
 
 include("utilities.jl")
 include("derivatives.jl")
+include("domains.jl")
+include("transformations.jl")
 include("generic_api.jl")
 include("chebyshev.jl")
 include("smolyak_traversal.jl")
 include("smolyak_api.jl")
-include("transformations.jl")
 
 end # module

@@ -2,64 +2,50 @@
 ##### transformations
 #####
 
-export to_pm1, from_pm1, coordinate_transformations,
+export transform_to, transform_from, coordinate_transformations,
     BoundedLinear, InfRational, SemiInfRational
+
 
 ####
 #### generic api
 ####
 
 """
-$(TYPEDEF)
-
-An abstract type for univariate transformations. Transformations are not required to be
-subtypes, this just documents the interface they need to support:
-
-- [`to_pm1`](@ref)
-
-- [`from_pm1`](@ref)
-
-- [`domain`](@ref)
 
 !!! note
     Abstract type used for code organization, not exported.
 """
-abstract type UnivariateTransformation end
-
-Broadcast.broadcastable(transformation::UnivariateTransformation) = Ref(transformation)
-
-function domain(transformation::UnivariateTransformation)
-    from_pm1.(transformation, (-1, 1))
-end
 
 """
-`$(FUNCTIONNAME)(transformation, x)`
+$(TYPEDEF)
 
-Transform `x` to ``[-1, 1]`` using `transformation`.
+An abstract type for univariate transformations.
+"""
+abstract type AbstractUnivariateTransformation end
 
-Supports partial application as `$(FUNCTIONNAME)(transformation)`.
+Broadcast.broadcastable(transformation::AbstractUnivariateTransformation) = Ref(transformation)
+
+domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
+
+"""
+`$(FUNCTIONNAME)(domain, transformation, x)`
+
+Transform `x` to `domain` using `transformation`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
-function to_pm1 end
-
-to_pm1(transformation) = Base.Fix1(to_pm1, transformation)
+function transform_to end
 
 """
-`$(FUNCTIONNAME)(transformation, x)`
+`$(FUNCTIONNAME)(domain, transformation, x)`
 
-Transform `x` from ``[-1, 1]`` using `transformation`.
-
-Supports partial application as `$(FUNCTIONNAME)(transformation)`.
+Transform `x` from `domain` using `transformation`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
-function from_pm1 end
-
-from_pm1(transformation) = Base.Fix1(from_pm1, transformation)
-
+function transform_from end
 
 ####
 #### coordinate transformations
@@ -67,6 +53,12 @@ from_pm1(transformation) = Base.Fix1(from_pm1, transformation)
 
 struct CoordinateTransformations{T<:Tuple}
     transformations::T
+end
+
+domain_kind(::Type{<:CoordinateTransformations}) = :multivariate
+
+function Base.Tuple(coordinate_transformations::CoordinateTransformations)
+    coordinate_transformations.transformations
 end
 
 function Base.show(io::IO, ct::CoordinateTransformations)
@@ -88,13 +80,19 @@ julia> using StaticArrays
 
 julia> ct = coordinate_transformations(BoundedLinear(0, 2), SemiInfRational(2, 3))
 coordinate transformations
-  (0.0,2.0) ↔ (-1, 1) [linear transformation]
-  (2,∞) ↔ (-1, 1) [rational transformation with scale 3]
+  (0.0,2.0) ↔ domain [linear transformation]
+  (2,∞) ↔ domain [rational transformation with scale 3]
 
-julia> x = from_pm1(ct, (0.4, 0.5))
+julia> d1 = domain(Chebyshev(InteriorGrid(), 5))
+[-1,1]
+
+julia> dom = coordinate_domains(d1, d1)
+[-1,1]²
+
+julia> x = transform_from(dom, ct, (0.4, 0.5))
 (1.4, 11.0)
 
-julia> y = to_pm1(ct, x)
+julia> y = transform_to(dom, ct, x)
 (0.3999999999999999, 0.5)
 ```
 """
@@ -104,22 +102,27 @@ end
 
 coordinate_transformations(transformations...) = coordinate_transformations(transformations)
 
-function to_pm1(ct::CoordinateTransformations, x::Tuple)
-    @argcheck length(ct.transformations) == length(x)
-    map((t, x) -> to_pm1(t, x), ct.transformations, x)
+function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
+    @unpack domains = domain
+    @unpack transformations = ct
+    @argcheck length(domains) == length(transformations) == length(x)
+    map((d, t, x) -> transform_to(d, t, x), domains, transformations, x)
 end
 
-function to_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    SVector(to_pm1(ct, Tuple(x)))
+function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
+                   x::AbstractVector)
+    SVector(transform_to(domain, ct, Tuple(x)))
 end
 
-function from_pm1(ct::CoordinateTransformations, x::Tuple)
-    @argcheck length(ct.transformations) == length(x)
-    map((t, x) -> from_pm1(t, x), ct.transformations, x)
+function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
+    @unpack domains = domain
+    @unpack transformations = ct
+    @argcheck length(domains) == length(transformations) == length(x)
+    map((d, t, x) -> transform_from(d, t, x), domains, transformations, x)
 end
 
-function from_pm1(ct::CoordinateTransformations, x::AbstractVector)
-    SVector(from_pm1(ct, Tuple(x)))
+function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::AbstractVector)
+    SVector(transform_from(domain, ct, Tuple(x)))
 end
 
 ####
@@ -130,7 +133,7 @@ end
 ### bounded linear
 ###
 
-struct BoundedLinear{T <: Real} <: UnivariateTransformation
+struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
     "Midpoint `m`."
     m::T
     "Scale `s`."
@@ -147,33 +150,38 @@ end
 
 function Base.show(io::IO, transformation::BoundedLinear)
     @unpack m, s = transformation
-    print(io, "(", m - s, ",", m + s, ") ↔ (-1, 1) [linear transformation]")
+    print(io, "(", m - s, ",", m + s, ") ↔ domain [linear transformation]")
 end
 
 """
 $(TYPEDEF)
 
-Transform `x ∈ (-1,1)` to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
+Transform the domain to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
 
 `m` and `s` are calculated and checked by the constructor; `a < b` is enforced.
 """
 BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
 
-function from_pm1(T::BoundedLinear, x::Scalar)
-    @unpack m, s = T
+function transform_from(::PM1, t::BoundedLinear, x::Scalar)
+    @unpack m, s = t
     _add(_mul(x, s), m)
 end
 
-function to_pm1(T::BoundedLinear, y::Scalar)
-    @unpack m, s = T
+function transform_to(::PM1, t::BoundedLinear, y::Scalar)
+    @unpack m, s = t
     _div(_sub(y, m), s)
+end
+
+function domain(t::BoundedLinear)
+    @unpack m, s = t
+    UnivariateDomain(m - s, m + s)
 end
 
 ###
 ### semi-infinite interval
 ###
 
-struct SemiInfRational{T<:Real} <: UnivariateTransformation
+struct SemiInfRational{T<:Real} <: AbstractUnivariateTransformation
     "The finite endpoint `A`."
     A::T
     "Scale factor `L ≠ 0`."
@@ -192,18 +200,18 @@ function Base.show(io::IO, transformation::SemiInfRational)
     else
         D = "(-∞,A)"
     end
-    print(io, D, " ↔ (-1, 1) [rational transformation with scale ", L, "]")
+    print(io, D, " ↔ domain [rational transformation with scale ", L, "]")
 end
 
 """
 $(SIGNATURES)
 
-`[-1,1]` transformed to the domain `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
+The domian transformed to  `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
 (when `L < 0`) using ``y = A + L ⋅ (1 + x) / (1 - x)``.
 
 When used with Chebyshev polynomials, also known as a “rational Chebyshev” basis.
 
-# Example mappings
+# Example mappings for the domain ``(-1,1)``
 
 - ``-1/2 ↦ A + L / 3``
 - ``0 ↦ A + L``
@@ -211,24 +219,30 @@ When used with Chebyshev polynomials, also known as a “rational Chebyshev” b
 """
 SemiInfRational(A::Real, L::Real) = SemiInfRational(promote(A, L)...)
 
-from_pm1(T::SemiInfRational, x) = T.A + T.L * (1 + x) / (1 - x)
+transform_from(::PM1, t::SemiInfRational, x) = t.A + t.L * (1 + x) / (1 - x)
 
-function to_pm1(T::SemiInfRational, y)
-    @unpack A, L = T
-    z = y - A
-    x = (z - L) / (z + L)
+function transform_to(::PM1, t::SemiInfRational, y)
+    @unpack A, L = t
+    z = _sub(y, A)
+    x = _div(_sub(z, L), _add(z, L))
     if (y == Inf && L > 0) || (y == -Inf && L < 0)
-        one(x)
+        one(x)                  # works for derivatives, because they are 0 at ±∞
     else
         x
     end
+end
+
+function domain(t::SemiInfRational)
+    @unpack L, A = t
+    ∞ = oftype(A, Inf)
+    L > 0 ? UnivariateDomain(A, ∞) : UnivariateDomain(-∞, A)
 end
 
 ###
 ### infinite interval
 ###
 
-struct InfRational{T <: Real} <: UnivariateTransformation
+struct InfRational{T <: Real} <: AbstractUnivariateTransformation
     "The center `A`."
     A::T
     "Scale factor `L > 0`."
@@ -242,31 +256,33 @@ end
 
 function Base.show(io::IO, transformation::InfRational)
     @unpack A, L = transformation
-    print(io, "(-∞,∞) ↔ (-1, 1) [rational transformation with center ", A, ", scale ", L, "]")
+    print(io, "(-∞,∞) ↔ domain [rational transformation with center ", A, ", scale ", L, "]")
 end
 
 """
 $(SIGNATURES)
 
-Chebyshev polynomials transformed to the domain `(-Inf, Inf)`
-using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
+The domain transformed to `(-Inf, Inf)` using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
 
-# Example mappings
+# Example mappings (for domain ``(-1,1)``)
 
 - ``0 ↦ A``
 - ``±0.5 ↦ A ± L / √3``
 """
 InfRational(A::Real, L::Real) = InfRational(promote(A, L)...)
 
-from_pm1(T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x))
+transform_from(::PM1, T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x))
 
-function to_pm1(T::InfRational, y::Real)
-    @unpack A, L = T
-    z = y - A
-    x = z / hypot(L, z)
+function transform_to(::PM1, t::InfRational, y::Real)
+    @unpack A, L = t
+    z = _sub(y, A)
+    # FIXME implement for derivatives
+    x = z / hypot(z, L)
     if isinf(y)
         y > 0 ? one(x) : -one(x)
     else
         x
     end
 end
+
+domain(::InfRational) = UnivariateDomain(-Inf, Inf)

@@ -128,14 +128,15 @@ end
 @testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
     basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
-    @test @inferred(domain(basis)) == ((-1, 1), (-1, 1))
+    @test @inferred(domain(basis)) ≡ coordinate_domains(PM1(), PM1())
     g = grid(Float64, basis)
     iterator_sanity_checks(g)
     x = @inferred collect(g)
     M = @inferred collocation_matrix(basis, x)
     θ = M \ f.(x)
     @test sum(abs.(θ) .> 1e-8) == 4
-    y1, y2 = range(domain(basis)[1]...; length = 100), range(domain(basis)[2]...; length = 100)
+    y1 = range(extrema(domain(basis)[1])...; length = 100)
+    y2 = range(extrema(domain(basis)[2])...; length = 100)
     for y1 in y1
         for y2 in y2
             y = SVector(y1, y2)

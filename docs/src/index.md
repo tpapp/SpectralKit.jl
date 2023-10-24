@@ -60,8 +60,10 @@ basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 x = grid(basis)
 θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
 z = (0.5, 0.7)                                        # evaluate at this point
-isapprox(f2(z), linear_combination(basis, θ, to_pm1(ct, z)), rtol = 0.005)
+isapprox(f2(z), (linear_combination(basis, θ) ∘ ct)(z), rtol = 0.005)
 ```
+
+Note how the transformation can be combined with `∘` to a callable that evaluates a transformed linear combination at `z`.
 
 ## Constructing bases
 
@@ -73,13 +75,29 @@ InteriorGrid
 InteriorGrid2
 ```
 
-### Univariate and multivariate transformations
+### Domains and transformations
 
-Bases are defined on the domain ``[-1, 1]`` or ``[-1, 1]^n``. *Transformations* map other uni- and multivariate sets into these domains.
+A transformation maps values between a *domain*, usually specified by
+the basis, and the (co)domain that is specified by a transformation.
+Transformations are not required to be subtypes of anything, but need
+to support
 
 ```@docs
-to_pm1
-from_pm1
+transform_to
+transform_from
+domain
+```
+
+    In most cases you do not need to specify a domain directly: transformations specify their domains (eg from ``(0, ∞)``), and the codomain is determined by a basis. However, the following can be used to construct and query some concrete domains.
+
+```@docs
+domain_kind
+coordinate_domains
+```
+
+Bases are defined on a *canonical domain*, such as ``[-1, 1]`` for Chebyshev polynomials. *Transformations* map other uni- and multivariate sets into these domains.
+
+```@docs
 BoundedLinear
 InfRational
 SemiInfRational
@@ -110,8 +128,9 @@ smolyak_basis
 ```@docs
 is_function_basis
 dimension
-domain
 ```
+
+See also [`domain`](@ref).
 
 ### Evaluation
 
@@ -149,10 +168,12 @@ derivatives
 
 This section of the documentation is probably only relevant to contributors and others who want to understand the internals.
 
-### Simplified API for adding custom transformations
+### Type hierarchies
+
+Generally, the abstract types below are not part of the exposed API, and new types don't have to subtype them (unless they want to rely on the existing convenience methods). They are merely for code organization.
 
 ```@docs
-SpectralKit.UnivariateTransformation
+SpectralKit.AbstractUnivariateDomain
 ```
 
 ### Grid internals

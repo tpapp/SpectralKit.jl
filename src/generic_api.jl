@@ -2,7 +2,7 @@
 ##### Generic API
 #####
 
-export is_function_basis, dimension, domain, basis_at, linear_combination, InteriorGrid,
+export is_function_basis, domain, dimension, basis_at, linear_combination, InteriorGrid,
     InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
     is_subset_basis
 
@@ -17,12 +17,17 @@ abstract type FunctionBasis end
 
 Broadcast.broadcastable(basis::FunctionBasis) = Ref(basis)
 
+abstract type UnivariateBasis <: FunctionBasis end
+
+abstract type MultivariateBasis <: FunctionBasis end
+
 """
-`$(FUNCTIONNAME)(F)`
+`$(FUNCTIONNAME)(::Type{F})`
 
 `$(FUNCTIONNAME)(f::F)`
 
-Test if the argument is a *function basis*, supporting the following interface:
+Test if the argument (value or type) is a *function basis*, supporting the following
+interface:
 
 - [`domain`](@ref) for querying the domain,
 
@@ -46,8 +51,15 @@ is_function_basis(f) = is_function_basis(typeof(f))
 """
 `$(FUNCTIONNAME)(basis)`
 
-The domain of a function basis. A tuple of numbers (of arbitrary type, but usually
-`Float64`), or a tuple of domains by coordinate.
+The domain of a function basis.
+
+`$(FUNCTIONNAME)(transformation)`
+
+The (co)domain of a transformation. The “other” domain (codomain, depending on the
+mapping) is provided explicitly for transformations, and should be compatible with
+the`domain` of the basis.
+
+See [`domain_kind`](@ref) for the interface supported by domains.
 """
 function domain end
 
@@ -65,8 +77,8 @@ Return an iterable with known element type and length (`Base.HasEltype()`,
 `Base.HasLength()`) of basis functions in `basis` evaluated at `x`.
 
 Univariate bases operate on real numbers, while for multivariate bases, `Tuple`s or
-`StaticArrays.SVector` are preferred for performance, though all `<:AbstractVector` types
-should work.
+`StaticArrays.SVector` are preferred for performance, though all `<:AbstractVector`
+types should work.
 
 Methods are type stable.
 
@@ -75,6 +87,12 @@ Methods are type stable.
 """
 function basis_at end
 
+"""
+$(SIGNATURES)
+
+Helper function for linear combinations of basis elements at `x`. When `_check`, check
+that `θ` and `basis` have compatible dimensions.
+"""
 @inline function _linear_combination(basis, θ, x, _check)
     _check && @argcheck dimension(basis) == length(θ)
     mapreduce(_mul, _add, θ, basis_at(basis, x))
@@ -91,12 +109,12 @@ The length of `θ` should equal `dimension(θ)`.
 linear_combination(basis, θ, x) = _linear_combination(basis, θ, x, true)
 
 # FIXME define a nice Base.show method
-struct LinearCombination{B,T}
+struct LinearCombination{B,C}
     basis::B
-    θ::T
-    function LinearCombination(basis::B, θ::T) where {B,T}
+    θ::C
+    function LinearCombination(basis::B, θ::C) where {B,C}
         @argcheck dimension(basis) == length(θ)
-        new{B,T}(basis, θ)
+        new{B,C}(basis, θ)
     end
 end
 
@@ -106,8 +124,30 @@ end
 $(SIGNATURES)
 
 Return a callable that calculates `linear_combination(basis, θ, x)` when called with `x`.
+
+Use `linear_combination(basis, θ) ∘ transformation` for domain transformations.
 """
 linear_combination(basis, θ) = LinearCombination(basis, θ)
+
+struct TransformedLinearCombination{B,C,T}
+    basis::B
+    θ::C
+    transformation::T
+    function TransformedLinearCombination(basis::B, θ::C, transformation::T) where {B,C,T}
+        @argcheck dimension(basis) == length(θ)
+        @argcheck domain_kind(domain(basis)) ≡ domain_kind(T)
+        new{B,C,T}(basis, θ, transformation)
+    end
+end
+
+function (l::TransformedLinearCombination)(x)
+    @unpack basis, θ, transformation = l
+    _linear_combination(basis, θ, transform_to(domain(basis), transformation, x), false)
+end
+
+function Base.:(∘)(l::LinearCombination, transformation)
+    TransformedLinearCombination(l.basis, l.θ, transformation)
+end
 
 """
 $(TYPEDEF)

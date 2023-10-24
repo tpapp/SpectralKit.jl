@@ -8,7 +8,6 @@ makedocs(
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
     pages = Any["index.md"],
-    strict = true,
     clean = true,
     checkdocs = :exports,
 )
