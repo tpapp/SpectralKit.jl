@@ -60,7 +60,7 @@ basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 x = grid(basis)
 θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
 z = (0.5, 0.7)                                        # evaluate at this point
-isapprox(f2(z), (linear_combination(basis, θ) ∘ ct)(z)), rtol = 0.005)
+isapprox(f2(z), (linear_combination(basis, θ) ∘ ct)(z), rtol = 0.005)
 ```
 
 Note how the transformation can be combined with `∘` to a callable that evaluates a transformed linear combination at `z`.
