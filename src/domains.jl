@@ -87,8 +87,7 @@ end
 function Base.show(io::IO, domain::CoordinateDomains)
     (; domains) = domain
     if allequal(domains)
-        print(io, domains[1])
-        print_unicode_superscript(io, length(domains))
+        print(io, domains[1], SuperScript(length(domains)))
     else
         join(io, domains, "×")
     end

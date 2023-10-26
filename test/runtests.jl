@@ -1,6 +1,6 @@
 using SpectralKit
 using SpectralKit: PM1
-using Test, DocStringExtensions, StaticArrays, BenchmarkTools, Sobol
+using Test, DocStringExtensions, StaticArrays, BenchmarkTools
 # import ForwardDiff
 
 include("utilities.jl")

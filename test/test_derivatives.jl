@@ -1,5 +1,14 @@
+using SpectralKit: PartialDerivatives
 using SpectralKit: _add                           # used to form a scalar for testing
 using SpectralKit: Derivatives, replace_zero_tags # test internals
+
+@testset "partial derivatives interface" begin
+    @test ∂(2, (1, 2), (2, 2)) == PartialDerivatives{(1, 2)}(((1, 1), (0, 2)))
+    @test ∂(3, (), (1, 1, 2), (3, 2)) == PartialDerivatives{(2, 1, 1)}(((0, 0, 0),  (2, 1, 0), (0, 1, 1)))
+    @test_throws ArgumentError ∂(3, (4, ))
+    @test_throws ArgumentError ∂(3, (-1, ))
+end
+
 
 @testset "univariate derivatives check" begin
     z = 0.6

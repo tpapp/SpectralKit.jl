@@ -114,45 +114,45 @@ end
 #### product traversal
 ####
 
-struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple}
+struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple,P}
     smolyak_indices::I
     sources::S
+    product::P
     @doc """
     $(SIGNATURES)
 
-    An iterator equivalent to
+    An iterator conceptually equivalent to
 
     ```
     [prod(getindex.(sources, indices)) for indices in smolyak_indices]
     ```
 
-    implemented to perform the minimal number of multiplications. Detailed docs of the
+    using [`_product`](@ref) instead to account for derivatives. Detailed docs of the
     arguments are in [`SmolyakIndices`](@ref).
 
     Caller should arrange the elements of `sources` in the correct order, see
     [`nested_extrema_indices`](@ref). Each element in `sources` should have at least
     `H` elements (cf type parameters of [`SmolyakIndices`](@ref)), this is not checked.
     """
-    function SmolyakProduct(smolyak_indices::SmolyakIndices{N},
-                            sources::S) where {N,S}
+    function SmolyakProduct(smolyak_indices::I, sources::S,
+                            product::P) where {N,I<:SmolyakIndices{N},S,P}
         @argcheck length(sources) == N
-        new{typeof(smolyak_indices),S}(smolyak_indices, sources)
+        new{I,S,P}(smolyak_indices, sources)
     end
 end
 
 Base.length(smolyak_product::SmolyakProduct) = length(smolyak_product.smolyak_indices)
 
-@generated function Base.eltype(::Type{SmolyakProduct{I,S}}) where {I,S}
-    T = mapfoldl(eltype, _mul_type, fieldtypes(S))
-    :($T)
+function Base.eltype(::Type{SmolyakProduct{I,S,P}}) where {I,S,P}
+    _product_type(P, fieldtypes(S))
 end
 
 @inline function Base.iterate(smolyak_product::SmolyakProduct, state...)
-    @unpack smolyak_indices, sources = smolyak_product
+    (; smolyak_indices, sources, product) = smolyak_product
     itr = iterate(smolyak_indices, state...)
     itr ≡ nothing && return nothing
     indices, state′ = itr
-    reduce(_mul, getindex.(sources, indices)), state′
+    _product(product, sources, indices), state′
 end
 
 struct SmolyakBasis{I<:SmolyakIndices,U<:UnivariateBasis} <: MultivariateBasis
@@ -162,9 +162,8 @@ end
 
 function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
     @unpack smolyak_indices, univariate_parent = smolyak_basis
-    print(io, "Sparse multivariate basis on ℝ")
-    print_unicode_superscript(io, N)
-    print(io, "\n  ", smolyak_indices, "\n  using ", univariate_parent)
+    print(io, "Sparse multivariate basis on ℝ", SuperScript(N), "\n  ", smolyak_indices,
+          "\n  using ", univariate_parent)
 end
 
 """
@@ -227,14 +226,32 @@ end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}, x) where {N,H}
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
+                  x::Union{Tuple,AbstractVector}) where {N,H}
     @argcheck length(x) == N
     @unpack smolyak_indices, univariate_parent = smolyak_basis
     function _f(x)
         sacollect(SVector{H}, basis_at(univariate_parent, x))
     end
-    univariate_bases_at = map(_f, replace_zero_tags(Tuple(x)))
-    SmolyakProduct(smolyak_indices, univariate_bases_at)
+    univariate_bases_at = map(_f, NTuple{N}(x))
+    SmolyakProduct(smolyak_indices, univariate_bases_at, nothing)
+end
+
+function _lift(::Val{H}, univariate_parent, partial_derivatives::PartialDerivatives{M},
+               x::SVector) where {H,M}
+    map((m, x) -> sacollect(SVector{H},
+                            basis_at(univariate_parent, derivative(x, Val(m)))),
+        M, Tuple(x)) # FIXME may need a generated function
+end
+
+
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
+                  ∂x::PartialDerivativesAt) where {N,H}
+    (; partial_derivatives, x) = ∂x
+    @argcheck length(x) == N
+    @unpack smolyak_indices, univariate_parent = smolyak_basis
+    univariate_bases_at = _lift(Val(H), univariate_parent, partial_derivatives, x)
+    SmolyakProduct(smolyak_indices, univariate_bases_at, partial_derivatives)
 end
 
 struct SmolyakGridIterator{T,I,S}
