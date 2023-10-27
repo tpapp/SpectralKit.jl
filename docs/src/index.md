@@ -158,10 +158,11 @@ is_subset_basis
 !!! note
     API for derivatives is still experimental and subject to change.
 
-If derivatives along a coordinate are needed, use [`derivatives`](@ref). For multiple coordinates, the result will be nested in the order of increasing tags. When unspecified, tags are assigned automatically from left to right.
+For univariate functions, use [`derivatives`](@ref). For multivariate functions, use partial derivatives with `∂`.
 
 ```@docs
 derivatives
+∂
 ```
 
 ## Internals

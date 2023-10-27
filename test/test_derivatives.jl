@@ -1,6 +1,6 @@
 using SpectralKit: PartialDerivatives
 using SpectralKit: _add                           # used to form a scalar for testing
-using SpectralKit: Derivatives, replace_zero_tags # test internals
+using SpectralKit: Derivatives                    # test internals
 
 @testset "partial derivatives interface" begin
     @test ∂(2, (1, 2), (2, 2)) == PartialDerivatives{(1, 2)}(((1, 1), (0, 2)))
@@ -8,7 +8,6 @@ using SpectralKit: Derivatives, replace_zero_tags # test internals
     @test_throws ArgumentError ∂(3, (4, ))
     @test_throws ArgumentError ∂(3, (-1, ))
 end
-
 
 @testset "univariate derivatives check" begin
     z = 0.6
@@ -20,52 +19,47 @@ end
     f(z) = sum(basis_at(b, z))
     bz = basis_at(b, derivatives(z, Val(2)))
     iterator_sanity_checks(bz)
-    ∑b = reduce(_add, )
+    ∑b = reduce(_add, bz)
     @test ∑b[0] ≈ f(z)
-    @test ∑b[1] ≈ ddn(f, z, Val(1))
-    @test ∑b[2] ≈ ddn(f, z, Val(2))
+    @test ∑b[1] ≈ DD(f, z) atol = 1e-8
+    @test ∑b[2] ≈ DD(f, z, 2) atol = 1e-8
 end
 
 @testset "univariate transformed derivatives" begin
-    # NOTE: currently only BoundedLinear is implemented
-    x = 0.6
-    t = to_pm1(BoundedLinear(0, 1))
+    D = 1                       # derivatives up to this one
     b = Chebyshev(EndpointGrid(), 4)
-    f(x) = sum(basis_at(b, t(x)))
-    bz = basis_at(b, t(derivatives(x, Val(2))))
-    iterator_sanity_checks(bz)
-    ∑b = reduce(_add, bz)
-    @test ∑b[0] ≈ f(x)
-    @test ∑b[1] ≈ ddn(f, x, Val(1))
-    @test ∑b[2] ≈ ddn(f, x, Val(2))
-end
-
-@testset "zero tags" begin
-    x1, x2, x3, x4 = range(1.0, 4.0; length = 4)
-    _get(x::Derivatives{I}) where {I} = (I, x.derivatives[1])
-    xs = @inferred replace_zero_tags((derivatives(x1), x2, derivatives(Val(3), x3), derivatives(x4)))
-    @test _get(xs[1]) == (4, x1)
-    @test xs[2] == x2
-    @test _get(xs[3]) == (3, x3)
-    @test _get(xs[4]) == (5, x4)
+    θ = randn(dimension(b))
+    for t in (BoundedLinear(-2.0, 7.0), )
+        for i in 1:100
+            z = rand_pm1(i)
+            x = transform_from(PM1(), t, z)
+            ℓ = linear_combination(b, θ) ∘ t
+            Dx = ℓ(derivatives(x, Val(D)))
+            @test Dx[0] == ℓ(x)
+            for d in 1:D
+                @test DD(ℓ, x, d) ≈ Dx[d] atol = 1e-8
+            end
+        end
+    end
 end
 
 @testset "Smolyak derivatives check" begin
-    b = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
-    x1 = 0.7
-    x2 = 0.4
-    z12 = derivatives(Val(2), x1) # exchange the order
-    z21 = derivatives(Val(1), x2)
-    f(x) =  sum(basis_at(b, x))
-    F00 = f([x1, x2])
-    F01 = ForwardDiff.derivative(x -> f([x1, x]), x2)
-    F10 = ForwardDiff.derivative(x -> f([x, x2]), x1)
-    F11 = ForwardDiff.derivative(x2 -> ForwardDiff.derivative(x -> f([x, x2]), x1), x2)
-    bz = basis_at(b, (z12, z21))
-    iterator_sanity_checks(bz)
-    Z = @inferred reduce(_add, bz)
-    @test Z[0][0] ≈ F00
-    @test Z[1][0] ≈ F01
-    @test Z[0][1] ≈ F10
-    @test Z[1][1] ≈ F11
+    N = 2
+    b = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), N)
+    t = coordinate_transformations((BoundedLinear(1.0, 2.7), BoundedLinear(-3.0, 2.0)))
+    D = ∂(Val(2), (), (1,), (2, ), (1, 2))
+    D̃ = [(f, x) -> f(x),
+         (f, x) -> DD(x1 -> f((x1, x[2])), x[1]),
+         (f, x) -> DD(x2 -> f((x[1], x2)), x[2]),
+         (f, x) -> DD(x1 -> DD(x2 -> f((x1, x2)), x[2]), x[1])]
+    θ = randn(dimension(b))
+    ℓ = linear_combination(b, θ) ∘ t
+    for _ in 1:100
+        z = [rand_pm1() for _ in 1:N]
+        x = transform_from(coordinate_domains(PM1(), PM1()), t, z)
+        ℓDx = ℓ(∂(D, x))
+        for (i, a) in enumerate(ℓDx)
+            @test a ≈ D̃[i](ℓ, x) atol = 1e-4 # cross-derivatives: lower tolerance
+        end
+    end
 end

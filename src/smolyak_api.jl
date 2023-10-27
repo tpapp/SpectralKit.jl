@@ -117,7 +117,7 @@ end
 struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple,P}
     smolyak_indices::I
     sources::S
-    product::P
+    product_kind::P
     @doc """
     $(SIGNATURES)
 
@@ -135,9 +135,9 @@ struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple,P}
     `H` elements (cf type parameters of [`SmolyakIndices`](@ref)), this is not checked.
     """
     function SmolyakProduct(smolyak_indices::I, sources::S,
-                            product::P) where {N,I<:SmolyakIndices{N},S,P}
+                            product_kind::P) where {N,I<:SmolyakIndices{N},S,P}
         @argcheck length(sources) == N
-        new{I,S,P}(smolyak_indices, sources)
+        new{I,S,P}(smolyak_indices, sources, product_kind)
     end
 end
 
@@ -148,11 +148,11 @@ function Base.eltype(::Type{SmolyakProduct{I,S,P}}) where {I,S,P}
 end
 
 @inline function Base.iterate(smolyak_product::SmolyakProduct, state...)
-    (; smolyak_indices, sources, product) = smolyak_product
+    (; smolyak_indices, sources, product_kind) = smolyak_product
     itr = iterate(smolyak_indices, state...)
     itr ≡ nothing && return nothing
     indices, state′ = itr
-    _product(product, sources, indices), state′
+    _product(product_kind, sources, indices), state′
 end
 
 struct SmolyakBasis{I<:SmolyakIndices,U<:UnivariateBasis} <: MultivariateBasis
@@ -226,32 +226,35 @@ end
 
 dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
-                  x::Union{Tuple,AbstractVector}) where {N,H}
-    @argcheck length(x) == N
-    @unpack smolyak_indices, univariate_parent = smolyak_basis
-    function _f(x)
-        sacollect(SVector{H}, basis_at(univariate_parent, x))
-    end
-    univariate_bases_at = map(_f, NTuple{N}(x))
-    SmolyakProduct(smolyak_indices, univariate_bases_at, nothing)
+"""
+$(SIGNATURES)
+
+Helper function to make univariate bases for a Smolyak basis.
+"""
+function _univariate_bases_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
+                              x) where {N,H}
+    (; univariate_parent) = smolyak_basis
+    map(x -> sacollect(SVector{H}, basis_at(univariate_parent, x)), x)
 end
 
-function _lift(::Val{H}, univariate_parent, partial_derivatives::PartialDerivatives{M},
-               x::SVector) where {H,M}
-    map((m, x) -> sacollect(SVector{H},
-                            basis_at(univariate_parent, derivative(x, Val(m)))),
-        M, Tuple(x)) # FIXME may need a generated function
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
+                  x::Union{Tuple,AbstractVector}) where {N}
+    @argcheck length(x) == N
+    @unpack smolyak_indices= smolyak_basis
+    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, NTuple{N}(x)),
+                   nothing)
 end
 
+function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
+                  Lx::LiftedPartialDerivativesAt) where {N}
+    (; D, lifted_x) = Lx
+    @argcheck length(lifted_x) == N
+    @unpack smolyak_indices = smolyak_basis
+    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, lifted_x), D)
+end
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
-                  ∂x::PartialDerivativesAt) where {N,H}
-    (; partial_derivatives, x) = ∂x
-    @argcheck length(x) == N
-    @unpack smolyak_indices, univariate_parent = smolyak_basis
-    univariate_bases_at = _lift(Val(H), univariate_parent, partial_derivatives, x)
-    SmolyakProduct(smolyak_indices, univariate_bases_at, partial_derivatives)
+function basis_at(smolyak_basis::SmolyakBasis, Dx::PartialDerivativesAt)
+    basis_at(smolyak_basis, _lift(Dx))
 end
 
 struct SmolyakGridIterator{T,I,S}

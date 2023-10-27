@@ -67,27 +67,18 @@ function e_i(basis, i)
 end
 
 """
-$(SIGNATURES)
-
-Function and its derivative at `x`.
-"""
-f_f′(f, x) = f(x), ForwardDiff.derivative(f, x)
-
-"""
-Helper function for ``∂^N f/∂x^N``.
-"""
-function ddn(f, x, ::Val{N}) where {N}
-    fn = foldl((f, _) -> x -> ForwardDiff.derivative(f, x),
-               ntuple(_ -> nothing, Val(N)); init = f)
-    fn(x)
-end
-
-"""
-Sanity checks for iterators.
+Some sanity checks for iterators.
 """
 function iterator_sanity_checks(itr)
     T = eltype(typeof(itr))
     @test eltype(itr) ≡ T
     @test all(x -> typeof(x) ≡ T, itr)
     @test count(_ -> true, itr) == length(itr)
+end
+
+"Derivative of f at x."
+function DD(f, x, n = 1; p = 10)
+    # workaround for https://github.com/JuliaDiff/FiniteDifferences.jl/issues/224
+    # remove anonymous call when that is fixed
+    central_fdm(p, n)(x -> f(x), x)
 end
