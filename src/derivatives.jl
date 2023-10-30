@@ -316,14 +316,16 @@ _mul(x::Real, y::Real) = x * y
 
 _mul(x, y, z) = _mul(_mul(x, y), z)
 
-_div(x::Real, y::Real) = x / y
-
 function _one(::Type{Derivatives{N,T}}) where {N,T}
     Derivatives(ntuple(i -> i == 1 ? _one(T) : _zero(T), Val(N)))
 end
 
 function _add(x::Derivatives, y::Derivatives)
     Derivatives(map(_add, x.derivatives, y.derivatives))
+end
+
+function _add(x::Derivatives, y::Real)
+    Derivatives(map(x -> x + y, x.derivatives))
 end
 
 _add(x::NTuple{N}, y::NTuple{N}) where N = map(_add, x, y)
@@ -342,10 +344,6 @@ function _mul(x::Real, y::Derivatives)
 end
 
 _mul(x::Real, y::Tuple) = map(y -> _mul(x, y), y)
-
-function _div(x::Derivatives, y::Real)
-    Derivatives(map(x -> _div(x, y), x.derivatives))
-end
 
 @generated function _mul(x::Derivatives{N}, y::Derivatives{N}) where {N}
     _sum_terms(k) = mapreduce(i -> :(_mul($(binomial(k, i)), xd[$(i + 1)], yd[$(k - i + 1)])),

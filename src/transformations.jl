@@ -175,12 +175,21 @@ BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
 
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)
     @unpack m, s = t
-    _add(_mul(x, s), m)
+    x * s + m
 end
 
-function transform_to(::PM1, t::BoundedLinear, y::Scalar)
+function transform_to(::PM1, t::BoundedLinear, y::Real)
     @unpack m, s = t
-    _div(_sub(y, m), s)
+    (y - m) / s
+end
+
+function transform_to(domain::PM1, t::BoundedLinear, y::Derivatives{N}) where N
+    (; m, s) = t
+    (; derivatives) = y
+    y0, yD... = derivatives
+    x0 = transform_to(domain, t, y0)
+    xD = map(y -> y / s, yD)
+    Derivatives((x0, xD...))
 end
 
 function domain(t::BoundedLinear)
@@ -232,15 +241,27 @@ SemiInfRational(A::Real, L::Real) = SemiInfRational(promote(A, L)...)
 
 transform_from(::PM1, t::SemiInfRational, x) = t.A + t.L * (1 + x) / (1 - x)
 
-function transform_to(::PM1, t::SemiInfRational, y)
-    @unpack A, L = t
-    z = _sub(y, A)
-    x = _div(_sub(z, L), _add(z, L))
+function transform_to(::PM1, t::SemiInfRational, y::Real)
+    (; A, L) = t
+    z = y - A
+    x = (z - L) / (z + L)
     if (y == Inf && L > 0) || (y == -Inf && L < 0)
-        one(x)                  # works for derivatives, because they are 0 at ±∞
+        one(x)
     else
         x
     end
+end
+
+function transform_to(::PM1, t::SemiInfRational, y::Derivatives{N}) where N
+    (; A, L) = t
+    (; derivatives) = y
+    x0 = transform_to(PM1(), t, derivatives[1])
+    N == 1 && return Derivatives((x0, ))
+    # based on Boyd (2001), Table E.7
+    Q = abs2(x0 - 1)
+    x1 = (derivatives[2] * Q) / (2*L)
+    N == 2 && return Derivatives((x0, x1))
+    error("$(N-1)th derivative not implemented yet, open an issue.")
 end
 
 function domain(t::SemiInfRational)

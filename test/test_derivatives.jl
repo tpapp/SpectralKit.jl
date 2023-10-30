@@ -46,7 +46,7 @@ end
 @testset "Smolyak derivatives check" begin
     N = 2
     b = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), N)
-    t = coordinate_transformations((BoundedLinear(1.0, 2.7), BoundedLinear(-3.0, 2.0)))
+    t = coordinate_transformations((BoundedLinear(1.0, 2.7), SemiInfRational(3.0, 0.7)))
     D = ∂(Val(2), (), (1,), (2, ), (1, 2))
     D̃ = [(f, x) -> f(x),
          (f, x) -> DD(x1 -> f((x1, x[2])), x[1]),
