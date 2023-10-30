@@ -252,10 +252,10 @@ function transform_to(::PM1, t::SemiInfRational, y::Real)
     end
 end
 
-function transform_to(::PM1, t::SemiInfRational, y::Derivatives{N}) where N
+function transform_to(domain::PM1, t::SemiInfRational, y::Derivatives{N}) where N
     (; A, L) = t
     (; derivatives) = y
-    x0 = transform_to(PM1(), t, derivatives[1])
+    x0 = transform_to(domain, t, derivatives[1])
     N == 1 && return Derivatives((x0, ))
     # based on Boyd (2001), Table E.7
     Q = abs2(x0 - 1)
@@ -307,14 +307,26 @@ transform_from(::PM1, T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x)
 
 function transform_to(::PM1, t::InfRational, y::Real)
     @unpack A, L = t
-    z = _sub(y, A)
-    # FIXME implement for derivatives
+    z = y - A
     x = z / hypot(z, L)
     if isinf(y)
         y > 0 ? one(x) : -one(x)
     else
         x
     end
+end
+
+function transform_to(domain::PM1, t::InfRational, y::Derivatives{N}) where N
+    (; A, L) = t
+    (; derivatives) = y
+    x0 = transform_to(domain, t, derivatives[1])
+    N == 1 && return Derivatives((x0, ))
+    # based on Boyd (2001), Table E.5
+    Q = 1 - abs2(x0)
+    sQ = √Q
+    x1 = (derivatives[2] * Q * sQ) / L
+    N == 2 && return Derivatives((x0, x1))
+    error("$(N-1)th derivative not implemented yet, open an issue.")
 end
 
 domain(::InfRational) = UnivariateDomain(-Inf, Inf)

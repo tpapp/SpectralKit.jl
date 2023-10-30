@@ -44,19 +44,23 @@ end
 end
 
 @testset "Smolyak derivatives check" begin
-    N = 2
+    N = 3
     b = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), N)
-    t = coordinate_transformations((BoundedLinear(1.0, 2.7), SemiInfRational(3.0, 0.7)))
-    D = ∂(Val(2), (), (1,), (2, ), (1, 2))
+    t = coordinate_transformations((BoundedLinear(1.0, 2.7),
+                                    SemiInfRational(3.0, 0.7),
+                                    InfRational(1.7, 0.3)))
+    D = ∂(Val(3), (), (1,), (2, ), (3, ), (1, 2))
     D̃ = [(f, x) -> f(x),
-         (f, x) -> DD(x1 -> f((x1, x[2])), x[1]),
-         (f, x) -> DD(x2 -> f((x[1], x2)), x[2]),
-         (f, x) -> DD(x1 -> DD(x2 -> f((x1, x2)), x[2]), x[1])]
+         (f, x) -> DD(x1 -> f((x1, x[2], x[3])), x[1]),
+         (f, x) -> DD(x2 -> f((x[1], x2, x[3])), x[2]),
+         (f, x) -> DD(x3 -> f((x[1], x[2], x3)), x[3]),
+         (f, x) -> DD(x1 -> DD(x2 -> f((x1, x2, x[3])), x[2]), x[1])]
     θ = randn(dimension(b))
     ℓ = linear_combination(b, θ) ∘ t
+    d = domain(b)
     for _ in 1:100
         z = [rand_pm1() for _ in 1:N]
-        x = transform_from(coordinate_domains(PM1(), PM1()), t, z)
+        x = transform_from(d, t, z)
         ℓDx = ℓ(∂(D, x))
         for (i, a) in enumerate(ℓDx)
             @test a ≈ D̃[i](ℓ, x) atol = 1e-4 # cross-derivatives: lower tolerance
