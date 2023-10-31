@@ -57,9 +57,9 @@ function basis_at(basis::Chebyshev, x::Scalar)
     ChebyshevIterator(x, basis.N)
 end
 
-function Base.iterate(itr::ChebyshevIterator)
-    @unpack x = itr
-    _one(x), (2, _one(x), x)
+function Base.iterate(itr::ChebyshevIterator{T}) where T
+    (; x) = itr
+    _one(T), (2, _one(T), x)
 end
 
 function Base.iterate(itr::ChebyshevIterator{T}, (i, fp, fpp)) where T

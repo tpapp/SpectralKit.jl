@@ -280,17 +280,34 @@ function _product_type(::Type{Nothing}, source_eltypes)
     mapfoldl(eltype, promote_type, source_eltypes)
 end
 
+struct PartialDerivativesValues{N,T}
+    values::NTuple{N,T}
+end
+
+function Base.show(io::IO, pdv::PartialDerivativesValues)
+    print(io, "SpectralKit.PartialDerivativesValues(")
+    join(io, pdv.values, ", ")
+    print(io, ")")
+end
+
+@inline Base.Tuple(pdv::PartialDerivativesValues) = pdv.values
+
+@inline Base.length(pdv::PartialDerivativesValues) = length(pdv.values)
+
+@inline Base.getindex(pdv::PartialDerivativesValues, i) = pdv.values[i]
+
 function _product(partial_derivatives::PartialDerivatives, sources, indices)
     (; lookups) = partial_derivatives
-    map(lookups) do lookup
+    p = map(lookups) do lookup
         mapreduce((l, s, i) -> s[i][l], *, lookup, sources, indices)
     end
+    PartialDerivativesValues(p)
 end
 
 function _product_type(::Type{PartialDerivatives{M,L}}, source_eltypes) where {M,L}
     T = _product_type(Nothing, map(eltype, source_eltypes))
     N = length(fieldtypes(L))
-    NTuple{N,T}
+    PartialDerivativesValues{N,T}
 end
 
 ####
@@ -302,33 +319,37 @@ end
 
 _zero(::Type{T}) where {T<:Real} = zero(T)
 
-_zero(x::T) where T = _zero(T)
+function _zero(::Type{Derivatives{N,T}}) where {N,T}
+    z = _zero(T)
+    Derivatives(ntuple(_ -> z, Val(N)))
+end
+
+function _zero(::Type{PartialDerivativesValues{N,T}}) where {N,T}
+    z = zero(T)
+    PartialDerivativesValues(ntuple(_ -> z, Val(N)))
+end
 
 _one(::Type{T}) where {T<:Real} = one(T)
-
-_one(x::T) where T = _one(T)
-
-_add(x::Real, y::Real) = x + y
-
-_sub(x::Real, y::Real) = x - y
-
-_mul(x::Real, y::Real) = x * y
-
-_mul(x, y, z) = _mul(_mul(x, y), z)
 
 function _one(::Type{Derivatives{N,T}}) where {N,T}
     Derivatives(ntuple(i -> i == 1 ? _one(T) : _zero(T), Val(N)))
 end
 
+_add(x::Real, y::Real) = x + y
+
 function _add(x::Derivatives, y::Derivatives)
     Derivatives(map(_add, x.derivatives, y.derivatives))
+end
+
+function _add(x::PartialDerivativesValues, y::PartialDerivativesValues)
+    PartialDerivativesValues(map(+, x.values, y.values))
 end
 
 function _add(x::Derivatives, y::Real)
     Derivatives(map(x -> x + y, x.derivatives))
 end
 
-_add(x::NTuple{N}, y::NTuple{N}) where N = map(_add, x, y)
+_sub(x::Real, y::Real) = x - y
 
 function _sub(x::Derivatives, y::Real)
     x1, xrest... = x.derivatives
@@ -339,11 +360,17 @@ function _sub(x::Derivatives, y::Derivatives)
     Derivatives(map(_sub, x.derivatives, y.derivatives))
 end
 
+_mul(x::Real, y::Real) = x * y
+
+_mul(x, y, z) = _mul(_mul(x, y), z)
+
 function _mul(x::Real, y::Derivatives)
     Derivatives(map(y -> _mul(x, y), y.derivatives))
 end
 
 _mul(x::Real, y::Tuple) = map(y -> _mul(x, y), y)
+
+_mul(x::Real, y::PartialDerivativesValues) = PartialDerivativesValues(map(y -> _mul(x, y), y.values))
 
 @generated function _mul(x::Derivatives{N}, y::Derivatives{N}) where {N}
     _sum_terms(k) = mapreduce(i -> :(_mul($(binomial(k, i)), xd[$(i + 1)], yd[$(k - i + 1)])),

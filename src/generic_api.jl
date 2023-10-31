@@ -90,12 +90,34 @@ function basis_at end
 """
 $(SIGNATURES)
 
+Helper function for iteration. Errors when arguments do not finish at the same time.
+Internal.
+"""
+@inline _is_done(::Nothing, ::Nothing) = true
+@inline _is_done(θI::Nothing, BI::Tuple) = throw(ArgumentError("not enough coefficients"))
+@inline _is_done(θI::Tuple, BI::Nothing) = throw(ArgumentError("too many coefficients"))
+@inline _is_done(::Tuple, ::Tuple) = false
+
+"""
+$(SIGNATURES)
+
 Helper function for linear combinations of basis elements at `x`. When `_check`, check
 that `θ` and `basis` have compatible dimensions.
 """
 @inline function _linear_combination(basis, θ, x, _check)
-    _check && @argcheck dimension(basis) == length(θ)
-    mapreduce(_mul, _add, θ, basis_at(basis, x))
+    # an implementation of mapreduce, to work around
+    # https://github.com/JuliaLang/julia/issues/50735
+    B = basis_at(basis, x)
+    a = iterate(θ)
+    b = iterate(B)
+    @argcheck !_is_done(a, b)
+    s = _mul(a[1], b[1])
+    while true
+        a = iterate(θ, a[2])
+        b = iterate(B, b[2])
+        _is_done(a, b) && return s
+        s = _add(s, _mul(a[1], b[1]))
+    end
 end
 
 """
