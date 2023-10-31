@@ -4,6 +4,10 @@ using SpectralKit: nesting_total_length, nesting_block_length, SmolyakIndices,
 "grids we test on"
 GRIDS = (EndpointGrid(), InteriorGrid(), InteriorGrid2())
 
+@testset "printing SmolyakParameters" begin
+    @test repr(SmolyakParameters(3, 2)) == "Smolyak parameters, ∑bᵢ ≤ 3, all bᵢ ≤ 2"
+end
+
 ####
 #### blocks
 ####

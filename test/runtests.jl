@@ -4,6 +4,7 @@ using Test, DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
 
 include("utilities.jl")
 
+include("test_utilities.jl")
 include("test_domains.jl")
 include("test_derivatives.jl")
 include("test_transformations.jl")

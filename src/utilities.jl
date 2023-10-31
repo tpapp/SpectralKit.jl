@@ -7,13 +7,13 @@ $(SIGNATURES)
 
 Print a nonnegative number using `digits`, where `0` is indexed with `1`.
 """
-function print_number(io::IO, digits, k::Integer)
+function print_number(io::IO, DIGITS, k::Integer)
     @argcheck k ≥ 0
     if k < 10
-        print(io, digits[k + 1])
+        print(io, DIGITS[k + 1])
     else
-        for d in reverse(digits(l))
-            print(io, digits[d + 1])
+        for d in reverse(digits(k))
+            print(io, DIGITS[d + 1])
         end
     end
 end
