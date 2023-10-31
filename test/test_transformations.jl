@@ -78,11 +78,18 @@ end
     @test x2 isa SVector{2,Float64} && all(x2 .≈ x)
 end
 
-# FIXME uncomment if relevant, otherwise delete
-# @testset "partial application" begin
-#     t = SemiInfRational(7.0, 1.0)
-#     x = rand_pm1()
-#     y = from_pm1(t, x)
-#     @test from_pm1(t)(x) == y
-#     @test to_pm1(t)(y) == to_pm1(t, y)
-# end
+@testset "printing, promotion, broadcasting" begin
+    v = [1.0, 2.0]
+    t1 = BoundedLinear(2.0, 3)
+    @test repr(t1) == "(2.0,3.0) ↔ domain [linear transformation]"
+    @test transform_to.(PM1(), t1, v) isa Vector
+    t2 = SemiInfRational(7.0, 1)
+    @test repr(t2) == "(7.0,∞) ↔ domain [rational transformation with scale 1.0]"
+    @test transform_to.(PM1(), t2, v) isa Vector
+    t3 = InfRational(0.5, 1)
+    @test repr(t3) == "(-∞,∞) ↔ domain [rational transformation with center 0.5, scale 1.0]"
+    @test transform_to.(PM1(), t3, v) isa Vector
+    ct = coordinate_transformations(t1, t2, t3)
+    @test repr(ct) ==
+        "coordinate transformations\n  " * repr(t1) * "\n  " * repr(t2) * "\n  " * repr(t3)
+end

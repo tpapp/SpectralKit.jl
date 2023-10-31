@@ -41,3 +41,8 @@ end
         @test l1(transform_to(domain(basis), t, x)) == l2(x)
     end
 end
+
+@testset "subset fallback" begin
+    @test !is_subset_basis(Chebyshev(InteriorGrid(), 4), # just test the fallback method
+                           smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), 2))
+end

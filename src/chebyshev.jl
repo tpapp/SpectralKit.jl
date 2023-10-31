@@ -57,9 +57,9 @@ function basis_at(basis::Chebyshev, x::Scalar)
     ChebyshevIterator(x, basis.N)
 end
 
-function Base.iterate(itr::ChebyshevIterator)
-    @unpack x = itr
-    _one(x), (2, _one(x), x)
+function Base.iterate(itr::ChebyshevIterator{T}) where T
+    (; x) = itr
+    _one(T), (2, _one(T), x)
 end
 
 function Base.iterate(itr::ChebyshevIterator{T}, (i, fp, fpp)) where T
@@ -78,8 +78,8 @@ $(SIGNATURES)
 
 Return a gridpoint for collocation, with `1 ≤ i ≤ dimension(basis)`.
 
-`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
-The actual type can be broadened as required. Methods are type stable.
+`T` is used *as a hint* for the element type of grid coordinates. The actual type can be
+broadened as required. Methods are type stable.
 
 !!! note
     Not all grids have this method defined, especially if it is impractical. See
