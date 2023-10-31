@@ -324,22 +324,10 @@ end
 #### operators.
 ####
 
-_zero(::Type{T}) where {T<:Real} = zero(T)
-
-function _zero(::Type{Derivatives{N,T}}) where {N,T}
-    z = _zero(T)
-    Derivatives(ntuple(_ -> z, Val(N)))
-end
-
-function _zero(::Type{∂Output{N,T}}) where {N,T}
-    z = zero(T)
-    ∂Output(ntuple(_ -> z, Val(N)))
-end
-
 _one(::Type{T}) where {T<:Real} = one(T)
 
 function _one(::Type{Derivatives{N,T}}) where {N,T}
-    Derivatives(ntuple(i -> i == 1 ? _one(T) : _zero(T), Val(N)))
+    Derivatives(ntuple(i -> i == 1 ? _one(T) : zero(T), Val(N)))
 end
 
 _add(x::Real, y::Real) = x + y
@@ -352,16 +340,7 @@ function _add(x::∂Output, y::∂Output)
     ∂Output(map(+, x.values, y.values))
 end
 
-function _add(x::Derivatives, y::Real)
-    Derivatives(map(x -> x + y, x.derivatives))
-end
-
 _sub(x::Real, y::Real) = x - y
-
-function _sub(x::Derivatives, y::Real)
-    x1, xrest... = x.derivatives
-    Derivatives((x1 - y, xrest...))
-end
 
 function _sub(x::Derivatives, y::Derivatives)
     Derivatives(map(_sub, x.derivatives, y.derivatives))
@@ -374,8 +353,6 @@ _mul(x, y, z) = _mul(_mul(x, y), z)
 function _mul(x::Real, y::Derivatives)
     Derivatives(map(y -> _mul(x, y), y.derivatives))
 end
-
-_mul(x::Real, y::Tuple) = map(y -> _mul(x, y), y)
 
 _mul(x::Real, y::∂Output) = ∂Output(map(y -> _mul(x, y), y.values))
 
