@@ -78,8 +78,8 @@ $(SIGNATURES)
 
 Return a gridpoint for collocation, with `1 ≤ i ≤ dimension(basis)`.
 
-`T` is used *as a hint* for the element type of grid coordinates, and defaults to `Float64`.
-The actual type can be broadened as required. Methods are type stable.
+`T` is used *as a hint* for the element type of grid coordinates. The actual type can be
+broadened as required. Methods are type stable.
 
 !!! note
     Not all grids have this method defined, especially if it is impractical. See

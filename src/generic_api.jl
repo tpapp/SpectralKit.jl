@@ -203,8 +203,6 @@ Equivalent to an `EndpointGrid` with endpoints dropped.
 """
 struct InteriorGrid2 <: AbstractGrid end
 
-gridpoint(basis, i) = gridpoint(Float64, basis, i)
-
 """
 `$(FUNCTIONNAME)([T], basis)`
 
