@@ -56,6 +56,15 @@ end
 
 Base.extrema(domain::UnivariateDomain) = (domain.min, domain.max)
 
+function Base.show(io::IO, domain::UnivariateDomain)
+    mi, ma = extrema(domain)
+    print(io, "[")
+    mi == -Inf ? print(io, "-∞") : print(io, mi)
+    print(io, ",")
+    ma == Inf ? print(io, "∞") : print(io, ma)
+    print(io, "]")
+end
+
 """
 Represents the interval ``[-1, 1]``.
 
@@ -87,8 +96,7 @@ end
 function Base.show(io::IO, domain::CoordinateDomains)
     (; domains) = domain
     if allequal(domains)
-        print(io, domains[1])
-        print_unicode_superscript(io, length(domains))
+        print(io, domains[1], SuperScript(length(domains)))
     else
         join(io, domains, "×")
     end
