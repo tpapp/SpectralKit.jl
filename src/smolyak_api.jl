@@ -246,16 +246,15 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
 end
 
 function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
-                  Lx::LiftedPartialDerivativesAt) where {N}
-    (; D, lifted_x) = Lx
+                  Lx::∂InputLifted) where {N}
+    (; ∂specification, lifted_x) = Lx
     @argcheck length(lifted_x) == N
     @unpack smolyak_indices = smolyak_basis
-    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, lifted_x), D)
+    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, lifted_x),
+                   ∂specification)
 end
 
-function basis_at(smolyak_basis::SmolyakBasis, Dx::PartialDerivativesAt)
-    basis_at(smolyak_basis, _lift(Dx))
-end
+basis_at(smolyak_basis::SmolyakBasis, ∂x::∂Input) = basis_at(smolyak_basis, _lift(∂x))
 
 struct SmolyakGridIterator{T,I,S}
     smolyak_indices::I

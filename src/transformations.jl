@@ -114,15 +114,14 @@ function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
     SVector(transform_to(domain, ct, Tuple(x)))
 end
 
-function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
-                      x::PartialDerivativesAt)
-    transform_to(domain, ct, _lift(x))
+function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, ∂x::∂Input)
+    transform_to(domain, ct, _lift(∂x))
 end
 
 function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
-                      x::LiftedPartialDerivativesAt)
-    (; D, lifted_x) = x
-    LiftedPartialDerivativesAt(D, transform_to(domain, ct, lifted_x))
+                      ∂x::∂InputLifted)
+    (; ∂specification, lifted_x) = ∂x
+    ∂InputLifted(∂specification, transform_to(domain, ct, lifted_x))
 end
 
 function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
@@ -132,7 +131,8 @@ function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations
     map((d, t, x) -> transform_from(d, t, x), domains, transformations, x)
 end
 
-function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::AbstractVector)
+function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations,
+                        x::AbstractVector)
     SVector(transform_from(domain, ct, Tuple(x)))
 end
 

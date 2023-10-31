@@ -103,9 +103,9 @@ along coordinates, and combines them according to `lookups`.
 
 Internal.
 """
-struct PartialDerivatives{M,L}
+struct ∂Specification{M,L}
     lookups::L
-    function PartialDerivatives{M}(lookups::L) where {M,L}
+    function ∂Specification{M}(lookups::L) where {M,L}
         @argcheck M isa Tuple{Vararg{Int}}
         @argcheck !isempty(lookups)
         @argcheck lookups isa Tuple{Vararg{typeof(M)}}
@@ -113,8 +113,8 @@ struct PartialDerivatives{M,L}
     end
 end
 
-function Base.show(io::IO, partial_derivatives::PartialDerivatives)
-    (; lookups) = partial_derivatives
+function Base.show(io::IO, ∂specification::∂Specification)
+    (; lookups) = ∂specification
     print(io, "partial derivatives")
     for (j, lookup) in enumerate(lookups)
         print(io, "\n[$j] ")
@@ -141,6 +141,7 @@ end
 $(SIGNATURES)
 
 Convert a partial specification to a lookup, for `N`-dimensional arguments. Eg
+
 ```jldoctest
 julia> SpectralKit._partial_to_lookup(Val(3), (1, 3, 1))
 (2, 0, 1)
@@ -172,45 +173,46 @@ partial derivatives
     @argcheck !isempty(partials) "Empty partial derivative specification."
     lookups = map(p -> _partial_to_lookup(Val(N), p), partials)
     M = ntuple(d -> maximum(l -> l[d], lookups), Val(N))
-    PartialDerivatives{M}(lookups)
+    ∂Specification{M}(lookups)
 end
 
 @inline ∂(N::Integer, partials...) = ∂(Val(Int(N)), partials...)
 
 """
 Partial derivatives to be evaluated at some `x`. These need to be [`_lift`](@ref)ed,
-then combined with [`_product`](@ref) from bases. Internal.
+then combined with [`_product`](@ref) from bases. Internal, use `∂(specification, x)` to
+construct.
 """
-struct PartialDerivativesAt{TD<:PartialDerivatives,TX<:SVector}
-    D::TD
+struct ∂Input{TS<:∂Specification,TX<:SVector}
+    ∂specification::TS
     x::TX
-    function PartialDerivativesAt(partial_derivatives::TD,
-                                  x::TX) where {M,N,TD<:PartialDerivatives{M},TX<:SVector{N}}
+    function ∂Input(∂specification::TS, x::TX) where {M,N,TS<:∂Specification{M},TX<:SVector{N}}
         @argcheck length(M) == N
-        new{TD,TX}(partial_derivatives, x)
+        new{TS,TX}(∂specification, x)
     end
 end
 
-function Base.show(io::IO, Dx::PartialDerivativesAt)
-    show(io, Dx.D)
-    print(io, "\nat ", Dx.x)
+function Base.show(io::IO, ∂x::∂Input)
+    show(io, ∂x.∂specification)
+    print(io, "\nat ", ∂x.x)
 end
 
 """
 $(SIGNATURES)
 
-Partial derivatives `D` at `x`.
+Input wrappert type for evaluating partial derivatives `∂specification` at `x`.
+
 ```jldoctest
 julia> using StaticArrays
 
-julia> D = ∂(Val(2), (), (1,), (2,), (1, 2))
+julia> s = ∂(Val(2), (), (1,), (2,), (1, 2))
 partial derivatives
 [1] f
 [2] ∂f/∂x₁
 [3] ∂f/∂x₂
 [4] ∂²f/∂x₁∂x₂
 
-julia> ∂(D, SVector(1, 2))
+julia> ∂(s, SVector(1, 2))
 partial derivatives
 [1] f
 [2] ∂f/∂x₁
@@ -219,9 +221,9 @@ partial derivatives
 at [1, 2]
 ```
 """
-function ∂(D::PartialDerivatives{M}, x::Union{AbstractVector,Tuple}) where M
+function ∂(∂specification::∂Specification{M}, x::Union{AbstractVector,Tuple}) where M
     N = length(M)
-    PartialDerivativesAt(D, SVector{N}(x))
+    ∂Input(∂specification, SVector{N}(x))
 end
 
 """
@@ -231,8 +233,8 @@ Shorthand for `∂(x, ∂(Val(length(x)), partials...))`. Ideally needs an `SVec
 `Tuple` so that size information can be obtained statically.
 """
 @inline function ∂(x::SVector{N}, partials...) where N
-    D = ∂(Val(N), partials...)
-    PartialDerivativesAt(D, x)
+    ∂specification = ∂(Val(N), partials...)
+    ∂Input(∂specification, x)
 end
 
 @inline ∂(x::Tuple, partials...) = ∂(SVector(x), partials...)
@@ -240,8 +242,8 @@ end
 """
 See [`_lift`](@ref). Internal.
 """
-struct LiftedPartialDerivativesAt{TD<:PartialDerivatives,TL<:Tuple}
-    D::TD
+struct ∂InputLifted{TS<:∂Specification,TL<:Tuple}
+    ∂specification::TS
     lifted_x::TL
 end
 
@@ -250,12 +252,12 @@ $(SIGNATURES)
 
 Lift a partial derivative calculation into a tuple of `Derivatives`. Internal.
 """
-@generated function _lift(Dx::PartialDerivativesAt{<:PartialDerivatives{M}}) where M
+@generated function _lift(∂x::∂Input{<:∂Specification{M}}) where M
     _lifted_x = [:(derivatives(x[$(i)], Val($(m)))) for (i, m) in enumerate(M)]
     quote
-        x = Dx.x
+        x = ∂x.x
         lifted_x = ($(_lifted_x...),)
-        LiftedPartialDerivativesAt(Dx.D, lifted_x)
+        ∂InputLifted(∂x.∂specification, lifted_x)
     end
 end
 
@@ -280,34 +282,39 @@ function _product_type(::Type{Nothing}, source_eltypes)
     mapfoldl(eltype, promote_type, source_eltypes)
 end
 
-struct PartialDerivativesValues{N,T}
+"""
+Container for output of evaluating partial derivatives. Each corresponds to an
+specification in a [`∂Specification`](@ref). Can be indexed with integers, or converted
+to a `Tuple`.
+"""
+struct ∂Output{N,T}
     values::NTuple{N,T}
 end
 
-function Base.show(io::IO, pdv::PartialDerivativesValues)
-    print(io, "SpectralKit.PartialDerivativesValues(")
-    join(io, pdv.values, ", ")
+function Base.show(io::IO, ∂output::∂Output)
+    print(io, "SpectralKit.∂Output(")
+    join(io, ∂output.values, ", ")
     print(io, ")")
 end
 
-@inline Base.Tuple(pdv::PartialDerivativesValues) = pdv.values
+@inline Base.Tuple(∂output::∂Output) = ∂output.values
 
-@inline Base.length(pdv::PartialDerivativesValues) = length(pdv.values)
+@inline Base.length(∂output::∂Output) = length(∂output.values)
 
-@inline Base.getindex(pdv::PartialDerivativesValues, i) = pdv.values[i]
+@inline Base.getindex(∂output::∂Output, i) = ∂output.values[i]
 
-function _product(partial_derivatives::PartialDerivatives, sources, indices)
-    (; lookups) = partial_derivatives
+function _product(∂specification::∂Specification, sources, indices)
+    (; lookups) = ∂specification
     p = map(lookups) do lookup
         mapreduce((l, s, i) -> s[i][l], *, lookup, sources, indices)
     end
-    PartialDerivativesValues(p)
+    ∂Output(p)
 end
 
-function _product_type(::Type{PartialDerivatives{M,L}}, source_eltypes) where {M,L}
+function _product_type(::Type{∂Specification{M,L}}, source_eltypes) where {M,L}
     T = _product_type(Nothing, map(eltype, source_eltypes))
     N = length(fieldtypes(L))
-    PartialDerivativesValues{N,T}
+    ∂Output{N,T}
 end
 
 ####
@@ -324,9 +331,9 @@ function _zero(::Type{Derivatives{N,T}}) where {N,T}
     Derivatives(ntuple(_ -> z, Val(N)))
 end
 
-function _zero(::Type{PartialDerivativesValues{N,T}}) where {N,T}
+function _zero(::Type{∂Output{N,T}}) where {N,T}
     z = zero(T)
-    PartialDerivativesValues(ntuple(_ -> z, Val(N)))
+    ∂Output(ntuple(_ -> z, Val(N)))
 end
 
 _one(::Type{T}) where {T<:Real} = one(T)
@@ -341,8 +348,8 @@ function _add(x::Derivatives, y::Derivatives)
     Derivatives(map(_add, x.derivatives, y.derivatives))
 end
 
-function _add(x::PartialDerivativesValues, y::PartialDerivativesValues)
-    PartialDerivativesValues(map(+, x.values, y.values))
+function _add(x::∂Output, y::∂Output)
+    ∂Output(map(+, x.values, y.values))
 end
 
 function _add(x::Derivatives, y::Real)
@@ -370,7 +377,7 @@ end
 
 _mul(x::Real, y::Tuple) = map(y -> _mul(x, y), y)
 
-_mul(x::Real, y::PartialDerivativesValues) = PartialDerivativesValues(map(y -> _mul(x, y), y.values))
+_mul(x::Real, y::∂Output) = ∂Output(map(y -> _mul(x, y), y.values))
 
 @generated function _mul(x::Derivatives{N}, y::Derivatives{N}) where {N}
     _sum_terms(k) = mapreduce(i -> :(_mul($(binomial(k, i)), xd[$(i + 1)], yd[$(k - i + 1)])),

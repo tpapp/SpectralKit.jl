@@ -1,10 +1,10 @@
-using SpectralKit: PartialDerivatives
+using SpectralKit: ∂Specification
 using SpectralKit: _add                           # used to form a scalar for testing
 using SpectralKit: Derivatives                    # test internals
 
 @testset "partial derivatives interface" begin
-    @test ∂(2, (1, 2), (2, 2)) == PartialDerivatives{(1, 2)}(((1, 1), (0, 2)))
-    @test ∂(3, (), (1, 1, 2), (3, 2)) == PartialDerivatives{(2, 1, 1)}(((0, 0, 0),  (2, 1, 0), (0, 1, 1)))
+    @test ∂(2, (1, 2), (2, 2)) == ∂Specification{(1, 2)}(((1, 1), (0, 2)))
+    @test ∂(3, (), (1, 1, 2), (3, 2)) == ∂Specification{(2, 1, 1)}(((0, 0, 0),  (2, 1, 0), (0, 1, 1)))
     @test_throws ArgumentError ∂(3, (4, ))
     @test_throws ArgumentError ∂(3, (-1, ))
 end
