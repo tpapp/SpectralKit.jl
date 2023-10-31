@@ -1,10 +1,20 @@
 # SpectralKit
 
-This is a very simple package for *building blocks* of spectral methods. Its intended audience is users who are familiar with the theory and practice of these methods, and prefer to assemble their code from modular building blocks. If you need an introduction, a book like *Boyd (2001): Chebyshev and Fourier spectral methods* is a good place to start.
+This is a very simple package for *building blocks* of spectral methods. Its intended audience is users who are familiar with the theory and practice of these methods, and prefer to assemble their code from modular building blocks, potentially reusing calculations. If you need an introduction, a book like *Boyd (2001): Chebyshev and Fourier spectral methods* is a good place to start.
 
-The package is optimized for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. It uses [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops. Key functionality includes evaluating a set of basis functions, their linear combination at arbitrary points in a fast manner, for use in threaded code. These should work seamlessly with automatic differentiation frameworks, but also has its own primitives for obtaining derivatives of basis functions.
+This package was designed primarily for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. Key features include
 
-## Introduction
+1. evaluation of univariate and multivatiate basis functions, including Smolyak combinations,
+2. transformed to the relevant domains of interest, eg ``[a,b] × [0,∞)``,
+3. (partial) derivatives, with correct limits at endpoints,
+4. allocation-free, thread safe linear combinations for the above with a given set of coefficients,
+5. using [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops.
+
+While there is some functionality in this package to *fit* approximations to existing functions, it is not ideal for that, as it was optimized for mapping a set of coefficients to residuals of functional equations at gridpoints.
+
+Also, while the package should interoperate seamlessly with most AD frameworks, only the derivative API (explained below) is guaranteed to have correct derivatives of limits near infinity.
+
+## Concepts
 
 In this package,
 
@@ -24,7 +34,7 @@ A basis is constructed using
 
 A set of coordinates for a particular basis can be augmented for a wider basis with [`augment_coefficients`](@ref).
 
-Currenly, all bases have the domain ``[-1,1]`` or ``[-1,1]^n``. Facilities are provided for coordinatewise *transformations* to other domains.
+Bases have a “canonical” domain, eg ``[-1,1]`` or ``[-1,1]^n`` for Chebyshev polynomials. Use [transformations](#domains-and-transformations) for mapping to other domains.
 
 ## Examples
 
@@ -88,7 +98,7 @@ transform_from
 domain
 ```
 
-    In most cases you do not need to specify a domain directly: transformations specify their domains (eg from ``(0, ∞)``), and the codomain is determined by a basis. However, the following can be used to construct and query some concrete domains.
+In most cases you do not need to specify a domain directly: transformations specify their domains (eg from ``(0, ∞)``), and the codomain is determined by a basis. However, the following can be used to construct and query some concrete domains.
 
 ```@docs
 domain_kind
