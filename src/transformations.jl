@@ -103,8 +103,8 @@ end
 coordinate_transformations(transformations...) = coordinate_transformations(transformations)
 
 function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
-    @unpack domains = domain
-    @unpack transformations = ct
+    (; domains) = domain
+    (; transformations) = ct
     @argcheck length(domains) == length(transformations) == length(x)
     map((d, t, x) -> transform_to(d, t, x), domains, transformations, x)
 end
@@ -125,8 +125,8 @@ function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
 end
 
 function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
-    @unpack domains = domain
-    @unpack transformations = ct
+    (; domains) = domain
+    (; transformations) = ct
     @argcheck length(domains) == length(transformations) == length(x)
     map((d, t, x) -> transform_from(d, t, x), domains, transformations, x)
 end
@@ -160,7 +160,7 @@ struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
 end
 
 function Base.show(io::IO, transformation::BoundedLinear)
-    @unpack m, s = transformation
+    (; m, s) = transformation
     print(io, "(", m - s, ",", m + s, ") ↔ domain [linear transformation]")
 end
 
@@ -174,12 +174,12 @@ Transform the domain to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
 BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
 
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)
-    @unpack m, s = t
+    (; m, s) = t
     x * s + m
 end
 
 function transform_to(::PM1, t::BoundedLinear, y::Real)
-    @unpack m, s = t
+    (; m, s) = t
     (y - m) / s
 end
 
@@ -193,7 +193,7 @@ function transform_to(domain::PM1, t::BoundedLinear, y::Derivatives{N}) where N
 end
 
 function domain(t::BoundedLinear)
-    @unpack m, s = t
+    (; m, s) = t
     UnivariateDomain(m - s, m + s)
 end
 
@@ -214,7 +214,7 @@ struct SemiInfRational{T<:Real} <: AbstractUnivariateTransformation
 end
 
 function Base.show(io::IO, transformation::SemiInfRational)
-    @unpack A, L = transformation
+    (; A, L) = transformation
     if L > 0
         D = "($A,∞)"
     else
@@ -265,7 +265,7 @@ function transform_to(domain::PM1, t::SemiInfRational, y::Derivatives{N}) where 
 end
 
 function domain(t::SemiInfRational)
-    @unpack L, A = t
+    (; L, A) = t
     ∞ = oftype(A, Inf)
     L > 0 ? UnivariateDomain(A, ∞) : UnivariateDomain(-∞, A)
 end
@@ -287,7 +287,7 @@ struct InfRational{T <: Real} <: AbstractUnivariateTransformation
 end
 
 function Base.show(io::IO, transformation::InfRational)
-    @unpack A, L = transformation
+    (; A, L) = transformation
     print(io, "(-∞,∞) ↔ domain [rational transformation with center ", A, ", scale ", L, "]")
 end
 
@@ -306,7 +306,7 @@ InfRational(A::Real, L::Real) = InfRational(promote(A, L)...)
 transform_from(::PM1, T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x))
 
 function transform_to(::PM1, t::InfRational, y::Real)
-    @unpack A, L = t
+    (; A, L) = t
     z = y - A
     x = z / hypot(z, L)
     if isinf(y)

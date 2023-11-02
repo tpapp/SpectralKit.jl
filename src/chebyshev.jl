@@ -36,7 +36,7 @@ end
 @inline domain(::Chebyshev) = PM1()
 
 function Base.show(io::IO, chebyshev::Chebyshev)
-    @unpack grid_kind, N = chebyshev
+    (; grid_kind, N) = chebyshev
     print(io, "Chebyshev polynomials (1st kind), ", grid_kind, ", dimension: ", N)
 end
 
@@ -63,7 +63,7 @@ function Base.iterate(itr::ChebyshevIterator{T}) where T
 end
 
 function Base.iterate(itr::ChebyshevIterator{T}, (i, fp, fpp)) where T
-    @unpack x, N = itr
+    (; x, N) = itr
     i > N && return nothing
     f = _sub(_mul(2, x, fp), fpp)
     f::T, (i + 1, f, fp)
@@ -86,13 +86,13 @@ broadened as required. Methods are type stable.
     [`grid`](@ref), which is part of the API, this function isn't.
 """
 function gridpoint(::Type{T}, basis::Chebyshev{InteriorGrid}, i::Integer) where {T <: Real}
-    @unpack N = basis
+    (; N) = basis
     @argcheck 1 ≤ i ≤ N                  # FIXME use boundscheck
     sinpi((N - 2 * i + 1) / T(2 * N))::T # use formula from Xu (2016)
 end
 
 function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where {T <: Real}
-    @unpack N = basis
+    (; N)= basis
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
     if N == 1
         cospi(1/T(2))::T        # 0.0 as a fallback, even though it does not have endpoints
@@ -102,7 +102,7 @@ function gridpoint(::Type{T}, basis::Chebyshev{EndpointGrid}, i::Integer) where 
 end
 
 function gridpoint(::Type{T}, basis::Chebyshev{InteriorGrid2}, i::Integer) where {T <: Real}
-    @unpack N = basis
+    (; N)= basis
     @argcheck 1 ≤ i ≤ N         # FIXME use boundscheck
     cospi(((N - i + 1) ./ T(N + 1)))::T
 end
@@ -116,7 +116,7 @@ Base.eltype(::Type{<:ChebyshevGridIterator{T}}) where {T} = T
 Base.length(itr::ChebyshevGridIterator) = dimension(itr.basis)
 
 function Base.iterate(itr::ChebyshevGridIterator{T}, i = 1) where {T}
-    @unpack basis = itr
+    (; basis) = itr
     if i ≤ dimension(basis)
         gridpoint(T, basis, i), i + 1
     else

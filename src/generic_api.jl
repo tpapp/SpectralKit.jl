@@ -163,7 +163,7 @@ struct TransformedLinearCombination{B,C,T}
 end
 
 function (l::TransformedLinearCombination)(x)
-    @unpack basis, θ, transformation = l
+    (; basis, θ, transformation) = l
     _linear_combination(basis, θ, transform_to(domain(basis), transformation, x), false)
 end
 
