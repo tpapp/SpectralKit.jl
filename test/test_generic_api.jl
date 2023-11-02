@@ -29,16 +29,22 @@ end
     @test_throws ArgumentError linear_combination(basis, bad_θ)
 end
 
-@testset "transformed linear combinations" begin
+@testset "transformed bases and linear combinations" begin
     N = 10
     basis = Chebyshev(EndpointGrid(), N)
-    θ = randn(10)
     t = BoundedLinear(1.0, 2.0)
+    @test domain(basis ∘ t) == domain(t)
+    @test dimension(basis ∘ t) == dimension(basis)
+    @test collect(grid(basis ∘ t)) ==
+        [transform_from(domain(basis), t, x) for x in grid(basis)]
+
+    θ = randn(10)
     l1 = linear_combination(basis, θ)
-    l2 = l1 ∘ t
+    l2 = linear_combination(basis ∘ t, θ)
+    l3 = linear_combination(basis, θ) ∘ t
     for _ in 1:20
         x = rand() + 1.0
-        @test l1(transform_to(domain(basis), t, x)) == l2(x)
+        @test l1(transform_to(domain(basis), t, x)) == l2(x) == l3(x)
     end
 end
 

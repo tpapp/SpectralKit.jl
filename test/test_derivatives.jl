@@ -49,7 +49,7 @@ end
         for i in 1:100
             z = rand_pm1(i)
             x = transform_from(PM1(), t, z)
-            ℓ = linear_combination(b, θ) ∘ t
+            ℓ = linear_combination(b ∘ t, θ)
             Dx = @inferred ℓ(derivatives(x, Val(D)))
             @test Dx[0] == ℓ(x)
             for d in 1:D
@@ -71,8 +71,9 @@ end
          (f, x) -> DD(x2 -> f((x[1], x2, x[3])), x[2]),
          (f, x) -> DD(x3 -> f((x[1], x[2], x3)), x[3]),
          (f, x) -> DD(x1 -> DD(x2 -> f((x1, x2, x[3])), x[2]), x[1])]
-    θ = randn(dimension(b))
-    ℓ = linear_combination(b, θ) ∘ t
+    bt = b ∘ t
+    θ = randn(dimension(bt))
+    ℓ = linear_combination(bt, θ)
     d = domain(b)
     for i in 1:100
         z = [rand_pm1() for _ in 1:N]

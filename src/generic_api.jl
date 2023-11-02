@@ -101,10 +101,10 @@ Internal.
 """
 $(SIGNATURES)
 
-Helper function for linear combinations of basis elements at `x`. When `_check`, check
-that `θ` and `basis` have compatible dimensions.
+Helper function for linear combinations of basis elements at `x`. Always checks that `θ`
+and `basis` have compatible dimensions.
 """
-@inline function _linear_combination(basis, θ, x, _check)
+@inline function _linear_combination(basis, θ, x)
     # an implementation of mapreduce, to work around
     # https://github.com/JuliaLang/julia/issues/50735
     B = basis_at(basis, x)
@@ -128,7 +128,7 @@ the given order.
 
 The length of `θ` should equal `dimension(θ)`.
 """
-linear_combination(basis, θ, x) = _linear_combination(basis, θ, x, true)
+linear_combination(basis, θ, x) = _linear_combination(basis, θ, x)
 
 # FIXME define a nice Base.show method
 struct LinearCombination{B,C}
@@ -140,36 +140,17 @@ struct LinearCombination{B,C}
     end
 end
 
-(l::LinearCombination)(x) = _linear_combination(l.basis, l.θ, x, false)
+(l::LinearCombination)(x) = _linear_combination(l.basis, l.θ, x)
 
 """
 $(SIGNATURES)
 
 Return a callable that calculates `linear_combination(basis, θ, x)` when called with `x`.
 
-Use `linear_combination(basis, θ) ∘ transformation` for domain transformations.
+You can use `linear_combination(basis, θ) ∘ transformation` for domain transformations,
+though working with `basis ∘ transformation` may be preferred.
 """
 linear_combination(basis, θ) = LinearCombination(basis, θ)
-
-struct TransformedLinearCombination{B,C,T}
-    basis::B
-    θ::C
-    transformation::T
-    function TransformedLinearCombination(basis::B, θ::C, transformation::T) where {B,C,T}
-        @argcheck dimension(basis) == length(θ)
-        @argcheck domain_kind(domain(basis)) ≡ domain_kind(T)
-        new{B,C,T}(basis, θ, transformation)
-    end
-end
-
-function (l::TransformedLinearCombination)(x)
-    (; basis, θ, transformation) = l
-    _linear_combination(basis, θ, transform_to(domain(basis), transformation, x), false)
-end
-
-function Base.:(∘)(l::LinearCombination, transformation)
-    TransformedLinearCombination(l.basis, l.θ, transformation)
-end
 
 """
 $(TYPEDEF)
@@ -227,7 +208,6 @@ for compatible vectors `y = f.(x)`.
 Methods are type stable. The elements of `x` can be [`derivatives`](@ref).
 """
 function collocation_matrix(basis, x = grid(basis))
-    @argcheck isconcretetype(eltype(x))
     N = dimension(basis)
     M = length(x)
     C = Matrix{eltype(basis_at(basis, first(x)))}(undef, M, N)
@@ -265,3 +245,45 @@ with [`augment_coefficients`](@ref).
     since they may be in different positions. Always use [`augment_coefficients`](@ref).
 """
 is_subset_basis(basis1::FunctionBasis, basis2::FunctionBasis) = false
+
+####
+#### transformed basis
+####
+
+"""
+Transform the domain of a basis.
+"""
+struct TransformedBasis{B,T} <: FunctionBasis
+    parent::B
+    transformation::T
+    function TransformedBasis(parent::B, transformation::T) where {B,T}
+        @argcheck domain_kind(domain(parent)) ≡ domain_kind(T)
+        new{B,T}(parent, transformation)
+    end
+end
+
+function Base.:(∘)(parent::FunctionBasis, transformation)
+    TransformedBasis(parent, transformation)
+end
+
+domain(basis::TransformedBasis) = domain(basis.transformation)
+
+dimension(basis::TransformedBasis) = dimension(basis.parent)
+
+function basis_at(basis::TransformedBasis, x)
+    (; parent, transformation) = basis
+    basis_at(parent, transform_to(domain(parent), transformation, x))
+end
+
+function grid(basis::TransformedBasis)
+    (; parent, transformation) = basis
+    d = domain(parent)
+    Iterators.map(x -> transform_from(d, transformation, x), grid(parent))
+end
+
+function Base.:(∘)(linear_combination::LinearCombination, transformation)
+    (; basis, θ) = linear_combination
+    LinearCombination(basis ∘ transformation, θ)
+end
+
+# FIXME add augmentation for transformed bases

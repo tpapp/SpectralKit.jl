@@ -40,7 +40,7 @@ Bases have a “canonical” domain, eg ``[-1,1]`` or ``[-1,1]^n`` for Chebyshev
 
 ### Univariate family on `[-1,1]`
 
-```@repl
+```@example
 using SpectralKit
 basis = Chebyshev(EndpointGrid(), 5)        # 5 Chebyshev polynomials
 is_function_basis(basis)                    # ie we support the interface below
@@ -59,18 +59,19 @@ augment_coefficients(basis, basis2, θ)      # … so let's do it
 
 ### Smolyak approximation on a transformed domain
 
-```@repl
+```@example
 using SpectralKit, StaticArrays
 function f2(x)                  # bivariate function we approximate
     x1, x2 = x                  # takes vectors
     exp(x1) + exp(-abs2(x2))
 end
-ct = coordinate_transformations(BoundedLinear(-1, 2.0), SemiInfRational(-3.0, 3.0))
 basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
-x = grid(basis)
-θ = collocation_matrix(basis) \ f2.(from_pm1.(ct, x)) # find the coefficients
-z = (0.5, 0.7)                                        # evaluate at this point
-isapprox(f2(z), (linear_combination(basis, θ) ∘ ct)(z), rtol = 0.005)
+ct = coordinate_transformations(BoundedLinear(-1, 2.0), SemiInfRational(-3.0, 3.0))
+basis_t = basis ∘ ct
+x = grid(basis_t)
+θ = collocation_matrix(basis_t) \ f2.(x)  # find the coefficients
+z = (0.5, 0.7)                            # evaluate at this point
+isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
 ```
 
 Note how the transformation can be combined with `∘` to a callable that evaluates a transformed linear combination at `z`.
