@@ -266,7 +266,7 @@ function Base.:(∘)(parent::FunctionBasis, transformation)
     TransformedBasis(parent, transformation)
 end
 
-domain(basis::TransformedBasis) = domain(basis.parent)
+domain(basis::TransformedBasis) = domain(basis.transformation)
 
 dimension(basis::TransformedBasis) = dimension(basis.parent)
 
@@ -278,7 +278,7 @@ end
 function grid(basis::TransformedBasis)
     (; parent, transformation) = basis
     d = domain(parent)
-    Iterators.map(x -> transform_to(d, transformation, x), grid(parent))
+    Iterators.map(x -> transform_from(d, transformation, x), grid(parent))
 end
 
 function Base.:(∘)(linear_combination::LinearCombination, transformation)
