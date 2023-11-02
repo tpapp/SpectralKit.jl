@@ -50,13 +50,12 @@ Length of each block `b`.
 end
 
 function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid})
-    @unpack len = ι
-    i = (len + 1) ÷ 2
+    i = (ι.len + 1) ÷ 2
     i, (0, 0)                   # step = 0 is special-cased
 end
 
 function Base.iterate(ι::SmolyakGridShuffle{EndpointGrid}, (i, step))
-    @unpack len = ι
+    (; len) = ι
     i == 0 && return len > 1 ? (1, (1, len - 1)) : nothing
     i′ = i + step
     if i′ ≤ len
@@ -83,7 +82,7 @@ end
 end
 
 function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid})
-    @unpack len = ι
+    (; len) = ι
     i0 = (len + 1) ÷ 2          # first index at this level
     Δ = len                     # basis for step size
     a = 2                       # alternating as 2Δa and Δa
@@ -91,7 +90,7 @@ function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid})
 end
 
 function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid}, (i, i0, Δ, a))
-    @unpack len = ι
+    (; len) = ι
     i′ = i + a * Δ
     if i′ ≤ len
         i′, (i′, i0, Δ, 3 - a)
@@ -115,15 +114,13 @@ end
 @inline nesting_block_length(::Type{Chebyshev}, ::InteriorGrid2, b::Int) = 1 << b
 
 function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid2})
-    @unpack len = ι
-    i = (len + 1) ÷ 2
+    i = (ι.len + 1) ÷ 2
     i, (i, 2 * i)
 end
 
 function Base.iterate(ι::SmolyakGridShuffle{InteriorGrid2}, (i, step))
-    @unpack len = ι
     i′ = i + step
-    if i′ ≤ len
+    if i′ ≤ ι.len
         i′, (i′, step)
     else
         step′ = step ÷ 2

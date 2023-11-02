@@ -87,7 +87,7 @@ struct SmolyakIndices{N,H,B,M,Mp1}
 end
 
 function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B,M}) where {N,H,B,M}
-    @unpack len = smolyak_indices
+    (; len) = smolyak_indices
     print(io, "Smolyak indexing, ∑bᵢ ≤ $(B), all bᵢ ≤ $(M), dimension $(len)")
 end
 
@@ -161,7 +161,7 @@ struct SmolyakBasis{I<:SmolyakIndices,U<:UnivariateBasis} <: MultivariateBasis
 end
 
 function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-    @unpack smolyak_indices, univariate_parent = smolyak_basis
+    (; smolyak_indices, univariate_parent) = smolyak_basis
     print(io, "Sparse multivariate basis on ℝ", SuperScript(N), "\n  ", smolyak_indices,
           "\n  using ", univariate_parent)
 end
@@ -219,8 +219,7 @@ end
 end
 
 function domain(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where {N}
-    @unpack univariate_parent = smolyak_basis
-    D = domain(univariate_parent)
+    D = domain(smolyak_basis.univariate_parent)
     coordinate_domains(Val(N), D)
 end
 
@@ -240,8 +239,8 @@ end
 function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
                   x::Union{Tuple,AbstractVector}) where {N}
     @argcheck length(x) == N
-    @unpack smolyak_indices= smolyak_basis
-    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, NTuple{N}(x)),
+    SmolyakProduct(smolyak_basis.smolyak_indices,
+                   _univariate_bases_at(smolyak_basis, NTuple{N}(x)),
                    nothing)
 end
 
@@ -249,8 +248,8 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
                   Lx::∂InputLifted) where {N}
     (; ∂specification, lifted_x) = Lx
     @argcheck length(lifted_x) == N
-    @unpack smolyak_indices = smolyak_basis
-    SmolyakProduct(smolyak_indices, _univariate_bases_at(smolyak_basis, lifted_x),
+    SmolyakProduct(smolyak_basis.smolyak_indices,
+                   _univariate_bases_at(smolyak_basis, lifted_x),
                    ∂specification)
 end
 
@@ -267,14 +266,14 @@ Base.length(itr::SmolyakGridIterator) = length(itr.smolyak_indices)
 
 function grid(::Type{T},
               smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
-    @unpack smolyak_indices, univariate_parent = smolyak_basis
+    (; smolyak_indices, univariate_parent) = smolyak_basis
     sources = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
                         for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
     SmolyakGridIterator{NTuple{N,T},typeof(smolyak_indices),typeof(sources)}(smolyak_indices, sources)
 end
 
 function Base.iterate(itr::SmolyakGridIterator, state...)
-    @unpack smolyak_indices, sources = itr
+    (; smolyak_indices, sources) = itr
     result = iterate(smolyak_indices, state...)
     result ≡ nothing && return nothing
     ι, state′ = result
@@ -328,7 +327,7 @@ Base.eltype(itr::PaddingIterator) = eltype(itr.θ1)
 
 function Base.iterate(itr::PaddingIterator, state = (firstindex(itr.θ1),
                                                      iterate(itr.itr1)...))
-    @unpack θ1, itr1, itr2 = itr
+    (; θ1, itr1, itr2) = itr
     i, ι1, state1, state2... = state
     res2 = iterate(itr2, state2...)
     res2 ≡ nothing && return nothing

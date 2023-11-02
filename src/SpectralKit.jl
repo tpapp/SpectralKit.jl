@@ -3,7 +3,6 @@ module SpectralKit
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
 using StaticArrays: MVector, SVector, sacollect
-using SimpleUnPack: @unpack
 
 include("utilities.jl")
 include("derivatives.jl")
