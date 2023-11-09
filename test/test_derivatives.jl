@@ -99,5 +99,5 @@ end
         o1 + o2 + o3
     end
     @test @inferred(f(∂o)) == sum(o_src)
-    @test @ballocated(f($∂o)) == 0
+    @test @ballocated($f($∂o)) == 0
 end
