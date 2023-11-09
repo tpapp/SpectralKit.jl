@@ -87,3 +87,17 @@ end
         end
     end
 end
+
+@testset "iteration for ∂Output" begin
+    o_src = (1.0, 2.0, 3.0)
+    ∂o = SpectralKit.∂Output(o_src)
+    for (o1, o2) in zip(o_src, ∂o)
+        @test o1 ≡ o2
+    end
+    function f(o)
+        o1, o2, o3 = o
+        o1 + o2 + o3
+    end
+    @test @inferred(f(∂o)) == sum(o_src)
+    @test @ballocated(f($∂o)) == 0
+end

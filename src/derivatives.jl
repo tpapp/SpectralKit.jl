@@ -284,8 +284,8 @@ end
 
 """
 Container for output of evaluating partial derivatives. Each corresponds to an
-specification in a [`∂Specification`](@ref). Can be indexed with integers, or converted
-to a `Tuple`.
+specification in a [`∂Specification`](@ref). Can be indexed with integers, iterated, or
+converted to a `Tuple`.
 """
 struct ∂Output{N,T}
     values::NTuple{N,T}
@@ -302,6 +302,8 @@ end
 @inline Base.length(∂output::∂Output) = length(∂output.values)
 
 @inline Base.getindex(∂output::∂Output, i) = ∂output.values[i]
+
+@inline Base.iterate(∂output::∂Output, i...) = Base.iterate(∂output.values, i...)
 
 function _product(∂specification::∂Specification, sources, indices)
     (; lookups) = ∂specification
