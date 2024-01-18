@@ -166,6 +166,13 @@ function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) whe
           "\n  using ", univariate_parent)
 end
 
+Base.length(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N = N
+
+function Base.getindex(basis::SmolyakBasis, i::Int)
+    @argcheck 1 ≤ i ≤ length(basis) BoundsError(basis, i)
+    basis.univariate_parent
+end
+
 """
 $(SIGNATURES)
 

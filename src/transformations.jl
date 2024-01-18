@@ -77,7 +77,7 @@ Broadcast.broadcastable(ct::CoordinateTransformations) = Ref(ct)
 """
 $(SIGNATURES)
 
-Wrapper for coordinate-wise transformations.
+Wrapper for coordinate-wise transformations. To extract components, convert to Tuple.
 
 ```jldoctest
 julia> using StaticArrays
