@@ -29,7 +29,7 @@ end
     @test_throws ArgumentError linear_combination(basis, bad_θ)
 end
 
-@testset "transformed bases and linear combinations" begin
+@testset "transformed bases and linear combinations (univariate)" begin
     N = 10
     basis = Chebyshev(EndpointGrid(), N)
     t = BoundedLinear(1.0, 2.0)
@@ -45,6 +45,25 @@ end
     for _ in 1:20
         x = rand() + 1.0
         @test l1(transform_to(domain(basis), t, x)) == l2(x) == l3(x)
+    end
+end
+
+@testset "transformed bases and linear combinations (bivariate)" begin
+    basis0 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), Val(2))
+    t = coordinate_transformations(BoundedLinear(1.0, 2.0), SemiInfRational(0, 1))
+    basis = basis0 ∘ t
+    @test domain(basis ∘ t) == domain(t)
+    @test dimension(basis ∘ t) == dimension(basis)
+    @test collect(grid(basis)) ==
+        [transform_from(domain(basis0), t, x) for x in grid(basis0)]
+
+    θ = randn(dimension(basis))
+    l1 = linear_combination(basis0, θ)
+    l2 = linear_combination(basis, θ)
+    l3 = linear_combination(basis0, θ) ∘ t
+    for _ in 1:20
+        x = rand(2) .+ 1.0
+        @test l1(transform_to(domain(basis0), t, x)) == l2(x) == l3(x)
     end
 end
 

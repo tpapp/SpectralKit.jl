@@ -57,6 +57,10 @@ end
 
 domain_kind(::Type{<:CoordinateTransformations}) = :multivariate
 
+function domain(coordinate_transformations::CoordinateTransformations)
+    coordinate_domains(map(domain, coordinate_transformations.transformations))
+end
+
 function Base.Tuple(coordinate_transformations::CoordinateTransformations)
     coordinate_transformations.transformations
 end
@@ -266,6 +270,7 @@ end
 
 function domain(t::SemiInfRational)
     (; L, A) = t
+    A = float(A)
     ∞ = oftype(A, Inf)
     L > 0 ? UnivariateDomain(A, ∞) : UnivariateDomain(-∞, A)
 end
