@@ -35,3 +35,16 @@ struct SubScript
 end
 
 Base.print(io::IO, s::SubScript) = print_number(io, _SUBSCRIPT_DIGITS, s.i)
+
+"""
+$(SIGNATURES)
+
+If `T <: NTuple{N}`, convert `v` into an `NTuple{N}`.
+
+Used for ingesting `::AbstractVector` arguments in contexts where an `NTuple` or
+`SVector` is preferred.
+"""
+function _ntuple_like(::Type{T}, v::AbstractVector) where {N,T<:NTuple{N}}
+    @argcheck length(v) == N
+    NTuple{N}(v)
+end

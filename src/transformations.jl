@@ -113,9 +113,9 @@ function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, 
     map((d, t, x) -> transform_to(d, t, x), domains, transformations, x)
 end
 
-function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
-                   x::AbstractVector)
-    SVector(transform_to(domain, ct, Tuple(x)))
+function transform_to(domain::CoordinateDomains{T}, ct::CoordinateTransformations,
+                      x::AbstractVector) where T
+    SVector(transform_to(domain, ct, _ntuple_like(T, x)))
 end
 
 function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, ∂x::∂Input)
@@ -135,9 +135,9 @@ function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations
     map((d, t, x) -> transform_from(d, t, x), domains, transformations, x)
 end
 
-function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations,
-                        x::AbstractVector)
-    SVector(transform_from(domain, ct, Tuple(x)))
+function transform_from(domain::CoordinateDomains{T}, ct::CoordinateTransformations,
+                        x::AbstractVector) where {T}
+    SVector(transform_from(domain, ct, _ntuple_like(T, x)))
 end
 
 ####
