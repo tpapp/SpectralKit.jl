@@ -37,6 +37,9 @@ interface:
 
 - [`grid`](@ref) to obtain collocation points.
 
+- `length` and `getindex` for multivariate bases `(domain_kind(domain(basis)) ==
+  :multivariate)`, getindex returns a compatible marginal basis
+
 [`linear_combination`](@ref) and [`collocation_matrix`](@ref) are also supported, building
 on the above.
 
@@ -284,6 +287,13 @@ end
 function Base.:(∘)(linear_combination::LinearCombination, transformation)
     (; basis, θ) = linear_combination
     LinearCombination(basis ∘ transformation, θ)
+end
+
+Base.length(basis::TransformedBasis{<:MultivariateBasis}) = length(basis.parent)
+
+function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
+    (; parent, transformation) = basis
+    TransformedBasis(parent[i], Tuple(transformation)[i])
 end
 
 # FIXME add augmentation for transformed bases

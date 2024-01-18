@@ -56,6 +56,9 @@ end
     @test dimension(basis ∘ t) == dimension(basis)
     @test collect(grid(basis)) ==
         [transform_from(domain(basis0), t, x) for x in grid(basis0)]
+    @test length(basis) == 2
+    @test basis[2] == basis0.univariate_parent ∘ Tuple(t)[2]
+    @test_throws BoundsError basis[3]
 
     θ = randn(dimension(basis))
     l1 = linear_combination(basis0, θ)
