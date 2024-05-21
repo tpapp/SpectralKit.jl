@@ -245,59 +245,6 @@ function _partials_canonical_expansion(::Val{N}, partials) where N
     result
 end
 
-
-
-# const _PARTIALS = Tuple{Vararg{Int}}
-
-# function _partials_max(D1::NTuple{N1,Int}, D2::NTuple{N2,Int}) where {N1,N2}
-#     ntuple(Val(max(N1,N2))) do i
-#         if i ≤ N1
-#             if i ≤ N2
-#                 max(D1[i], D2[i])
-#             else
-#                 D1[i]
-#             end
-#         else
-#             D2[i]
-#         end
-#     end
-# end
-
-# function _partials_isless_or_eq(D1::NTuple{N1,Int}, D2::NTuple{N2,Int}) where {N1,N2}
-#     N1 ≤ N2 || return false
-#     for i in 1:N1
-#         D1[i] ≤ D2[i] || return false
-#     end
-#     true
-# end
-
-# function _normalize_partials(D::Tuple)
-#     i = something(findlast(d -> d > 0, D), 0)
-#     D[1:i]
-# end
-
-# function _expand_M_Ds_union(k_d_pairs)
-#     UDs = Vector{_PARTIALS}()
-#     M = ()
-#     for D in Ds
-#         M = _partials_max(M, D)
-#         for i in CartesianIndices(map(d -> 0:d, D))
-#             _sorted_insert_new!(UDs, _normalize_partials(Tuple(i)))
-#         end
-#     end
-#     M, UDs
-# end
-
-# @generated function _check_M_Ds_consistency(::Val{N}, ::Val{Ds}) where {N,Ds}
-#     @argcheck Ds isa Tuple{Vararg{_PARTIALS}} && all(D -> all(d -> d ≥ 0, D), Ds)
-#     @argcheck M isa NTuple{K,Int} && all(m -> m ≥ 0, M)
-#     M′, Ds′ = _calculate_M_Ds_union(Ds)
-#     C = M′ ≡ M && Ds′ ≡ Ds
-#     quote
-#         Val($(C))
-#     end
-# end
-
 # struct ∂Derivatives{K,M,Ds}
 #     function ∂Derivatives{K,M,Ds}() where {K,M,Ds}
 #         @argcheck K isa Int && K ≥ 0
