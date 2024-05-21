@@ -39,6 +39,21 @@ Base.print(io::IO, s::SubScript) = print_number(io, _SUBSCRIPT_DIGITS, s.i)
 """
 $(SIGNATURES)
 
+Print notation for partial derivatives, where `d[i]` stands for ``∂ⁱ/∂x[d]ⁱ``.
+"""
+function _print_partial_notation(io::IO, d)
+    if d ≡ ()
+        print(io, "value")
+    else
+        for (i, p) in enumerate(d)
+            print(io, "∂", SubScript(i), SuperScript(p))
+        end
+    end
+end
+
+"""
+$(SIGNATURES)
+
 If `T <: NTuple{N}`, convert `v` into an `NTuple{N}`.
 
 Used for ingesting `::AbstractVector` arguments in contexts where an `NTuple` or

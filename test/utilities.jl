@@ -76,9 +76,11 @@ function iterator_sanity_checks(itr)
     @test count(_ -> true, itr) == length(itr)
 end
 
-"Derivative of f at x."
+"nth derivative of f at x."
 function DD(f, x, n = 1; p = 10)
-    # workaround for https://github.com/JuliaDiff/FiniteDifferences.jl/issues/224
-    # remove anonymous call when that is fixed
-    central_fdm(p, n)(x -> f(x), x)
+    if n == 0
+        f(x)
+    else
+        central_fdm(p, n)(f, x)
+    end
 end
