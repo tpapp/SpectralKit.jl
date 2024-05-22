@@ -10,5 +10,4 @@ include("test_transformations.jl")
 include("test_chebyshev.jl")
 include("test_smolyak_traversal.jl")
 include("test_smolyak.jl")
-
-include("test_generic_api.jl")
+include("test_generic_api.jl")  # NOTE moved last as it used constructs from above

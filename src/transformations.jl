@@ -31,6 +31,8 @@ domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
 Transform `x` to `domain` using `transformation`.
 
+`domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
+
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
@@ -40,6 +42,8 @@ function transform_to end
 `$(FUNCTIONNAME)(domain, transformation, x)`
 
 Transform `x` from `domain` using `transformation`.
+
+`domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints

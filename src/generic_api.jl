@@ -297,3 +297,11 @@ function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
 end
 
 # FIXME add augmentation for transformed bases
+
+function transform_to(basis::FunctionBasis, transformation, x)
+    transform_to(domain(basis), transformation, x)
+end
+
+function transform_from(basis::FunctionBasis, transformation, x)
+    transform_from(domain(basis), transformation, x)
+end

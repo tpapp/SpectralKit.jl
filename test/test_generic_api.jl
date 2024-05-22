@@ -48,6 +48,15 @@ end
     end
 end
 
+@testset "transform_to and transform_from univariate shortcuts" begin
+    basis = Chebyshev(EndpointGrid(), 5)
+    t = BoundedLinear(1.0, 2.0)
+    y = rand_pm1()
+    x = transform_to(domain(basis), t, y)
+    @test transform_to(basis, t, y) == x
+    @test transform_from(basis, t, x) == transform_from(domain(basis), t, x)
+end
+
 @testset "transformed bases and linear combinations (bivariate)" begin
     basis0 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), Val(2))
     t = coordinate_transformations(BoundedLinear(1.0, 2.0), SemiInfRational(0, 1))
@@ -68,6 +77,15 @@ end
         x = rand(2) .+ 1.0
         @test l1(transform_to(domain(basis0), t, x)) == l2(x) == l3(x)
     end
+end
+
+@testset "transform_to and transform_from bivariate shortcuts" begin
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), Val(2))
+    t = coordinate_transformations(BoundedLinear(1.0, 2.0), SemiInfRational(0, 1))
+    y = SVector(rand_pm1(), rand_pm1())
+    x = transform_to(domain(basis), t, y)
+    @test transform_to(basis, t, y) == x
+    @test transform_from(basis, t, x) == transform_from(domain(basis), t, x)
 end
 
 @testset "subset fallback" begin
