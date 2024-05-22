@@ -1,9 +1,8 @@
 using SpectralKit, Test
 # test internals
 using SpectralKit: 𝑑Derivatives, _one, _add, _sub, _mul,
-    Partials, _is_strict_subset, _partials_minimal_representation, _partials_canonical_expansion
-    # _partials_max,
-# _normalize_partials, _calculate_M_Ds_union, _collapse_D_union!, ∂Derivatives
+    Partials, _is_strict_subset, _partials_minimal_representation,
+    _partials_canonical_expansion, ∂Derivatives, ∂CoordinateExpansion
 using Random: randperm
 using StaticArrays: SVector
 
@@ -88,6 +87,25 @@ end
         @test p_exp == p_exp2
     end
 end
+
+@testset "partial derivatives API entry points" begin
+    @test ∂() ≡ ∂Derivatives{Tuple{}}()
+    @test ∂(2, 2) ≡ ∂Derivatives{Tuple{Partials(2, 2)}}()
+    @test 𝑑^2 << Val(2) ≡ ∂Derivatives{Tuple{Partials(0, 2)}}()
+    @test ∂(1, 2) ∪ ∂(2, 1) ≡
+        ∂Derivatives{Tuple{_partials_minimal_representation([Partials(1, 2),
+                                                             Partials(2, 1)])...}}()
+    @test repr(∂()) == "∂()"
+    @test repr(∂(1, 2)) == "∂(1, 2)"
+end
+
+@testset "partials derivatives expansions" begin
+    D = ∂(2, 2)
+    x = SVector(1.0, 2.0)
+    Dx = @inferred(D(x))
+    @test Dx isa ∂CoordinateExpansion{<:typeof(D)}
+end
+
 
 # @testset "partial derivatives interface" begin
 #     @test ∂(2, (1, 2), (2, 2)) == ∂Specification{(1, 2)}(((1, 1), (0, 2)))

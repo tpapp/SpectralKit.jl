@@ -1,5 +1,8 @@
+using SpectralKit, Test
+using SpectralKit: PM1, UnivariateDomain
+
 @testset "domain API" begin
-    d1 = SpectralKit.PM1()
+    d1 = PM1()
     @test repr(d1) == "[-1,1]"
     @test extrema(d1) == (-1, 1)
     @test (minimum(d1), maximum(d1)) == extrema(d1)
@@ -11,6 +14,6 @@
     @test length(dn) == 2
     @test dn[1] == d1
     @test Tuple(dn) ≡ (d1, d1)
-    d2 = coordinate_domains(SpectralKit.PM1(), SpectralKit.UnivariateDomain(-3.0, Inf))
+    d2 = coordinate_domains(PM1(), SpectralKit.UnivariateDomain(-3.0, Inf))
     @test repr(d2) == "[-1,1]×[-3.0,∞]"
 end

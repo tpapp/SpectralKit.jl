@@ -27,7 +27,7 @@
                 θ = rand(N)
                 @test linear_combination(basis, θ, x) ≈
                     sum(chebyshev_cos(x, i) * θ for (i,θ) in enumerate(θ))
-                @test linear_combination(basis, θ, derivatives(x))[1] ≈
+                @test linear_combination(basis, θ, 𝑑(x))[1] ≈
                     sum(chebyshev_cos_deriv(x, i) * θ for (i,θ) in enumerate(θ))
             end
 

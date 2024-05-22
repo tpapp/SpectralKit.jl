@@ -2,7 +2,7 @@
 ##### Generic API
 #####
 
-export is_function_basis, domain, dimension, basis_at, linear_combination, InteriorGrid,
+export is_function_basis, dimension, basis_at, linear_combination, InteriorGrid,
     InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
     is_subset_basis
 

@@ -227,14 +227,14 @@ function _partials_minimal_representation(partials)
     minimal_partials
 end
 
-function _partials_canonical_expansion(::Val{N}, partials) where N
+function _partials_canonical_expansion(::Val{N}, Ps) where N
     result = OrderedSet{NTuple{N,Int}}()
     function _plus1_cartesian_indices(p::Partials{M}) where M
         (; I) = p
         @argcheck M ≤ N
         CartesianIndices(ntuple(i -> i ≤ M ? I[i] + 1 : 1, Val(N)))
     end
-    for p in partials
+    for p in Ps
         for ι in _plus1_cartesian_indices(p)
             i = map(i -> i - 1, Tuple(ι))
             if !(i ∈ result)
@@ -245,107 +245,106 @@ function _partials_canonical_expansion(::Val{N}, partials) where N
     result
 end
 
-# struct ∂Derivatives{K,M,Ds}
-#     function ∂Derivatives{K,M,Ds}() where {K,M,Ds}
-#         @argcheck K isa Int && K ≥ 0
-#         @argcheck _check_M_Ds_consistency(Val(N), Val(Ds)) ≡ Val(true)
-#         new{K,M,Ds}()
-#     end
-#     function ∂Derivatives(dimension::Val{K}, degree::Val{m}) where {K,m}
-#         @argcheck K isa Int && K ≥ 1
-#         @argcheck m isa Int && m ≥ 0
-#         m == 0 && return new{0,(),((),)}()
-#         z = ntuple(_ -> 0, Val(K - 1))
-#         M = (z..., m)
-#         Ds = ntuple(i -> (z..., i - 1), Val(m + 1))
-#         new{K,M,Ds}()
-#     end
-# end
+function _partials_expansion_degrees(::Val{N}, partials) where N
+    degrees = zero(MVector{N,Int})
+    for P in partials
+        for (j, i) in enumerate(P.I)
+            degrees[j] = max(degrees[j], i)
+        end
+    end
+    Tuple(degrees)
+end
 
-# ∂(k::Val{K}, m::Val{M}) where {K,M} = ∂Derivatives(k, m)
+_partials_minimum_input_dimension(partials) = maximum(P -> length(P.I), partials)
 
-# @inline ∂(dimension::Int, degree::Int = 1) = ∂(Val(dimension), Val(degree))
+function _is_minimal_representation(::Val{Ps}) where Ps
+    _Ps = fieldtypes(Ps)
+    _Ps isa Tuple{Vararg{Partials}} || return false
+    _partials_minimal_representation(_Ps) == collect(_Ps)
+end
 
-# @generated function Base.:∪(∂ds::∂Derivatives...)
-#     _get_Ds(::∂Derivatives{K,N,Ds}) where {K,N,Ds} = Ds
-#     M, Ds = _calculate_M_Ds_union(Iterators.flatten((_get_Ds(∂d) for ∂d in ∂ds)))
-#     K = length(M)
-#     quote
-#         ∂Derivatives{$(K), $(M), $(Ds)}()
-#     end
-# end
+struct ∂Derivatives{Ps}
+    function ∂Derivatives{Ps}() where {Ps}
+        if Ps isa Partials
+            new{Tuple{Ps}}()
+        else
+            @argcheck _is_minimal_representation(Val(Ps))
+            new{Ps}()
+        end
+    end
+end
 
-# function Base.:^(::∂Derivatives{K,M,D}, ::Val{Y}) where {K,M,D,Y}
-#     @argcheck Y isa Int && Y ≥ 0
-#     (dhead..., dlast) = D
-#     @argcheck(all(iszero, dhead...),
-#               "The ^ operator can only be applied for ∂ derivatives along one dimension.")
-#     ∂Derivatives(Val(K), Val(M * Y))
-# end
+∂(I::Tuple{Vararg{Int}}) = ∂Derivatives{Partials(I)}()
 
-# function _collapse_D_union!(D::Vector{_PARTIALS})
-#     D = collect(D)
-#     U = Vector{Pair{Int,Int}}()
-#     while !isempty(D)
-#         M = reduce(_partials_max, D)
-#         k = findfirst(d -> d > 0, M)
-#         k ≡ nothing && break    # we are done
-#         m = M[k]
-#         push!(U, k => m)
-#         _d = (ntuple(_ -> 0, k - 1)..., m)
-#         filter!(d -> !_partials_isless_or_eq(d, _d), D)
-#     end
-#     U
-# end
+∂(I::Integer...) = ∂Derivatives{Partials(I...)}()
 
-# function Base.show(io::IO, ::∂Derivatives{K,M,D}) where {K,M,D}
-#     print(io, "partial derivatives (at least $(K) dimensions), up to ")
-#     join(io, ("∂($(k), $(m))" for (k, m) in _collapse_D_union!(collect(_PARTIALS, D))), " ∪ ")
-# end
+∂() = ∂Derivatives{Tuple{}}()
 
-# struct ∂DerivativesInput{P<:∂Derivatives,N,T}
-#     partial_derivatives::P
-#     x::SVector{N,T}
-#     function ∂DerivativesInput(∂derivatives::P,
-#                                x::SVector{N,T}) where {K,P<:∂Derivatives{K},N,T}
-#         @argcheck N ≤ K "Can't differentiate the $(K)th element of a $(N)-element input."
-#         new{P,N,T}(∂derivatives, x)
-#     end
-# end
+function Base.:<<(d::𝑑Derivatives{D}, ::Val{N}) where {D,N}
+    @argcheck N isa Int && N ≥ 1
+    @argcheck D ≥ 1
+    ∂Derivatives{Partials(ntuple(i -> 0, Val(N - 1))..., D)}()
+end
 
-# (∂derivatives::∂Derivatives)(x::SVector) = ∂DerivativesInput(partial_derivatives, x)
+@generated function Base.:∪(∂ds::∂Derivatives...)
+    _get_Ps(::Type{<:∂Derivatives{Ps}}) where {Ps} = [fieldtypes(Ps)...]
+    Ps = mapreduce(_get_Ps, vcat, ∂ds)
+    quote
+        ∂Derivatives{Tuple{$(_partials_minimal_representation(Ps))...}}()
+    end
+end
 
-# """
-# See [`_lift`](@ref). Internal.
-# """
-# struct ∂DerivativesInputLifted{P<:∂Derivatives,L<:Tuple}
-#     partial_derivatives::P
-#     lifted_x::L
-# end
+function Base.show(io::IO, ::∂Derivatives{Ps}) where {Ps}
+    _Ps = fieldtypes(Ps)
+    _repr(P::Partials) = "∂($(join(P.I, ", ")))"
+    if isempty(_Ps)
+        print(io, "∂()")
+    elseif length(_Ps) == 1
+        print(io, _repr(_Ps[1]))
+    else
+        print(io, "union(")
+        join(io, (_repr(P) for P in fieldtypes(Ps)), ", ")
+        print(io, ")")
+    end
+end
 
-# """
-# $(SIGNATURES)
+@generated function _expand_coordinates(::∂Derivatives{Ps}, x::NTuple{N}) where {Ps,N}
+    _Ps = fieldtypes(Ps)
+    @argcheck N ≥ _partials_minimum_input_dimension(_Ps)
+    M = _partials_expansion_degrees(Val(N), _Ps)
+    x = [:(𝑑Derivatives{$(m)}()(x[$(j)])) for (j, m) in enumerate(M)]
+    quote
+        tuple($(x...))
+    end
+end
 
-# Lift a partial derivative calculation into a tuple of `Derivatives`. Internal.
-# """
-# @generated function _lift(∂x::∂DerivativesInput{<:∂Derivatives{K,M,N}}) where {K,M,N}
-#     _lifted_x = [:(∂(Val($(i ≤ K ? M[i] : 0)))(x[$(i)])) for i in 1:N]
-#     quote
-#         x = ∂x.x
-#         lifted_x = ($(_lifted_x...),)
-#         ∂PartialDerivativesInputLifted(∂x.∂derivatives, lifted_x)
-#     end
-# end
+struct ∂CoordinateExpansion{D<:∂Derivatives,S<:Tuple}
+    ∂D::D
+    x::S
+    function ∂CoordinateExpansion(∂D::D, x::S) where {D<:∂Derivatives,S<:Tuple}
+        new{D,S}(∂D, x)
+    end
+end
 
-# struct ∂Expansion{P<:∂Derivatives,N,T}
-#     ∂derivatives::P
-#     coefficients::SVector{N,T}
-#     function ∂Expansion(∂derivatives::∂Derivatives{K,M,D},
-#                         coefficients::SVector{N,T}) where {K,M,D,N,T}
-#         @argcheck length(D) == N
-#         new{typeof(P),N,T}(∂derivatives, coefficients)
-#     end
-# end
+(∂D::∂Derivatives)(x::Tuple) = ∂CoordinateExpansion(∂D, _expand_coordinates(∂D, x))
+
+(∂D::∂Derivatives)(x::AbstractVector) = ∂CoordinateExpansion(∂D, Tuple(x))
+
+struct ∂Expansion{D,N,T}
+    ∂D::D
+    coefficients::SVector{N,T}
+    function ∂Expansion(∂D::D, coefficients::SVector{N,T}) where {D<:∂Derivatives,N,T}
+        new{D,N,T}(coefficients)
+    end
+end
+
+function _add(x::∂Expansion{D,N}, y::∂Expansion{D,N}) where {D,N}
+    ∂Expansion(x.D, map(+, x.values, y.values))
+end
+
+function _mul(x::Real, y::∂Expansion)
+    ∂Expansion(y.D, map(y -> _mul(x, y), y.coefficients))
+end
 
 # function Base.show(io::IO, expansion::∂Expansion{<:∂Derivatives{K,M,D}}) where {K,M,D}
 #     (; coefficients) = expansion
@@ -357,51 +356,39 @@ end
 #     end
 # end
 
-# """
-# $(SIGNATURES)
+"""
+$(SIGNATURES)
 
-# Conceptually equivalent to `prod(getindex.(sources, indices))`, which it returns when
-# `kind` is `nothing`, a placeholder calculating any derivatives. Internal.
-# """
-# _product(kind::Nothing, sources, indices) = mapreduce(getindex, *, sources, indices)
+Conceptually equivalent to `prod(x))`, which it returns when `kind` is `nothing`, a
+placeholder calculating any derivatives. Internal.
+"""
+_product(kind::Nothing, x::Tuple) = prod(x)
 
-# """
-# $(SIGNATURES)
+"""
+$(SIGNATURES)
 
-# Type that is returnedby [`_product`](@ref).
-# """
-# function _product_type(::Type{Nothing}, source_eltypes)
-#     mapfoldl(eltype, promote_type, source_eltypes)
-# end
+Type that is returnedby [`_product`](@ref).
+"""
+function _product_type(::Type{Nothing}, source_eltypes)
+    mapfoldl(eltype, promote_type, source_eltypes)
+end
 
-# @generated function _product(∂derivatives::∂Derivatives{K,M,D},
-#                              sources::NTuple{N},
-#                              indices) where {K,M,D,N}
-#     xs = [gensym(:x) for _ in 1:N]
-#     assignments = [:($(xs[i]) = sources[indices[$(i)]]) for i in 1:N]
-#     products = [begin
-#                     ι = NTuple(i -> i ≤ K ? d[i] + 1 : 1, Val(N))
-#                     mapreduce(i -> :($(xs[i])[$(ι[i])]),
-#                               (a, b) -> :($(a) * $(b)),
-#                               1:N)
-#                 end for d in D]
-#     quote
-#         $(assignments...)
-#         ∂Expansion(∂derivatives, SVector($(products)...))
-#     end
-# end
+@generated function _product(∂D::∂Derivatives{Ps}, x::NTuple{N,𝑑Expansion}) where {Ps,N}
+    function _product(d)
+        # FIXME could skip bounds checking if verified at the beginning
+        mapreduce(i -> :(x[$i].coefficients[$(d[i]) + 1]), (a, b) -> :($(a) * $(b)), 1:N)
+    end
+    products = [_product(d) for d in _partials_canonical_expansion(Val(N), fieldtypes(Ps))]
+    quote
+        ∂Expansion(∂derivatives, SVector($(products)...))
+    end
+end
 
-# function _product_type(::Type{∂Derivatives{M,L}}, source_eltypes) where {M,L}
-#     T = _product_type(Nothing, map(eltype, source_eltypes))
-#     N = length(fieldtypes(L))
-#     ∂Output{N,T}
-# end
-
-# function _add(x::∂Expansion{P}, y::∂Expansion{P}) where P
-#     ∂Expansion(x.∂derivatives, map(+, x.values, y.values))
-# end
-
-# _mul(x::Real, y::∂Expansion) = ∂Expansion(y.∂derivatives, map(y -> _mul(x, y), y.values))
+function _product_type(::Type{D}, source_eltypes) where {Ps,D<:∂Derivatives{Ps}}
+    T = _product_type(Nothing, map(eltype, source_eltypes))
+    N = length(_partials_canonical_expansion(Val(N), fieldtypes(Ps)))
+    ∂Expansion{D,N,T}
+end
 
 #####
 ##### FIXME revise and move documentation below
