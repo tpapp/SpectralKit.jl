@@ -328,22 +328,22 @@ end
 
 (∂D::∂Derivatives)(x::Tuple) = ∂CoordinateExpansion(∂D, _expand_coordinates(∂D, x))
 
-(∂D::∂Derivatives)(x::AbstractVector) = ∂CoordinateExpansion(∂D, Tuple(x))
+(∂D::∂Derivatives)(x::AbstractVector) = ∂D(Tuple(x))
 
 struct ∂Expansion{D,N,T}
     ∂D::D
     coefficients::SVector{N,T}
     function ∂Expansion(∂D::D, coefficients::SVector{N,T}) where {D<:∂Derivatives,N,T}
-        new{D,N,T}(coefficients)
+        new{D,N,T}(∂D, coefficients)
     end
 end
 
 function _add(x::∂Expansion{D,N}, y::∂Expansion{D,N}) where {D,N}
-    ∂Expansion(x.D, map(+, x.values, y.values))
+    ∂Expansion(x.∂D, map(+, x.coefficients, y.coefficients))
 end
 
 function _mul(x::Real, y::∂Expansion)
-    ∂Expansion(y.D, map(y -> _mul(x, y), y.coefficients))
+    ∂Expansion(y.∂D, map(y -> _mul(x, y), y.coefficients))
 end
 
 # function Base.show(io::IO, expansion::∂Expansion{<:∂Derivatives{K,M,D}}) where {K,M,D}
@@ -380,7 +380,7 @@ end
     end
     products = [_product(d) for d in _partials_canonical_expansion(Val(N), fieldtypes(Ps))]
     quote
-        ∂Expansion(∂derivatives, SVector($(products)...))
+        ∂Expansion(∂D, SVector($(products...)))
     end
 end
 

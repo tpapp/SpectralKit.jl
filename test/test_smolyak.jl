@@ -1,5 +1,5 @@
 using SpectralKit, Test
-using SpectralKit: PM1
+using SpectralKit: PM1, ∂Expansion
 
 ####
 #### api
@@ -27,6 +27,18 @@ end
             y = SVector(y1, y2)
             @test linear_combination(basis, θ, y) ≈ f(y)
         end
+    end
+
+    @testset "sanity check for derivatives" begin
+        # NOTE this just checks that it runs and is inferred, but does not check
+        # correctness, derivatives derived below should be compared
+        # x[1] * x[2] + 5 * x[1] - 3 * x[2] + 5
+        # f1(x) = x[2] + 5
+        # f2(x) = x[1] - 3
+        # f12(x) = 1
+        D = ∂(1, 1)
+        y = SVector(1.0, 2.0)
+        @test @inferred(linear_combination(basis, θ, D(y))) isa ∂Expansion
     end
 end
 
