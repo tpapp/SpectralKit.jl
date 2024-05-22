@@ -36,20 +36,22 @@ end
 
 Base.print(io::IO, s::SubScript) = print_number(io, _SUBSCRIPT_DIGITS, s.i)
 
-"""
-$(SIGNATURES)
+# FIXME function below is currently unused, decide if we need to keep it after
+# refactoring Base.show(::IO, ::∂Expansion)
+# """
+# $(SIGNATURES)
 
-Print notation for partial derivatives, where `d[i]` stands for ``∂ⁱ/∂x[d]ⁱ``.
-"""
-function _print_partial_notation(io::IO, d)
-    if d ≡ ()
-        print(io, "value")
-    else
-        for (i, p) in enumerate(d)
-            print(io, "∂", SubScript(i), SuperScript(p))
-        end
-    end
-end
+# Print notation for partial derivatives, where `d[i]` stands for ``∂ⁱ/∂x[d]ⁱ``.
+# """
+# function _print_partial_notation(io::IO, d)
+#     if d ≡ ()
+#         print(io, "value")
+#     else
+#         for (i, p) in enumerate(d)
+#             print(io, "∂", SubScript(i), SuperScript(p))
+#         end
+#     end
+# end
 
 """
 $(SIGNATURES)

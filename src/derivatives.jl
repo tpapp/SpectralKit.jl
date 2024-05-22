@@ -1,12 +1,13 @@
 #####
-##### Internal implementation for derivatives. See docs of [`Derivatives`](@ref).
+##### Internal implementation for derivatives.
 #####
 
 export 𝑑, ∂
 
 ####
-#### Operations we support, with fallbacks defined below. This is deliberately kept
-#### minimal, now all versions are defined for commutative operators.
+#### Operations we support for calculating (untransformed) basis functions and their
+#### products, with fallbacks defined below. This is deliberately kept minimal, not all
+#### versions are defined for commutative operators.
 ####
 
 _one(::Type{T}) where {T<:Real} = one(T)
@@ -23,18 +24,20 @@ _mul(x, y, z) = _mul(_mul(x, y), z)
 #### Univariate expansions and derivatives
 ####
 
-
-# """
-# A small AD framework used *internally*, for calculating derivatives.
-
-# Supports only the operations required by this module. The restriction is deliberate,
-# should not be used for arithmetic operators outside this package.
-
-# See [`∂`](@ref) for the exposed API.
-# """
 struct 𝑑Expansion{Dp1,T}
     "The function value and derivatives. `Dp1` is the degree of the last derivative + 1."
     coefficients::SVector{Dp1,T}
+    @doc """
+    $(SIGNATURES)
+
+    Taylor expansion around a given value.
+
+    Implements small AD framework used *internally*, for calculating derivatives, that
+    supports only the operations required by this module. The restriction is deliberate,
+    should not be used for arithmetic operators outside this package.
+
+    See [`∂`](@ref) for the exposed API. This type supports `eltype` and `getindex`.
+    """
     function 𝑑Expansion(coefficients::SVector{Dp1,T}) where {Dp1,T}
         new{Dp1,T}(coefficients)
     end
@@ -130,6 +133,7 @@ end
 "Types accepted as scalars in this package."
 const Scalar = Union{Real,𝑑Expansion}
 
+# FIXME incorporate into docs
 # """
 #     derivatives(x, ::Val(N) = Val(1))
 
@@ -180,6 +184,23 @@ const Scalar = Union{Real,𝑑Expansion}
 
 struct Partials{N}
     I::NTuple{N,Int}
+    """
+    $(SIGNATURES)
+
+    Partial derivatives up to given indices. Eg `Partials((1, 2))` would contain
+    - the value,
+    - first derivatives ``∂_1`, ``∂_2``,
+    - cross derivatives ``∂_1 ∂_2``,
+    - second derivative ``∂^2_2``
+
+    This is just a building block used internally by `∂Derivatives`. The actual order in
+    containers is determined by [`_partials_canonical_expansion`](@ref). See also
+    [`_partials_minimal_representation`](@ref).
+
+    This constructor enforces that the last index is non-zero. Use the other
+    `Partials(I...)` constructor to strip trailing zeros. Note that the number indices
+    just determines the *minimum* length for the multivariate arguments to be differentiated.
+    """
     function Partials(I::NTuple{N,Int}) where N
         @argcheck all(i -> i ≥ 0, I)
         @argcheck I ≡ () || last(I) ≠ 0
@@ -196,6 +217,12 @@ function Partials(I::Integer...)
     Partials(ntuple(i -> Int(I[i]), N))
 end
 
+"""
+$(SIGNATURES)
+
+True iff the partial derivatives contained in the first argument is a *strict* subset of
+those in the second.
+"""
 function _is_strict_subset(p1::Partials{N1}, p2::Partials{N2}) where {N1,N2}
     N1 > N2 && return false     # valid because derivatives are always positive
     I1 = p1.I
@@ -208,6 +235,13 @@ function _is_strict_subset(p1::Partials{N1}, p2::Partials{N2}) where {N1,N2}
     strict || N1 < N2
 end
 
+"""
+$(SIGNATURES)
+
+Imposes a total ordering on `Partials` with the property that a strict subset implies an
+order, but not necessarily vice versa. This determines the traversal and help with
+eliminating nested specifications.
+"""
 function Base.isless(p1::Partials{N1}, p2::Partials{N2}) where {N1, N2}
     _is_strict_subset(p1, p2) && return true
     _is_strict_subset(p2, p1) && return false
@@ -216,6 +250,17 @@ end
 
 Base.isequal(p1::Partials, p2::Partials) = p1.I == p2.I
 
+"""
+$(SIGNATURES)
+
+Collapse specification of partial derivatives (an iterable of `Partials`) so a canonical
+“minimal” representation with respect to the total ordering. Eliminates nested
+specifications and duplicates.
+
+!!! NOTE
+    Takes any iterable of `Partials`, returns a `Vector`. Allocates, for use in
+    generated functions.
+"""
 function _partials_minimal_representation(partials)
     descending_partials = sort!(collect(Partials, partials); rev = true)
     minimal_partials = Vector{Partials}()
@@ -227,6 +272,13 @@ function _partials_minimal_representation(partials)
     minimal_partials
 end
 
+"""
+$(SIGNATURES)
+
+The ordering of partial derivatives contains for containers, for `N`-dimensional
+arguments. Returns an iterable of `N`-tuples that contain integer indices of partial
+derivatives, eg `(0, 1, 2)` for ``∂_2 ∂_3^2``.
+"""
 function _partials_canonical_expansion(::Val{N}, Ps) where N
     result = OrderedSet{NTuple{N,Int}}()
     function _plus1_cartesian_indices(p::Partials{M}) where M
@@ -245,6 +297,12 @@ function _partials_canonical_expansion(::Val{N}, Ps) where N
     result
 end
 
+"""
+$(SIGNATURES)
+
+Elementwise maximum of the iterable from `_partials_canonical_expansion`, an `N`-tuple
+of nonnegative integers.
+"""
 function _partials_expansion_degrees(::Val{N}, partials) where N
     degrees = zero(MVector{N,Int})
     for P in partials
@@ -255,8 +313,18 @@ function _partials_expansion_degrees(::Val{N}, partials) where N
     Tuple(degrees)
 end
 
+"""
+$(SIGNATURES)
+
+The smallest input dimension (length) a partial derivative specification can support.
+"""
 _partials_minimum_input_dimension(partials) = maximum(P -> length(P.I), partials)
 
+"""
+$(SIGNATURES)
+
+Check if `Ps` is a minimal representation, ie a valid type parameter for `∂Derivatives`.
+"""
 function _is_minimal_representation(::Val{Ps}) where Ps
     _Ps = fieldtypes(Ps)
     _Ps isa Tuple{Vararg{Partials}} || return false
@@ -264,10 +332,23 @@ function _is_minimal_representation(::Val{Ps}) where Ps
 end
 
 struct ∂Derivatives{Ps}
+    @doc """
+    $(SIGNATURES)
+
+    A callable that requests that the given partial derivatives of its argument are
+    evaluated.
+
+    The partial derivatives are encoded in the `Ps` as a `Tuple{...}` of `Partials`.
+    They are checked to be “minimal”, see [`_is_minimal_representation`](@ref), except
+    when `Ps` is a `Partials`, then it is wrapped and used as is.
+
+    The API entry point is `∂`s, combined with `<<` and `∪`/`union`.
+    """
     function ∂Derivatives{Ps}() where {Ps}
         if Ps isa Partials
             new{Tuple{Ps}}()
         else
+            # FIXME check that this does not allocate
             @argcheck _is_minimal_representation(Val(Ps))
             new{Ps}()
         end
