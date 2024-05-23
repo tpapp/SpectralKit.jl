@@ -106,6 +106,10 @@ $(SIGNATURES)
 
 Helper function for linear combinations of basis elements at `x`. Always checks that `θ`
 and `basis` have compatible dimensions.
+
+!!! NOTE
+    `x` and `θ` can be anything that supports `_mul(θ[i], b[i])` and `_add` on the
+    result of this.
 """
 @inline function _linear_combination(basis, θ, x)
     # an implementation of mapreduce, to work around

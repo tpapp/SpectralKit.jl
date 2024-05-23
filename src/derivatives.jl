@@ -12,11 +12,11 @@ export 𝑑, ∂
 
 _one(::Type{T}) where {T<:Real} = one(T)
 
-_add(x::Real, y::Real) = x + y
+_add(x::T, y::T) where {T <: Union{Real,SVector}} = x + y
 
 _sub(x::Real, y::Real) = x - y
 
-_mul(x::Real, y::Real) = x * y
+_mul(x::Union{Real,SVector}, y::Real) = x * y
 
 _mul(x, y, z) = _mul(_mul(x, y), z)
 

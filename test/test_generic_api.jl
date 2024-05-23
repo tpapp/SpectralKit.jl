@@ -88,6 +88,15 @@ end
     @test transform_from(basis, t, x) == transform_from(domain(basis), t, x)
 end
 
+@testset "linear combination SVector passthrough" begin
+    N = 10
+    M = 3
+    basis = Chebyshev(InteriorGrid(), N) ∘ SemiInfRational(0.0, 1.0)
+    θ = rand(SVector{M,Float64}, N)
+    x = 2.0
+    @test linear_combination(basis, θ, x) ≡ SVector{M}(linear_combination(basis, map(x -> x[i], θ), x) for i in 1:M)
+end
+
 @testset "subset fallback" begin
     @test !is_subset_basis(Chebyshev(InteriorGrid(), 4), # just test the fallback method
                            smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), 2))
