@@ -187,11 +187,11 @@ end
 
 function transform_to(domain::PM1, t::BoundedLinear, y::𝑑Expansion{Dp1}) where Dp1
     (; m, s) = t
-    (; derivatives) = y
-    y0, yD... = derivatives
+    (; coefficients) = y
+    y0, yD... = coefficients
     x0 = transform_to(domain, t, y0)
     xD = map(y -> y / s, yD)
-    𝑑Expansion((x0, xD...))
+    𝑑Expansion(SVector(x0, xD...))
 end
 
 function domain(t::BoundedLinear)
@@ -256,12 +256,12 @@ end
 
 function transform_to(domain::PM1, t::SemiInfRational, y::𝑑Expansion{Dp1}) where Dp1
     (; A, L) = t
-    (; derivatives) = y
-    x0 = transform_to(domain, t, derivatives[1])
+    (; coefficients) = y
+    x0 = transform_to(domain, t, coefficients[1])
     Dp1 == 1 && return 𝑑Expansion(SVector(x0))
     # based on Boyd (2001), Table E.7
     Q = abs2(x0 - 1)
-    x1 = (derivatives[2] * Q) / (2*L)
+    x1 = (coefficients[2] * Q) / (2*L)
     Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
     error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
@@ -321,13 +321,13 @@ end
 
 function transform_to(domain::PM1, t::InfRational, y::𝑑Expansion{Dp1}) where Dp1
     (; A, L) = t
-    (; derivatives) = y
-    x0 = transform_to(domain, t, derivatives[1])
-    N == 1 && return Derivatives(SVector(x0))
+    (; coefficients) = y
+    x0 = transform_to(domain, t, coefficients[1])
+    N == 1 && return Coefficients(SVector(x0))
     # based on Boyd (2001), Table E.5
     Q = 1 - abs2(x0)
     sQ = √Q
-    x1 = (derivatives[2] * Q * sQ) / L
+    x1 = (coefficients[2] * Q * sQ) / L
     N == 2 && return 𝑑Expansion(SVector(x0, x1))
     error("$(N-1)th derivative not implemented yet, open an issue.")
 end

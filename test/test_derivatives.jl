@@ -1,3 +1,8 @@
+#####
+##### NOTE: we only test building blocks here, derivative calculations exposed in the
+##### API are tested in test_chebyshev.jl and test_smolyak.jl
+#####
+
 using SpectralKit, Test
 # test internals
 using SpectralKit: 𝑑Derivatives, _one, _add, _sub, _mul,

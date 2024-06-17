@@ -72,3 +72,20 @@
         @test_throws ArgumentError augment_coefficients(basis, basis, randn(4))
     end
 end
+
+@testset "univariate derivatives" begin
+    basis = Chebyshev(InteriorGrid(), 5)
+    N = 5
+    D = 𝑑^Val(N)
+    for transformation in (BoundedLinear(-2, 3), )
+        transformed_basis = basis ∘ transformation
+        f = linear_combination(transformed_basis, randn(dimension(transformed_basis)))
+        for _ in 1:100
+            x = transform_from(basis, transformation, rand_pm1())
+            y = f(D(x))
+            for i in 0:N
+                @test y[i] ≈ DD(f, x, i) atol = 1e-6
+            end
+        end
+    end
+end
