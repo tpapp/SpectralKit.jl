@@ -1,4 +1,4 @@
-@testset "BoundedLinear" begin
+@testset "bounded linear domain transformations" begin
     @test_throws DomainError BoundedLinear(-1.0, Inf)
     @test_throws DomainError BoundedLinear(-1.0, -2.0)
 
@@ -7,17 +7,21 @@
 
     @test extrema(domain(trans)) == (A, B)
 
-    for i in 1:100
-        x = rand_pm1(i)
+    for _ in 1:100
+        x = rand_pm1()
         y = transform_from(PM1(), trans, x)
-        i == 1 && @test y ≈ A
-        i == 2 && @test y ≈ B
-        i > 2 && @test A < y < B
+        if x == -1
+            @test y ≈ A
+        elseif x == 1
+            @test y ≈ B
+        else
+            @test A < y < B
+        end
         @test transform_to(PM1(), trans, y) ≈ x
     end
 end
 
-@testset "Chebyshev semi-infinite" begin
+@testset "semi-infinite domain transformations" begin
     @test_throws DomainError SemiInfRational(-1.0, Inf)
     @test_throws DomainError SemiInfRational(-1.0, 0.0)
     @test_throws DomainError SemiInfRational(NaN, 2.0)
@@ -28,17 +32,21 @@ end
 
     @test extrema(domain(trans)) == (A, Inf)
 
-    for i in 1:100
-        x = rand_pm1(i)
+    for _ in 1:100
+        x = rand_pm1()
         y = transform_from(PM1(), trans, x)
-        i == 1 && @test y ≈ A
-        i == 2 && @test y ≈ Inf
-        i > 2 && @test A < y < Inf
+        if x == -1
+            @test y ≈ A
+        elseif x == 1
+            @test y ≈ Inf
+        else
+            @test A < y < Inf
+        end
         @test transform_to(PM1(), trans, y) ≈ x
     end
 end
 
-@testset "Chebyshev infinite" begin
+@testset "infinite domain transformations" begin
     @test_throws DomainError InfRational(1.0, Inf)
     @test_throws DomainError InfRational(1.0, 0.0)
     @test_throws DomainError InfRational(1.0, -2.0)
@@ -50,12 +58,16 @@ end
 
     @test extrema(domain(trans)) == (-Inf, Inf)
 
-    for i in 1:100
-        x = rand_pm1(i)
+    for _ in 1:100
+        x = rand_pm1()
         y = transform_from(PM1(), trans, x)
-        i == 1 && @test y == -Inf
-        i == 2 && @test y == Inf
-        i > 2 && @test isfinite(y)
+        if x == -1
+            @test y == -Inf
+        elseif x == 1
+            @test y == Inf
+        else
+            @test isfinite(y)
+        end
         @test transform_to(PM1(), trans, y) ≈ x
     end
 end

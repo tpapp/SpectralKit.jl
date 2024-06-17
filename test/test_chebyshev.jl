@@ -16,8 +16,8 @@
             @test dimension(basis) == N
 
             # check linear combinations
-            for i in 1:100
-                x = rand_pm1(i)
+            for _ in 1:100
+                x = rand_in_domain(basis)
                 bx = @inferred basis_at(basis, x)
 
                 @test length(bx) == N
@@ -44,8 +44,8 @@
             end
 
             # augmented coefficients
-            for i in 1:100
-                x = rand_pm1(i)
+            for _ in 1:100
+                x = rand_in_domain(basis)
                 θ = rand(N)
                 destination_basis = Chebyshev(grid_kind, N + 5)
                 destination_θ = augment_coefficients(basis, destination_basis, θ)
@@ -82,7 +82,7 @@ end
         transformed_basis = basis ∘ transformation
         f = linear_combination(transformed_basis, randn(dimension(transformed_basis)))
         for _ in 1:50
-            x = transform_from(basis, transformation, rand_pm1())
+            x = transform_from(basis, transformation, rand_in_domain(basis))
             y = f(D(x))
             for i in 0:N
                 @test y[i] ≈ DD(f, x, i) atol = 1e-6
