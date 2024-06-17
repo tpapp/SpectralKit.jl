@@ -75,12 +75,13 @@ end
 
 @testset "univariate derivatives" begin
     basis = Chebyshev(InteriorGrid(), 5)
-    N = 5
-    D = 𝑑^Val(N)
-    for transformation in (BoundedLinear(-2, 3), )
+    for (transformation, N) in ((BoundedLinear(-2, 3), 5),
+                                (SemiInfRational(0.7, 0.3), 1),
+                                (InfRational(0.4, 0.9), 1))
+        D = 𝑑^Val(N)
         transformed_basis = basis ∘ transformation
         f = linear_combination(transformed_basis, randn(dimension(transformed_basis)))
-        for _ in 1:100
+        for _ in 1:50
             x = transform_from(basis, transformation, rand_pm1())
             y = f(D(x))
             for i in 0:N

@@ -323,13 +323,13 @@ function transform_to(domain::PM1, t::InfRational, y::𝑑Expansion{Dp1}) where 
     (; A, L) = t
     (; coefficients) = y
     x0 = transform_to(domain, t, coefficients[1])
-    N == 1 && return Coefficients(SVector(x0))
+    Dp1 == 1 && return Coefficients(SVector(x0))
     # based on Boyd (2001), Table E.5
     Q = 1 - abs2(x0)
     sQ = √Q
     x1 = (coefficients[2] * Q * sQ) / L
-    N == 2 && return 𝑑Expansion(SVector(x0, x1))
-    error("$(N-1)th derivative not implemented yet, open an issue.")
+    Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
+    error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
 
 domain(::InfRational) = UnivariateDomain(-Inf, Inf)
