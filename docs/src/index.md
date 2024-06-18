@@ -29,24 +29,25 @@ In this package,
 We construct a basis of Chebyshev polynomials on ``[0, 4]``. This requires a transformation since their canonical domain is ``[-1,1]``. Other transformations include [`SemiInfRational`](@ref) (for ``[A, \infty]`` intervals)  and [`InfRational`](@ref).
 
 We display the domian and the dimension (number of basis functions).
-```@example univariate
+```@repl univariate
+using SpectralKit
 basis = Chebyshev(InteriorGrid(), 5) ∘ BoundedLinear(0, 4)
 domain(basis)
 dimension(basis)
 ```
 
 We have chosen an interior grid, shown below. We `collect` the result for the purpose of this tutorial, since `grid` returns an iterable to avoid allocations.
-```@example univariate
+```@relp univariate
 collect(grid(basis))
 ```
 
 We can show evaluate the basis functions at a given point. Again, it is an iterable, so we `collect` to show it here.
-```@example univariate
+```@relp univariate
 collect(basis_at(basis, 0.41))
 ```
 
 We can evaluate linear combination as directly, or via partial application.
-```@example univariate
+```@repl univariate
 θ = [1, 0.5, 0.2, 0.3, 0.001]               # a vector of coefficients
 x = 0.41
 linear_combination(basis, θ, x)          # combination at some value
@@ -54,14 +55,14 @@ linear_combination(basis, θ)(x)          # also as a callable
 ```
 
 We can also evaluate *derivatives* of either the basis or the linear combination at a given point. Here we want the derivatives up to order 3.
-```@example univariate
+```@repl univariate
 dx = (𝑑^2)(x)
 collect(basis_at(basis, dx))
 linear_combination(basis, θ, x)
 ```
 
 Having an approximation, we can embed it in a larger basis, extending the coefficients accordingly.
-```@example univariate
+```@repl univariate
 basis2 = Chebyshev(EndpointGrid(), 8) ∘ transformation(basis)       # 8 Chebyshev polynomials
 is_subset_basis(basis, basis2)              # we could augment θ …
 augment_coefficients(basis, basis2, θ)      # … so let's do it
