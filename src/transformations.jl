@@ -33,8 +33,8 @@ Transform `x` to `domain` using `transformation`.
 
 `domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
 
-!!! FIXME
-    document, especially differentiability requirements at infinite endpoints
+Transformations to infinity make sure that ``\pm\infty`` is mapped to the limit for
+values and derivatives.
 """
 function transform_to end
 
@@ -45,8 +45,8 @@ Transform `x` from `domain` using `transformation`.
 
 `domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
 
-!!! FIXME
-    document, especially differentiability requirements at infinite endpoints
+Transformations to infinity make sure that ``\pm\infty`` is mapped to the limit for
+values and derivatives.
 """
 function transform_from end
 

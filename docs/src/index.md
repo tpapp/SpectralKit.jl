@@ -58,7 +58,9 @@ We can also evaluate *derivatives* of either the basis or the linear combination
 ```@repl univariate
 dx = (𝑑^2)(x)
 collect(basis_at(basis, dx))
-linear_combination(basis, θ, dx)
+fdx = linear_combination(basis, θ, dx)
+fdx[0] # the value
+fdx[1] # the first derivative
 ```
 
 Having an approximation, we can embed it in a larger basis, extending the coefficients accordingly.
@@ -94,6 +96,15 @@ Finally, we check the approximation at a point.
 ```@example
 z = (0.5, 0.7)                            # evaluate at this point
 isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
+```
+
+## Infinite endpoints
+
+Values and derivatives at ``\pm\infty`` should provide the correct limits.
+```@repl
+basis = Chebyshev(InteriorGrid(), 4) ∘ InfRational(0.0, 1.0)
+collect(basis_at(basis, 𝑑(Inf)))
+collect(basis_at(basis, 𝑑(-Inf)))
 ```
 
 ## Constructing bases
