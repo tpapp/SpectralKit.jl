@@ -1,3 +1,5 @@
+using SpectralKit: PM1
+
 @testset "bounded linear domain transformations" begin
     @test_throws DomainError BoundedLinear(-1.0, Inf)
     @test_throws DomainError BoundedLinear(-1.0, -2.0)
@@ -44,6 +46,15 @@ end
         end
         @test transform_to(PM1(), trans, y) ≈ x
     end
+
+    # compare to analytical limits NOTE extend when we add more derivatives
+    y_pinf = @inferred transform_to(PM1(), trans, 𝑑(Inf))
+    @test y_pinf[0] == 1 == @inferred transform_to(PM1(), trans, Inf)
+    @test y_pinf[1] == 0
+
+    y_minf = @inferred transform_to(PM1(), trans, 𝑑(-Inf))
+    @test y_minf[0] == 1 == @inferred transform_to(PM1(), trans, -Inf)
+    @test y_minf[1] == 0
 end
 
 @testset "infinite domain transformations" begin
@@ -70,6 +81,15 @@ end
         end
         @test transform_to(PM1(), trans, y) ≈ x
     end
+
+    # compare to analytical limits NOTE extend when we add more derivatives
+    y_pinf = @inferred transform_to(PM1(), trans, 𝑑(Inf))
+    @test y_pinf[0] == 1 == transform_to(PM1(), trans, Inf)
+    @test y_pinf[1] == 0
+
+    y_minf = @inferred transform_to(PM1(), trans, 𝑑(-Inf))
+    @test y_minf[0] == -1 == transform_to(PM1(), trans, -Inf)
+    @test y_minf[1] == 0
 end
 
 @testset "coordinate transformations" begin

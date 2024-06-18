@@ -90,3 +90,42 @@ end
         end
     end
 end
+
+@testset "endpoint continuity for derivatives" begin
+    N = 10
+    basis = Chebyshev(InteriorGrid(), N)
+
+    # NOTE here we are checking that in some sense, derivatives give the right limit at
+    # endpoints for transformations to ∞. We use the analytical derivatives for
+    # comparison, based on the chain rule.
+    x_pinf = 𝑑(Inf)
+    x_minf = 𝑑(-Inf)
+
+    @testset "SemiInfRational endpoints continuity" begin
+        trans = SemiInfRational(2.3, 0.7)
+
+        for i in 1:N
+            θ = e_i(basis ∘ trans, i)
+            y_pinf = @inferred linear_combination(basis ∘ trans, θ, x_pinf)
+            @test y_pinf[0] == 1
+            @test y_pinf[1] == 0
+            y_minf = @inferred linear_combination(basis ∘ trans, θ, x_minf)
+            @test y_minf[0] == 1
+            @test y_minf[1] == 0
+        end
+    end
+
+    @testset "InfRational endpoints continuity" begin
+        trans = InfRational(0.3, 3.0)
+
+        for i in 1:N
+            θ = e_i(basis ∘ trans, i)
+            y_pinf = @inferred linear_combination(basis ∘ trans, θ, x_pinf)
+            @test y_pinf[0] == 1
+            @test y_pinf[1] == 0
+            y_minf = @inferred linear_combination(basis ∘ trans, θ, x_minf)
+            @test y_minf[0] == (-1)^(i+1)
+            @test y_minf[1] == 0
+        end
+    end
+end

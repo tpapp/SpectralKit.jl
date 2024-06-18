@@ -247,7 +247,7 @@ function transform_to(::PM1, t::SemiInfRational, y::Real)
     (; A, L) = t
     z = y - A
     x = (z - L) / (z + L)
-    if (y == Inf && L > 0) || (y == -Inf && L < 0)
+    if y == Inf || y == -Inf
         one(x)
     else
         x

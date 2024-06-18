@@ -4,18 +4,6 @@
 
 using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for rand_in_domain
 
-struct KroneckerVector{T} <: AbstractVector{T}
-    i::Int
-    len::Int
-end
-
-Base.size(v::KroneckerVector) = (v.len, )
-
-@inline function Base.getindex(v::KroneckerVector{T}, i::Int) where {T}
-    @boundscheck 1 ≤ i ≤ v.len
-    i == v.i ? one(T) : zero(T)
-end
-
 chebyshev_cos(x, n) = cos((n - 1) * acos(x))
 
 function chebyshev_cos_deriv(x, n)
