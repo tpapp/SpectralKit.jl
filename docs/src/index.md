@@ -88,12 +88,12 @@ f2((x1, x2)) = exp(x1) + exp(-abs2(x2))
 ```
 
 We find the coefficients by solving with the collocation matrix.
-```@example
+```@example smolyak
 θ = collocation_matrix(basis_t) \ f2.(grid(basis_t))
 ```
 
 Finally, we check the approximation at a point.
-```@example
+```@example smolyak
 z = (0.5, 0.7)                            # evaluate at this point
 isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
 ```
