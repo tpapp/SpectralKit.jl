@@ -212,7 +212,7 @@ for this when it makes sense.
 The collocation matrix may not be an `AbstractMatrix`, all it needs to support is `C \\ y`
 for compatible vectors `y = f.(x)`.
 
-Methods are type stable. The elements of `x` can be [`derivatives`](@ref).
+Methods are type stable. The elements of `x` can be derivatives, see [`𝑑`](@ref).
 """
 function collocation_matrix(basis, x = grid(basis))
     N = dimension(basis)
