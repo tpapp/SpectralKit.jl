@@ -4,7 +4,7 @@
 
 export is_function_basis, dimension, basis_at, linear_combination, InteriorGrid,
     InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
-    is_subset_basis
+    is_subset_basis, transformation
 
 """
 $(TYPEDEF)
@@ -273,6 +273,10 @@ function Base.:(∘)(parent::FunctionBasis, transformation)
     TransformedBasis(parent, transformation)
 end
 
+Base.parent(basis::TransformedBasis) = basis.parent
+
+transformation(basis::TransformedBasis) = basis.transformation
+
 domain(basis::TransformedBasis) = domain(basis.transformation)
 
 dimension(basis::TransformedBasis) = dimension(basis.parent)
@@ -300,7 +304,15 @@ function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
     TransformedBasis(parent[i], Tuple(transformation)[i])
 end
 
-# FIXME add augmentation for transformed bases
+function is_subset_basis(basis1::TransformedBasis, basis2::TransformedBasis)
+    basis1.transformation ≡ basis2.transformation &&
+        is_subset_basis(basis1.parent, basis2.parent)
+end
+
+function augment_coefficients(basis1::TransformedBasis, basis2::TransformedBasis, θ1)
+    @argcheck is_subset_basis(basis1, basis2)
+    augment_coefficients(basis1.parent, basis2.parent, θ1)
+end
 
 function transform_to(basis::FunctionBasis, transformation, x)
     transform_to(domain(basis), transformation, x)

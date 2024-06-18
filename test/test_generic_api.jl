@@ -35,6 +35,8 @@ end
     t = BoundedLinear(1.0, 2.0)
     @test domain(basis ∘ t) == domain(t)
     @test dimension(basis ∘ t) == dimension(basis)
+    @test parent(basis ∘ t) ≡ basis
+    @test transformation(basis ∘ t) ≡ t
     @test collect(grid(basis ∘ t)) ==
         [transform_from(domain(basis), t, x) for x in grid(basis)]
 

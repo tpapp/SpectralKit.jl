@@ -73,6 +73,22 @@
     end
 end
 
+@testset "augmentation of transformed basis" begin
+    N = 5
+    M = N + 3
+    t = SemiInfRational(0.3, 0.9)
+    grid_kind = InteriorGrid()
+    basis =  Chebyshev(grid_kind, N) ∘ t
+    basis′ =  Chebyshev(grid_kind, M) ∘ t
+    @test is_subset_basis(basis, basis′)
+    for _ in 1:100
+        x = rand_in_domain(basis)
+        θ = rand(N)
+        θ′ = augment_coefficients(basis, basis′, θ)
+        @test linear_combination(basis, θ, x) ≈ linear_combination(basis′, θ′, x)
+    end
+end
+
 @testset "univariate derivatives" begin
     basis = Chebyshev(InteriorGrid(), 5)
     for (transformation, N) in ((BoundedLinear(-2, 3), 5),

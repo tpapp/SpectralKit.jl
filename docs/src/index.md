@@ -24,40 +24,50 @@ In this package,
 
 3. [`basis_at`](@ref) returns an *iterator* for evaluating basis functions at an arbitrary point inside their domain. This iterator is meant to be heavily optimized and non-allocating. [`linear_combination`](@ref) is a convenience wrapper for obtaining a linear combination of basis functions at a given point.
 
-A basis is constructed using
+## Univariate basis example
 
-1. a family on a *fixed* domain, eg [`Chebyshev`](@ref),
+We construct a basis of Chebyshev polynomials on ``[0, 4]``. This requires a transformation since their canonical domain is ``[-1,1]``. Other transformations include [`SemiInfRational`](@ref) (for ``[A, \infty]`` intervals)  and [`InfRational`](@ref).
 
-2. a grid specification like [`InteriorGrid`](@ref),
+We display the domian and the dimension (number of basis functions).
+```@example univariate
+basis = Chebyshev(InteriorGrid(), 5) ∘ BoundedLinear(0, 4)
+domain(basis)
+dimension(basis)
+```
 
-3. a number of parameters that determine the number of basis functions.
+We have chosen an interior grid, shown below. We `collect` the result for the purpose of this tutorial, since `grid` returns an iterable to avoid allocations.
+```@example univariate
+collect(grid(basis))
+```
 
-A set of coordinates for a particular basis can be augmented for a wider basis with [`augment_coefficients`](@ref).
+We can show evaluate the basis functions at a given point. Again, it is an iterable, so we `collect` to show it here.
+```@example univariate
+collect(basis_at(basis, 0.41))
+```
 
-Bases have a “canonical” domain, eg ``[-1,1]`` or ``[-1,1]^n`` for Chebyshev polynomials. Use [transformations](#domains-and-transformations) for mapping to other domains.
-
-## Examples
-
-### Univariate family on `[-1,1]`
-
-```@example
-using SpectralKit
-basis = Chebyshev(EndpointGrid(), 5)        # 5 Chebyshev polynomials
-is_function_basis(basis)                    # ie we support the interface below
-dimension(basis)                            # number of basis functions
-domain(basis)                               # domain
-grid(basis)                                 # Gauss-Lobatto grid
-collect(basis_at(basis, 0.41))              # iterator for basis functions at 0.41
-collect(basis_at(basis, derivatives(0.41))) # values and 1st derivatives
+We can evaluate linear combination as directly, or via partial application.
+```@example univariate
 θ = [1, 0.5, 0.2, 0.3, 0.001]               # a vector of coefficients
-linear_combination(basis, θ, 0.41)          # combination at some value
-linear_combination(basis, θ)(0.41)          # also as a callable
-basis2 = Chebyshev(EndpointGrid(), 8)       # 8 Chebyshev polynomials
+x = 0.41
+linear_combination(basis, θ, x)          # combination at some value
+linear_combination(basis, θ)(x)          # also as a callable
+```
+
+We can also evaluate *derivatives* of either the basis or the linear combination at a given point. Here we want the derivatives up to order 3.
+```@example univariate
+dx = (𝑑^2)(x)
+collect(basis_at(basis, dx))
+linear_combination(basis, θ, x)
+```
+
+Having an approximation, we can embed it in a larger basis, extending the coefficients accordingly.
+```@example univariate
+basis2 = Chebyshev(EndpointGrid(), 8) ∘ transformation(basis)       # 8 Chebyshev polynomials
 is_subset_basis(basis, basis2)              # we could augment θ …
 augment_coefficients(basis, basis2, θ)      # … so let's do it
 ```
 
-### Smolyak approximation on a transformed domain
+## Multivariate (Smolyak) approximation example
 
 ```@example
 using SpectralKit, StaticArrays

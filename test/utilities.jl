@@ -42,7 +42,7 @@ function rand_in_domain(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
 end
 
 function rand_in_domain(basis::TransformedBasis)
-    (; parent, transformation)
+    (; parent, transformation) = basis
     transform_from(parent, transformation, rand_in_domain(parent))
 end
 
