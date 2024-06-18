@@ -16,8 +16,8 @@
             @test dimension(basis) == N
 
             # check linear combinations
-            for i in 1:100
-                x = rand_pm1(i)
+            for _ in 1:100
+                x = rand_in_domain(basis)
                 bx = @inferred basis_at(basis, x)
 
                 @test length(bx) == N
@@ -27,7 +27,7 @@
                 θ = rand(N)
                 @test linear_combination(basis, θ, x) ≈
                     sum(chebyshev_cos(x, i) * θ for (i,θ) in enumerate(θ))
-                @test linear_combination(basis, θ, derivatives(x))[1] ≈
+                @test linear_combination(basis, θ, 𝑑(x))[1] ≈
                     sum(chebyshev_cos_deriv(x, i) * θ for (i,θ) in enumerate(θ))
             end
 
@@ -44,8 +44,8 @@
             end
 
             # augmented coefficients
-            for i in 1:100
-                x = rand_pm1(i)
+            for _ in 1:100
+                x = rand_in_domain(basis)
                 θ = rand(N)
                 destination_basis = Chebyshev(grid_kind, N + 5)
                 destination_θ = augment_coefficients(basis, destination_basis, θ)
@@ -70,5 +70,62 @@
         @test_throws ArgumentError augment_coefficients(basis, basis2_N, θ)
         # too few coefficients
         @test_throws ArgumentError augment_coefficients(basis, basis, randn(4))
+    end
+end
+
+@testset "univariate derivatives" begin
+    basis = Chebyshev(InteriorGrid(), 5)
+    for (transformation, N) in ((BoundedLinear(-2, 3), 5),
+                                (SemiInfRational(0.7, 0.3), 1),
+                                (InfRational(0.4, 0.9), 1))
+        D = 𝑑^Val(N)
+        transformed_basis = basis ∘ transformation
+        f = linear_combination(transformed_basis, randn(dimension(transformed_basis)))
+        for _ in 1:50
+            x = transform_from(basis, transformation, rand_in_domain(basis))
+            y = f(D(x))
+            for i in 0:N
+                @test y[i] ≈ DD(f, x, i) atol = 1e-6
+            end
+        end
+    end
+end
+
+@testset "endpoint continuity for derivatives" begin
+    N = 10
+    basis = Chebyshev(InteriorGrid(), N)
+
+    # NOTE here we are checking that in some sense, derivatives give the right limit at
+    # endpoints for transformations to ∞. We use the analytical derivatives for
+    # comparison, based on the chain rule.
+    x_pinf = 𝑑(Inf)
+    x_minf = 𝑑(-Inf)
+
+    @testset "SemiInfRational endpoints continuity" begin
+        trans = SemiInfRational(2.3, 0.7)
+
+        for i in 1:N
+            θ = e_i(basis ∘ trans, i)
+            y_pinf = @inferred linear_combination(basis ∘ trans, θ, x_pinf)
+            @test y_pinf[0] == 1
+            @test y_pinf[1] == 0
+            y_minf = @inferred linear_combination(basis ∘ trans, θ, x_minf)
+            @test y_minf[0] == 1
+            @test y_minf[1] == 0
+        end
+    end
+
+    @testset "InfRational endpoints continuity" begin
+        trans = InfRational(0.3, 3.0)
+
+        for i in 1:N
+            θ = e_i(basis ∘ trans, i)
+            y_pinf = @inferred linear_combination(basis ∘ trans, θ, x_pinf)
+            @test y_pinf[0] == 1
+            @test y_pinf[1] == 0
+            y_minf = @inferred linear_combination(basis ∘ trans, θ, x_minf)
+            @test y_minf[0] == (-1)^(i+1)
+            @test y_minf[1] == 0
+        end
     end
 end

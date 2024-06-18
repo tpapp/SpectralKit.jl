@@ -10,7 +10,7 @@ This package was designed primarily for solving functional equations, as usually
 4. allocation-free, thread safe linear combinations for the above with a given set of coefficients,
 5. using [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops.
 
-While there is some functionality in this package to *fit* approximations to existing functions, it is not ideal for that, as it was optimized for mapping a set of coefficients to residuals of functional equations at gridpoints.
+While there is some functionality in this package to *fit* approximations to existing functions, it does not use optimized algorithms (DCT) for that, as it was optimized for mapping a set of coefficients to residuals of functional equations at gridpoints.
 
 Also, while the package should interoperate seamlessly with most AD frameworks, only the derivative API (explained below) is guaranteed to have correct derivatives of limits near infinity.
 
@@ -169,10 +169,10 @@ is_subset_basis
 !!! note
     API for derivatives is still experimental and subject to change.
 
-For univariate functions, use [`derivatives`](@ref). For multivariate functions, use partial derivatives with `∂`.
+For univariate functions, use [`𝑑`](@ref). For multivariate functions, use partial derivatives with [`∂`](@ref).
 
 ```@docs
-derivatives
+𝑑
 ∂
 ```
 

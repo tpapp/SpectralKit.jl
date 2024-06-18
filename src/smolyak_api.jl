@@ -2,158 +2,7 @@
 ##### Smolyak bases
 #####
 
-export SmolyakParameters, smolyak_basis
-
-struct SmolyakParameters{B,M}
-    function SmolyakParameters{B,M}() where {B,M}
-        @argcheck B isa Int && B ≥ 0
-        @argcheck M isa Int && M ≥ 0
-        M > B && @warn "M > B replaced with M = B" M B
-        new{B,min(B,M)}()       # maintain M ≤ B
-    end
-end
-
-function Base.show(io::IO, ::SmolyakParameters{B,M}) where {B,M}
-    print(io, "Smolyak parameters, ∑bᵢ ≤ $(B), all bᵢ ≤ $(M)")
-end
-
-"""
-$(SIGNATURES)
-
-Parameters for Smolyak grids that are independent of the dimension of the domain.
-
-Polynomials are organized into blocks (of eg `1, 2, 2, 4, 8, 16, …`) polynomials (and
-corresponding gridpoints), indexed with a *block index* `b` that starts at `0`. `B ≥ ∑
-bᵢ` and `0 ≤ bᵢ ≤ M` constrain the number of blocks along each dimension `i`.
-
-`M > B` is not an error, but will be normalized to `M = B` with a warning.
-"""
-@inline function SmolyakParameters(B::Integer, M::Integer = B)
-    SmolyakParameters{Int(B),Int(M)}()
-end
-
-"""
-$(TYPEDEF)
-
-Indexing specification in a Smolyak basis/interpolation.
-
-# Type parameters
-
-- `N`: the dimension of indices
-
-- `H`: highest index visited for all dimensions
-
-- `B ≥ 0`: sum of block indices, starting from `0` (ie `B = 0` has just one element),
-
-- `M`: upper bound on each block index
-
-# Constructor
-
-Takes the dimension `N` as a parameter, `grid_kind`, and a `SmolyakParameters` object,
-calculating everything else.
-
-# Details
-
-Consider positive integer indices `(i1, …, iN)`, each starting at one.
-
-Let `ℓ(b) = nesting_total_length(Chebyshev, grid_knid, kind, b)`, and `b1` denote the
-smallest integer such that `i1 ≤ ℓ(b1)`, and similarly for `i2, …, iN`. Extend this with
-`ℓ(-1) = 0` for the purposes of notation.
-
-An index `(i1, …, iN)` is visited iff all of the following hold:
-
-1. `1 ≤ i1 ≤ ℓ(M)`, …, `1 ≤ iN ≤ ℓ(M)`,
-2. `0 ≤ b1 ≤ M`, …, `1 ≤ bN ≤ M`,
-3. `b1 + … + bN ≤ B`
-
-Visited indexes are in *column-major* order.
-"""
-struct SmolyakIndices{N,H,B,M,Mp1}
-    "number of coefficients (cached)"
-    len::Int
-    "nesting total lengths (cached)"
-    nesting_total_lengths::NTuple{Mp1,Int}
-    function SmolyakIndices{N}(grid_kind::AbstractGrid,
-                               smolyak_parameters::SmolyakParameters{B,M}) where {N,B,M}
-        @argcheck N ≥ 1
-        Mp1 = M + 1
-        len = __smolyak_length(grid_kind, Val(N), Val(B), M)
-        first_block_length = nesting_total_length(Chebyshev, grid_kind, 0)
-        nesting_total_lengths = ntuple(bp1 -> nesting_total_length(Chebyshev, grid_kind, bp1 - 1),
-                                       Val(Mp1))
-        H = last(nesting_total_lengths)
-        new{N,H,B,M,Mp1}(len, nesting_total_lengths)
-    end
-end
-
-function Base.show(io::IO, smolyak_indices::SmolyakIndices{N,H,B,M}) where {N,H,B,M}
-    (; len) = smolyak_indices
-    print(io, "Smolyak indexing, ∑bᵢ ≤ $(B), all bᵢ ≤ $(M), dimension $(len)")
-end
-
-@inline highest_visited_index(::SmolyakIndices{N,H}) where {N,H} = H
-
-Base.eltype(::Type{<:SmolyakIndices{N}}) where N = NTuple{N,Int}
-
-@inline Base.length(ι::SmolyakIndices) = ι.len
-
-@inline function Base.iterate(ι::SmolyakIndices{N,H,B}) where {N,H,B}
-    slack, indices, blocks, limits = __inc_init(ι.nesting_total_lengths, Val(N), Val(B))
-    indices, (slack, indices, blocks, limits)
-end
-
-@inline function Base.iterate(ι::SmolyakIndices, (slack, indices, blocks, limits))
-    valid, Δ, indices′, blocks′, limits′ = __inc(ι.nesting_total_lengths, slack, indices,
-                                                 blocks, limits)
-    valid || return nothing
-    slack′ = slack + Δ
-    indices′, (slack′, indices′, blocks′, limits′)
-end
-
-####
-#### product traversal
-####
-
-struct SmolyakProduct{I<:SmolyakIndices,S<:Tuple,P}
-    smolyak_indices::I
-    sources::S
-    product_kind::P
-    @doc """
-    $(SIGNATURES)
-
-    An iterator conceptually equivalent to
-
-    ```
-    [prod(getindex.(sources, indices)) for indices in smolyak_indices]
-    ```
-
-    using [`_product`](@ref) instead to account for derivatives. Detailed docs of the
-    arguments are in [`SmolyakIndices`](@ref).
-
-    Caller should arrange the elements of `sources` in the correct order, see
-    [`nested_extrema_indices`](@ref). Each element in `sources` should have at least
-    `H` elements (cf type parameters of [`SmolyakIndices`](@ref)), this is not checked.
-    """
-    function SmolyakProduct(smolyak_indices::I, sources::S,
-                            product_kind::P) where {N,I<:SmolyakIndices{N},S,P}
-        @argcheck length(sources) == N
-        new{I,S,P}(smolyak_indices, sources, product_kind)
-    end
-end
-
-Base.length(smolyak_product::SmolyakProduct) = length(smolyak_product.smolyak_indices)
-
-function Base.eltype(::Type{SmolyakProduct{I,S,P}}) where {I,S,P}
-    _product_type(P, fieldtypes(S))
-end
-
-@inline function Base.iterate(smolyak_product::SmolyakProduct, state...)
-    (; smolyak_indices, sources, product_kind) = smolyak_product
-    itr = iterate(smolyak_indices, state...)
-    itr ≡ nothing && return nothing
-    indices, state′ = itr
-    _product(product_kind, sources, indices), state′
-end
+export smolyak_basis
 
 struct SmolyakBasis{I<:SmolyakIndices,U<:UnivariateBasis} <: MultivariateBasis
     smolyak_indices::I
@@ -252,15 +101,13 @@ function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
 end
 
 function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
-                  Lx::∂InputLifted) where {N}
-    (; ∂specification, lifted_x) = Lx
-    @argcheck length(lifted_x) == N
+                  Dx::∂CoordinateExpansion) where {N}
+    (; ∂D, x) = Dx
+    @argcheck length(x) == N
     SmolyakProduct(smolyak_basis.smolyak_indices,
-                   _univariate_bases_at(smolyak_basis, lifted_x),
-                   ∂specification)
+                   _univariate_bases_at(smolyak_basis, x),
+                   ∂D)
 end
-
-basis_at(smolyak_basis::SmolyakBasis, ∂x::∂Input) = basis_at(smolyak_basis, _lift(∂x))
 
 struct SmolyakGridIterator{T,I,S}
     smolyak_indices::I

@@ -2,7 +2,7 @@
 ##### Generic API
 #####
 
-export is_function_basis, domain, dimension, basis_at, linear_combination, InteriorGrid,
+export is_function_basis, dimension, basis_at, linear_combination, InteriorGrid,
     InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
     is_subset_basis
 
@@ -106,6 +106,10 @@ $(SIGNATURES)
 
 Helper function for linear combinations of basis elements at `x`. Always checks that `θ`
 and `basis` have compatible dimensions.
+
+!!! NOTE
+    `x` and `θ` can be anything that supports `_mul(θ[i], b[i])` and `_add` on the
+    result of this.
 """
 @inline function _linear_combination(basis, θ, x)
     # an implementation of mapreduce, to work around
@@ -297,3 +301,11 @@ function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
 end
 
 # FIXME add augmentation for transformed bases
+
+function transform_to(basis::FunctionBasis, transformation, x)
+    transform_to(domain(basis), transformation, x)
+end
+
+function transform_from(basis::FunctionBasis, transformation, x)
+    transform_from(domain(basis), transformation, x)
+end

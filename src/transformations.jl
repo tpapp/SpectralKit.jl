@@ -2,9 +2,8 @@
 ##### transformations
 #####
 
-export transform_to, transform_from, coordinate_transformations,
+export domain, domain_kind, transform_to, transform_from, coordinate_transformations,
     BoundedLinear, InfRational, SemiInfRational
-
 
 ####
 #### generic api
@@ -32,6 +31,8 @@ domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
 Transform `x` to `domain` using `transformation`.
 
+`domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
+
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
 """
@@ -41,6 +42,8 @@ function transform_to end
 `$(FUNCTIONNAME)(domain, transformation, x)`
 
 Transform `x` from `domain` using `transformation`.
+
+`domain` can be replaced by `basis` for a shortcut which uses `domain(basis)`.
 
 !!! FIXME
     document, especially differentiability requirements at infinite endpoints
@@ -118,14 +121,9 @@ function transform_to(domain::CoordinateDomains{T}, ct::CoordinateTransformation
     SVector(transform_to(domain, ct, _ntuple_like(T, x)))
 end
 
-function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, ∂x::∂Input)
-    transform_to(domain, ct, _lift(∂x))
-end
-
 function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
-                      ∂x::∂InputLifted)
-    (; ∂specification, lifted_x) = ∂x
-    ∂InputLifted(∂specification, transform_to(domain, ct, lifted_x))
+                      Dx::∂CoordinateExpansion)
+    ∂CoordinateExpansion(x.∂D, transform_to(domain, ct, x.x))
 end
 
 function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
@@ -187,13 +185,13 @@ function transform_to(::PM1, t::BoundedLinear, y::Real)
     (y - m) / s
 end
 
-function transform_to(domain::PM1, t::BoundedLinear, y::Derivatives{N}) where N
+function transform_to(domain::PM1, t::BoundedLinear, y::𝑑Expansion{Dp1}) where Dp1
     (; m, s) = t
-    (; derivatives) = y
-    y0, yD... = derivatives
+    (; coefficients) = y
+    y0, yD... = coefficients
     x0 = transform_to(domain, t, y0)
     xD = map(y -> y / s, yD)
-    Derivatives((x0, xD...))
+    𝑑Expansion(SVector(x0, xD...))
 end
 
 function domain(t::BoundedLinear)
@@ -249,23 +247,23 @@ function transform_to(::PM1, t::SemiInfRational, y::Real)
     (; A, L) = t
     z = y - A
     x = (z - L) / (z + L)
-    if (y == Inf && L > 0) || (y == -Inf && L < 0)
+    if y == Inf || y == -Inf
         one(x)
     else
         x
     end
 end
 
-function transform_to(domain::PM1, t::SemiInfRational, y::Derivatives{N}) where N
+function transform_to(domain::PM1, t::SemiInfRational, y::𝑑Expansion{Dp1}) where Dp1
     (; A, L) = t
-    (; derivatives) = y
-    x0 = transform_to(domain, t, derivatives[1])
-    N == 1 && return Derivatives((x0, ))
+    (; coefficients) = y
+    x0 = transform_to(domain, t, coefficients[1])
+    Dp1 == 1 && return 𝑑Expansion(SVector(x0))
     # based on Boyd (2001), Table E.7
     Q = abs2(x0 - 1)
-    x1 = (derivatives[2] * Q) / (2*L)
-    N == 2 && return Derivatives((x0, x1))
-    error("$(N-1)th derivative not implemented yet, open an issue.")
+    x1 = (coefficients[2] * Q) / (2*L)
+    Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
+    error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
 
 function domain(t::SemiInfRational)
@@ -321,17 +319,17 @@ function transform_to(::PM1, t::InfRational, y::Real)
     end
 end
 
-function transform_to(domain::PM1, t::InfRational, y::Derivatives{N}) where N
+function transform_to(domain::PM1, t::InfRational, y::𝑑Expansion{Dp1}) where Dp1
     (; A, L) = t
-    (; derivatives) = y
-    x0 = transform_to(domain, t, derivatives[1])
-    N == 1 && return Derivatives((x0, ))
+    (; coefficients) = y
+    x0 = transform_to(domain, t, coefficients[1])
+    Dp1 == 1 && return Coefficients(SVector(x0))
     # based on Boyd (2001), Table E.5
     Q = 1 - abs2(x0)
     sQ = √Q
-    x1 = (derivatives[2] * Q * sQ) / L
-    N == 2 && return Derivatives((x0, x1))
-    error("$(N-1)th derivative not implemented yet, open an issue.")
+    x1 = (coefficients[2] * Q * sQ) / L
+    Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
+    error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
 
 domain(::InfRational) = UnivariateDomain(-Inf, Inf)

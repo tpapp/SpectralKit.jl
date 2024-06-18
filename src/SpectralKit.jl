@@ -2,6 +2,7 @@ module SpectralKit
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES, TYPEDEF
+using OrderedCollections: OrderedSet
 using StaticArrays: MVector, SVector, sacollect
 
 include("utilities.jl")

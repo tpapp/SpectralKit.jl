@@ -2,17 +2,7 @@
 ##### utility functions for tests
 #####
 
-struct KroneckerVector{T} <: AbstractVector{T}
-    i::Int
-    len::Int
-end
-
-Base.size(v::KroneckerVector) = (v.len, )
-
-@inline function Base.getindex(v::KroneckerVector{T}, i::Int) where {T}
-    @boundscheck 1 ≤ i ≤ v.len
-    i == v.i ? one(T) : zero(T)
-end
+using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for rand_in_domain
 
 chebyshev_cos(x, n) = cos((n - 1) * acos(x))
 
@@ -31,15 +21,29 @@ end
 """
 $(SIGNATURES)
 
-Return a random scalar in `(-1.0, 1.0)` (the default), except when `i == 1`, return `-1.0`,
-when `i == 2`, return `1.0`.
+Return a random value in [-1,1], putting an atomic mass on endpoints.
 
 The intention is to provide comprehensive testing for endpoints.
 """
-function rand_pm1(i = 3)
-    i == 1 && return -1.0
-    i == 2 && return 1.0
-    rand() * 2 - 1.0
+rand_pm1() = clamp((rand() - 0.5) * 2.5, -1, 1)
+
+"""
+$(SIGNATURES)
+
+Return a random value in the domain of the given basis, putting an atomic mass on endpoints.
+
+The intention is to provide comprehensive testing for endpoints.
+"""
+rand_in_domain(::Chebyshev) = rand_pm1()
+
+function rand_in_domain(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
+    (; univariate_parent) = basis
+    SVector(ntuple(_ -> rand_in_domain(univariate_parent), Val(N)))
+end
+
+function rand_in_domain(basis::TransformedBasis)
+    (; parent, transformation)
+    transform_from(parent, transformation, rand_in_domain(parent))
 end
 
 "Flags (`true`) for elements in `a` that are within `atol` of some element in `b`."
@@ -76,9 +80,11 @@ function iterator_sanity_checks(itr)
     @test count(_ -> true, itr) == length(itr)
 end
 
-"Derivative of f at x."
+"nth derivative of f at x."
 function DD(f, x, n = 1; p = 10)
-    # workaround for https://github.com/JuliaDiff/FiniteDifferences.jl/issues/224
-    # remove anonymous call when that is fixed
-    central_fdm(p, n)(x -> f(x), x)
+    if n == 0
+        f(x)
+    else
+        central_fdm(p, n)(f, x)
+    end
 end

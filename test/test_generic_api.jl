@@ -48,6 +48,15 @@ end
     end
 end
 
+@testset "transform_to and transform_from univariate shortcuts" begin
+    basis = Chebyshev(EndpointGrid(), 5)
+    t = BoundedLinear(1.0, 2.0)
+    y = rand_in_domain(basis)
+    x = transform_to(domain(basis), t, y)
+    @test transform_to(basis, t, y) == x
+    @test transform_from(basis, t, x) == transform_from(domain(basis), t, x)
+end
+
 @testset "transformed bases and linear combinations (bivariate)" begin
     basis0 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), Val(2))
     t = coordinate_transformations(BoundedLinear(1.0, 2.0), SemiInfRational(0, 1))
@@ -68,6 +77,24 @@ end
         x = rand(2) .+ 1.0
         @test l1(transform_to(domain(basis0), t, x)) == l2(x) == l3(x)
     end
+end
+
+@testset "transform_to and transform_from bivariate shortcuts" begin
+    basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), Val(2))
+    t = coordinate_transformations(BoundedLinear(1.0, 2.0), SemiInfRational(0, 1))
+    y = rand_in_domain(basis)
+    x = transform_to(domain(basis), t, y)
+    @test transform_to(basis, t, y) == x
+    @test transform_from(basis, t, x) == transform_from(domain(basis), t, x)
+end
+
+@testset "linear combination SVector passthrough" begin
+    N = 10
+    M = 3
+    basis = Chebyshev(InteriorGrid(), N) ∘ SemiInfRational(0.0, 1.0)
+    θ = rand(SVector{M,Float64}, N)
+    x = 2.0
+    @test linear_combination(basis, θ, x) ≡ SVector{M}(linear_combination(basis, map(x -> x[i], θ), x) for i in 1:M)
 end
 
 @testset "subset fallback" begin
