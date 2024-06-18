@@ -138,5 +138,5 @@ function augment_coefficients(basis1::Chebyshev{K1}, basis2::Chebyshev{K2},
 end
 
 function is_subset_basis(basis1::Chebyshev{K1}, basis2::Chebyshev{K2}) where {K1,K2}
-    K1 == K2 && basis2.N ≥ basis1.N
+    basis2.N ≥ basis1.N
 end

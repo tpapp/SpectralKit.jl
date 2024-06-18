@@ -56,15 +56,14 @@
         end
     end
 
-    # incompatible grids
+    # compatible and incompatible grids
     @testset "augment Chebyshev coefficients — errors" begin
         basis = Chebyshev(InteriorGrid(), 5)
         θ = randn(5)
-        # incompatible grids
+        # different grids are compatible
         basis2_G = Chebyshev(EndpointGrid(), 6)
-        @test !is_subset_basis(basis, basis2_G)
-        @test_throws ArgumentError augment_coefficients(basis, basis2_G, θ)
-        # fewer dimensions
+        @test is_subset_basis(basis, basis2_G)
+        # fewer dimensions are not compatible
         basis2_N = Chebyshev(InteriorGrid(), 4)
         @test !is_subset_basis(basis, basis2_N)
         @test_throws ArgumentError augment_coefficients(basis, basis2_N, θ)

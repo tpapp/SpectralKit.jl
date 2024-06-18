@@ -26,7 +26,7 @@ In this package,
 
 ## Univariate basis example
 
-We construct a basis of Chebyshev polynomials on ``[0, 4]``. This requires a transformation since their canonical domain is ``[-1,1]``. Other transformations include [`SemiInfRational`](@ref) (for ``[A, \infty]`` intervals)  and [`InfRational`](@ref).
+We construct a basis of Chebyshev polynomials on ``[0, 4]``. This requires a transformation since their canonical domain is ``[-1,1]``. Other transformations include [`SemiInfRational`](@ref) for ``[A, \infty]`` intervals  and [`InfRational`](@ref) for ``[-\infty, \infty] `` intervals.
 
 We display the domian and the dimension (number of basis functions).
 ```@repl univariate
@@ -37,18 +37,18 @@ dimension(basis)
 ```
 
 We have chosen an interior grid, shown below. We `collect` the result for the purpose of this tutorial, since `grid` returns an iterable to avoid allocations.
-```@relp univariate
+```@repl univariate
 collect(grid(basis))
 ```
 
 We can show evaluate the basis functions at a given point. Again, it is an iterable, so we `collect` to show it here.
-```@relp univariate
+```@repl univariate
 collect(basis_at(basis, 0.41))
 ```
 
 We can evaluate linear combination as directly, or via partial application.
 ```@repl univariate
-θ = [1, 0.5, 0.2, 0.3, 0.001]               # a vector of coefficients
+θ = [1, 0.5, 0.2, 0.3, 0.001];           # a vector of coefficients
 x = 0.41
 linear_combination(basis, θ, x)          # combination at some value
 linear_combination(basis, θ)(x)          # also as a callable
@@ -58,7 +58,7 @@ We can also evaluate *derivatives* of either the basis or the linear combination
 ```@repl univariate
 dx = (𝑑^2)(x)
 collect(basis_at(basis, dx))
-linear_combination(basis, θ, x)
+linear_combination(basis, θ, dx)
 ```
 
 Having an approximation, we can embed it in a larger basis, extending the coefficients accordingly.
