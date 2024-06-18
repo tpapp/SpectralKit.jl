@@ -275,7 +275,14 @@ end
 
 Base.parent(basis::TransformedBasis) = basis.parent
 
+"""
+$(SIGNATURES)
+
+Return the transformation of transformed bases, or `nothing` it not applicable.
+"""
 transformation(basis::TransformedBasis) = basis.transformation
+
+transformation(::FunctionBasis) = nothing
 
 domain(basis::TransformedBasis) = domain(basis.transformation)
 
