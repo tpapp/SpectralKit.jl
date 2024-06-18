@@ -86,6 +86,9 @@ julia> (𝑑^3)(2.0)
 ```
 
 Note that non-literal exponentiation requires `^Val(y)`, for type stability.
+
+See [`linear_combination`](@ref) for examples of evaluating derivatives of basis
+functions and linear combinations.
 """
 const 𝑑 = 𝑑Derivatives{1}()
 
@@ -211,7 +214,6 @@ end
 function Partials(I::Integer...)
     N = length(I)
     while N > 0 && I[N] == 0
-        @show N
         N -= 1
     end
     Partials(ntuple(i -> Int(I[i]), N))
@@ -355,6 +357,45 @@ struct ∂Derivatives{Ps}
     end
 end
 
+"""
+$(SIGNATURES)
+
+Partial derivatives along the given coordinates.
+
+The following are equivalent, and represent ``\\partial_1 \\partial^2_2``, ie the first
+derivative along the first axis, and the second partial derivative along the second
+axis.
+
+```@jldoctest
+julia> ∂(1, 2)
+∂(1, 2)
+
+julia> ∂((1, 2))
+∂(1, 2)
+```
+
+Only the vararg form allows trailing zeros, which are stripped:
+```@jldoctest
+julia> ∂(1, 0)
+∂(1)
+
+julia> ∂((1, 0))
+ERROR: ArgumentError: I ≡ () || last(I) ≠ 0 must hold.
+```
+
+Use the empty form for no derivatives:
+```@jldoctest
+julia> ∂()
+∂()
+```
+
+Combine derivatives using `union` or `∪`:
+
+```jldoctest
+julia> ∂(1, 2) ∪ ∂(2, 1)
+union(∂(2, 1), ∂(1, 2))
+```
+"""
 ∂(I::Tuple{Vararg{Int}}) = ∂Derivatives{Partials(I)}()
 
 ∂(I::Integer...) = ∂Derivatives{Partials(I...)}()
