@@ -70,22 +70,31 @@ augment_coefficients(basis, basis2, θ)      # … so let's do it
 
 ## Multivariate (Smolyak) approximation example
 
-```@example
+We set up a Smolyak basis to approximate functions on ``[-1,2] \times [-3, \infty]``, where the second dimension has a scaling of ``3``.
+
+```@example smolyak
 using SpectralKit, StaticArrays
-function f2(x)                  # bivariate function we approximate
-    x1, x2 = x                  # takes vectors
-    exp(x1) + exp(-abs2(x2))
-end
 basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
 ct = coordinate_transformations(BoundedLinear(-1, 2.0), SemiInfRational(-3.0, 3.0))
 basis_t = basis ∘ ct
-x = grid(basis_t)
-θ = collocation_matrix(basis_t) \ f2.(x)  # find the coefficients
+```
+Note how the basis can be combined with a transformation using `∘`.
+
+We will approximate the following function:
+```@example smolyak
+f2((x1, x2)) = exp(x1) + exp(-abs2(x2))
+```
+
+We find the coefficients by solving with the collocation matrix.
+```@example
+θ = collocation_matrix(basis_t) \ f2.(grid(basis_t))
+```
+
+Finally, we check the approximation at a point.
+```@example
 z = (0.5, 0.7)                            # evaluate at this point
 isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
 ```
-
-Note how the transformation can be combined with `∘` to a callable that evaluates a transformed linear combination at `z`.
 
 ## Constructing bases
 
@@ -150,6 +159,7 @@ smolyak_basis
 ```@docs
 is_function_basis
 dimension
+transformation
 ```
 
 See also [`domain`](@ref).
