@@ -102,6 +102,7 @@ isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
 
 Values and derivatives at ``\pm\infty`` should provide the correct limits.
 ```@repl
+using SpectralKit
 basis = Chebyshev(InteriorGrid(), 4) ∘ InfRational(0.0, 1.0)
 collect(basis_at(basis, 𝑑(Inf)))
 collect(basis_at(basis, 𝑑(-Inf)))
