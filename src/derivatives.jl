@@ -362,6 +362,10 @@ $(SIGNATURES)
 
 Partial derivatives along the given coordinates.
 
+!!! NOTE
+    Partial derivatives are currently **experimental** and not heavily tested. API may
+    change at any point without prior notice or deprecation.
+
 The following are equivalent, and represent ``\\partial_1 \\partial^2_2``, ie the first
 derivative along the first axis, and the second partial derivative along the second
 axis.
