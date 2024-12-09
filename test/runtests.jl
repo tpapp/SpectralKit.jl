@@ -19,7 +19,5 @@ end
 
 @testset "QA with Aqua" begin
     import Aqua
-    Aqua.test_all(SpectralKit; ambiguities = false)
-    # testing separately, cf https://github.com/JuliaTesting/Aqua.jl/issues/77
-    Aqua.test_ambiguities(SpectralKit)
+    Aqua.test_all(SpectralKit)
 end
