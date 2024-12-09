@@ -2,7 +2,7 @@
 
 ![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
 [![build](https://github.com/tpapp/SpectralKit.jl/workflows/CI/badge.svg)](https://github.com/tpapp/SpectralKit.jl/actions?query=workflow%3ACI)
-[![codecov.io](http://codecov.io/github/tpapp/SpectralKit.jl/coverage.svg?branch=master)](http://codecov.io/github/tpapp/SpectralKit.jl?branch=master)
+[![codecov](https://codecov.io/gh/tpapp/SpectralKit.jl/graph/badge.svg?token=OrJPt0v6yz)](https://codecov.io/gh/tpapp/SpectralKit.jl)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://tpapp.github.io/SpectralKit.jl/stable)
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)](https://tpapp.github.io/SpectralKit.jl/dev)
 [![DOI](https://zenodo.org/badge/220448027.svg)](https://zenodo.org/badge/latestdoi/220448027)
