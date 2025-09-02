@@ -293,10 +293,10 @@ function basis_at(basis::TransformedBasis, x)
     basis_at(parent, transform_to(domain(parent), transformation, x))
 end
 
-function grid(basis::TransformedBasis)
+function grid(::Type{T}, basis::TransformedBasis) where T
     (; parent, transformation) = basis
     d = domain(parent)
-    Iterators.map(x -> transform_from(d, transformation, x), grid(parent))
+    Iterators.map(x -> transform_from(d, transformation, x), grid(T, parent))
 end
 
 function Base.:(∘)(linear_combination::LinearCombination, transformation)
