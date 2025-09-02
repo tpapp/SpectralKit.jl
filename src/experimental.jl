@@ -9,6 +9,9 @@ A best effort is made to
 """
 module Experimental
 
+# migrate to generic API
+export constant_coefficients
+
 using Compat: @compat
 @compat public model_parameters_dimension, make_model_parameters,
     calculate_derived_quantities, make_approximation_basis, describe_policy_transformations,
@@ -34,6 +37,36 @@ function named_cumulative_ranges(lengths::NamedTuple{N}) where N
         (a + 1):(a + l)
     end
     NamedTuple{N}(ranges)
+end
+
+####
+#### generic API additions
+####
+
+"""
+$(FUNCTIONNAME)(basis, y)
+
+Approximate a constant value `y` on `basis`.
+
+Formally, return a set of coefficients `θ` such that `linear_combination(basis, θ, x) ≈
+y` for all `x` in the domain.
+"""
+function constant_coefficients end
+
+function constant_coefficients(basis::SpectralKit.Chebyshev, y)
+    θ = zeros(basis.N)
+    θ[1] = y
+    θ
+end
+
+function constant_coefficients(basis::SpectralKit.TransformedBasis, y)
+    constant_coefficients(parent(basis), y)
+end
+
+function constant_coefficients(basis::SpectralKit.SmolyakBasis, y)
+    θ = zeros(SpectralKit.dimension(basis))
+    θ[1] = y
+    θ
 end
 
 ####

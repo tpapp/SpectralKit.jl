@@ -3,6 +3,28 @@ using LogExpFunctions: logistic
 using Test
 using SpectralKit
 
+####
+#### generic api
+####
+
+@testset "constant coefficients" begin
+    y = 3.8
+    b1 = Chebyshev(InteriorGrid(), 20)
+    t2 = InfRational(3.8, 1.3)
+    t3 = SemiInfRational(0.7, 1.9)
+    b2 = b1 ∘ t2
+    b3 = b1 ∘ t3
+    B1 = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), Val(2))
+    B2 = B1 ∘ coordinate_transformations(t2, t3)
+    for basis in [b1, b2, b3, B1, B2]
+        θ = SKX.constant_coefficients(basis, y)
+        for _ in 1:100
+            x = rand_in_domain(basis)
+            @test linear_combination(basis, θ, x) ≈ y
+        end
+    end
+end
+
 """
 A simple Ramsey model in discrete time.
 
