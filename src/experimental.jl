@@ -15,11 +15,14 @@ export constant_coefficients
 using Compat: @compat
 @compat public model_parameters_dimension, make_model_parameters,
     calculate_derived_quantities, make_approximation_basis, describe_policy_transformations,
-    policy_coefficients_dimension, make_policy_functions
+    policy_coefficients_dimension, make_policy_functions, constant_initial_guess,
+    calculate_initial_guess
+
+import ..SpectralKit
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES
-import ..SpectralKit
+using InverseFunctions: inverse
 
 ####
 #### utilities
@@ -142,6 +145,40 @@ function make_policy_functions(model_family, policy_transformations::NamedTuple,
     map(ranges, policy_transformations) do r, t
         t ∘ SpectralKit.linear_combination(approximation_basis, @view coefficients[r])
     end
+end
+
+"""
+$(FUNCTIONNAME)(model_family, derived_quantities)
+
+Return initial guesses in a type that supports `getproperty` (eg a `NamedTuple`).
+
+Should provide a scalar for each name in [`describe_policy_transformations`](@ref) (can
+be in any arbitrary order, and contain other names).
+"""
+function constant_initial_guess end
+
+"""
+$(SIGNATURES)
+
+Return an initial guess for the coefficients. Falls back to using
+[`constant_initial_guess`](@ref), or the user may define a method in case that is not
+sufficient.
+"""
+function calculate_initial_guess(model_family, derived_quantities,
+                                 policy_transformations::NamedTuple{N},
+                                 approximation_basis) where N
+    constant_guess = constant_initial_guess(model_family, derived_quantities)
+    d = SpectralKit.dimension(approximation_basis)
+    # QUESTION line below assumes all univariate, generalize?
+    ranges = named_cumulative_ranges(map(_ -> d, policy_transformations))
+    coefficients = zeros(last(last(ranges)))
+    for (name, transformation) in pairs(policy_transformations)
+        r = getproperty(ranges, name)
+        y = inverse(transformation)(getproperty(constant_guess, name))
+        # FIXME a constant_coefficient! API would have fewer allocations
+        coefficients[r] .= constant_coefficients(approximation_basis, y)
+    end
+    coefficients
 end
 
 end

@@ -82,12 +82,12 @@ function SKX.make_model_parameters(::RamseyDiscrete, x)
     (; α = logistic(pre_α), β = logistic(pre_β), δ = logistic(pre_δ))
 end
 
-product(model_parameters, k) = k^model_parameters.α  - model_parameters.δ * k
+product(model_parameters, k) = k^model_parameters.α + (1 - model_parameters.δ) * k
 
 function SKX.calculate_derived_quantities(::RamseyDiscrete, model_parameters)
     (; α, β, δ) = model_parameters
     # f'(k) β = (α k^{α-1} - δ) β = 1
-    k_s = ((1 / β + δ) / α)^(α - 1)
+    k_s = ((1 / β + 1 - δ) / α)^(α - 1)
     c_s = product(model_parameters, k_s) - k_s
     (; k_s, c_s)
 end
@@ -99,6 +99,11 @@ function SKX.make_approximation_basis(::RamseyDiscrete, derived_quantities, appr
 end
 
 SKX.describe_policy_transformations(::RamseyDiscrete) = (; c_share = logistic)
+
+function SKX.constant_initial_guess(::RamseyDiscrete, derived_quantities)
+    (; k_s, c_s) = derived_quantities
+    (; c_share = c_s / k_s)
+end
 
 model_family = RamseyDiscrete()
 model_parameters = SKX.make_model_parameters(model_family,
@@ -112,3 +117,5 @@ policy_functions = SKX.make_policy_functions(model_family, policy_transformation
                                              approximation_basis,
                                              zeros(SKX.policy_coefficients_dimension(policy_transformations,
                                                                                      approximation_basis)))
+θ0 = SKX.calculate_initial_guess(model_family, derived_quantities, policy_transformations,
+                                 approximation_basis)
