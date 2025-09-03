@@ -174,7 +174,8 @@ function calculate_initial_guess(model_family, derived_quantities,
     coefficients = zeros(last(last(ranges)))
     for (name, transformation) in pairs(policy_transformations)
         r = getproperty(ranges, name)
-        y = inverse(transformation)(getproperty(constant_guess, name))
+        transformed_y = getproperty(constant_guess, name)
+        y = inverse(transformation)(transformed_y)
         # FIXME a constant_coefficient! API would have fewer allocations
         coefficients[r] .= constant_coefficients(approximation_basis, y)
     end
