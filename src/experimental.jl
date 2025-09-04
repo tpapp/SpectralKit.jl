@@ -131,6 +131,15 @@ $(USERNOTE)
 """
 function describe_policy_transformations end
 
+"""
+$(FUNCTIONNAME)(model_family, model_parameters, policy_functions, gridpoint)
+
+Calculate the residuals at the given gridpoint.
+
+$(USERNOTE)
+"""
+function calculate_residuals end
+
 function policy_coefficients_dimension(policy_transformations::NamedTuple, approximation_basis)
     SpectralKit.dimension(approximation_basis) * length(policy_transformations)
 end
@@ -148,7 +157,7 @@ function make_policy_functions(model_family, policy_transformations::NamedTuple,
 end
 
 """
-$(FUNCTIONNAME)(model_family, derived_quantities)
+$(FUNCTIONNAME)(model_family, model_parameters, derived_quantities)
 
 Return initial guesses in a type that supports `getproperty` (eg a `NamedTuple`).
 
@@ -164,10 +173,10 @@ Return an initial guess for the coefficients. Falls back to using
 [`constant_initial_guess`](@ref), or the user may define a method in case that is not
 sufficient.
 """
-function calculate_initial_guess(model_family, derived_quantities,
+function calculate_initial_guess(model_family, model_parameters, derived_quantities,
                                  policy_transformations::NamedTuple{N},
                                  approximation_basis) where N
-    constant_guess = constant_initial_guess(model_family, derived_quantities)
+    constant_guess = constant_initial_guess(model_family, model_parameters, derived_quantities)
     d = SpectralKit.dimension(approximation_basis)
     # QUESTION line below assumes all univariate, generalize?
     ranges = named_cumulative_ranges(map(_ -> d, policy_transformations))

@@ -58,11 +58,11 @@ V'(k) = u'(c(k)) f'(k)
 ```
 and then
 ```math
-u'(c(k)) f'(k) = β u'(c(f(k) - c(k))) f'(c(f(k) - c(k))) f'(k)
+u'(c(k)) f'(k) = β u'(c(f(k) - c(k))) f'(f(k) - c(k)) f'(k)
 ```
 Then cancel ``f'(k)`` and rearrange as unitless
 ```math
-1 = β u'(c(f(k) - c(k))) f'(c(f(k)) - c(k)) / u'(k)
+1 = β u'(c(f(k) - c(k))) f'(f(k) - c(k)) / u'(c(k))
 ```
 From this it follows that the steady state ``k_s`` solves
 ```
@@ -79,15 +79,21 @@ SKX.model_parameters_dimension(::RamseyDiscrete) = 3
 
 function SKX.make_model_parameters(::RamseyDiscrete, x)
     pre_α, pre_β, pre_δ = x
+    # NOTE: we are assuming log utility, doesn't need a parameter
     (; α = logistic(pre_α), β = logistic(pre_β), δ = logistic(pre_δ))
 end
 
 product(model_parameters, k) = k^model_parameters.α + (1 - model_parameters.δ) * k
 
+function marginal_product(model_parameters, k)
+    (; α, δ) =model_parameters
+    α * k^(α - 1) + (1 - model_parameters.δ)
+end
+
 function SKX.calculate_derived_quantities(::RamseyDiscrete, model_parameters)
     (; α, β, δ) = model_parameters
-    # f'(k) β = (α k^{α-1} - δ) β = 1
-    k_s = ((1 / β + 1 - δ) / α)^(α - 1)
+    # we are solving f'(k) β = (α k^{α-1} + 1 - δ) β = 1
+    k_s = ((1 / β - 1 + δ) / α)^(1/(α - 1))
     c_s = product(model_parameters, k_s) - k_s
     (; k_s, c_s)
 end
@@ -100,22 +106,39 @@ end
 
 SKX.describe_policy_transformations(::RamseyDiscrete) = (; c_share = logistic)
 
-function SKX.constant_initial_guess(::RamseyDiscrete, derived_quantities)
+function SKX.constant_initial_guess(::RamseyDiscrete, model_parameters, derived_quantities)
     (; k_s, c_s) = derived_quantities
-    (; c_share = c_s / k_s)
+    (; c_share = c_s / product(model_parameters, k_s))
+end
+
+function SKX.calculate_residuals(::RamseyDiscrete, model_parameters, policy_functions, k0)
+    (; β) = model_parameters
+    (; c_share) = policy_functions
+    y0 = product(model_parameters, k0)
+    c0 = c_share(k0) * y0
+    k1 = y0 - c0
+    c1 = c_share(k1) * product(model_parameters, k1)
+    # assuming log utility
+    (; Euler = β * c0/c1 * marginal_product(model_parameters, k1) - 1)
 end
 
 model_family = RamseyDiscrete()
 model_parameters = SKX.make_model_parameters(model_family,
-                                            randn(SKX.model_parameters_dimension(model_family)))
+                                             randn(SKX.model_parameters_dimension(model_family)))
 derived_quantities = SKX.calculate_derived_quantities(model_family, model_parameters)
+let
+    (; k_s, c_s) = derived_quantities
+    (; β, α, δ) = model_parameters
+    @test marginal_product(model_parameters, k_s) * model_parameters.β ≈ 1
+    @test product(model_parameters, k_s) - c_s ≈ k_s
+end
 approximation_scheme = (; policy_coefficients = 10)
 approximation_basis = SKX.make_approximation_basis(model_family, derived_quantities,
                                                    approximation_scheme)
 policy_transformations = SKX.describe_policy_transformations(model_family)
+θ0 = SKX.calculate_initial_guess(model_family, model_parameters, derived_quantities,
+                                 policy_transformations, approximation_basis)
 policy_functions = SKX.make_policy_functions(model_family, policy_transformations,
-                                             approximation_basis,
-                                             zeros(SKX.policy_coefficients_dimension(policy_transformations,
-                                                                                     approximation_basis)))
-θ0 = SKX.calculate_initial_guess(model_family, derived_quantities, policy_transformations,
-                                 approximation_basis)
+                                             approximation_basis, θ0)
+@test SKX.calculate_residuals(model_family, model_parameters, policy_functions,
+                              derived_quantities.k_s).Euler ≈ 0 atol = 1e-8
