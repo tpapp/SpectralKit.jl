@@ -142,8 +142,8 @@ policy_functions = SKX.make_policy_functions(model_family, policy_transformation
                                              approximation_basis, θ0)
 @test SKX.calculate_residuals(model_family, model_parameters, policy_functions,
                               derived_quantities.k_s).Euler ≈ 0 atol = 1e-8
-grid = SKX.make_approximation_grid(model_family, model_parameters, derived_quantities,
-                                   approximation_basis)
+approximation_grid = SKX.make_approximation_grid(model_family, model_parameters,
+                                                 derived_quantities, approximation_basis)
 
 @test @inferred SKX.sum_of_squared_residuals(model_family, model_parameters, policy_functions,
-                                             grid) isa Float64
+                                             approximation_grid) isa Float64
