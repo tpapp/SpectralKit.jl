@@ -9,6 +9,13 @@ A best effort is made to
 """
 module Experimental
 
+# TODO
+# - [ ] clean up API, too many functions with positional arguments
+# - [ ] write up tutorial-like docs
+# - [ ] docs: an ascii diagram of various calculations, with https://asciiflow.com/
+# - [ ] solver functions
+# - [ ] actually implement a solution and AD it
+
 # migrate to generic API
 export constant_coefficients
 
@@ -16,7 +23,7 @@ using Compat: @compat
 @compat public model_parameters_dimension, make_model_parameters,
     calculate_derived_quantities, make_approximation_basis, describe_policy_transformations,
     policy_coefficients_dimension, make_policy_functions, constant_initial_guess,
-    calculate_initial_guess
+    calculate_initial_guess, sum_of_squared_residuals
 
 import ..SpectralKit
 
@@ -189,6 +196,38 @@ function calculate_initial_guess(model_family, model_parameters, derived_quantit
         coefficients[r] .= constant_coefficients(approximation_basis, y)
     end
     coefficients
+end
+
+"""
+$(SIGNATURES)
+
+Return a grid for calculating the residuals. The default implementation just uses the
+grid that corresponds to the approximation basis.
+"""
+function make_approximation_grid(model_family, model_parameters, derived_quantities,
+                                 approximation_basis)
+    SpectralKit.grid(approximation_basis)
+end
+
+"""
+$(SIGNATURES)
+
+Sum of squares. Works for values returned by [`calculate_residuals`](@ref).
+"""
+sum_abs2(x::Real) = abs2(x)
+
+sum_abs2(nt::NamedTuple) = sum(abs2, values(nt))
+
+"""
+$(SIGNATURES)
+
+Calculate the sum of squared residuals.
+"""
+function sum_of_squared_residuals(model_family, model_parameters, policy_functions, grid)
+    mapreduce(+, grid) do gridpoint
+        sum_abs2(calculate_residuals(model_family, model_parameters, policy_functions,
+                                     gridpoint))
+    end
 end
 
 end
