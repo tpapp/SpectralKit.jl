@@ -3,6 +3,9 @@ uuid = "5c252ae7-b5b6-46ab-a016-b0e3d78320b7"
 version = "0.16.1"
 authors = ["Tamas K. Papp <tkpapp@gmail.com>"]
 
+[workspace]
+projects = ["test", "docs"]
+
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
