@@ -98,8 +98,8 @@ function SKX.calculate_derived_quantities(::RamseyDiscrete, model_parameters)
     (; k_s, c_s)
 end
 
-function SKX.make_approximation_basis(::RamseyDiscrete, derived_quantities, approximation_scheme)
-    (; policy_coefficients) = approximation_scheme
+function SKX.make_approximation_basis(::RamseyDiscrete, derived_quantities, approximation_parameters)
+    (; policy_coefficients) = approximation_parameters
     (; k_s) = derived_quantities
     Chebyshev(InteriorGrid(), policy_coefficients) ∘ SemiInfRational(0.0, k_s)
 end
@@ -132,9 +132,9 @@ let
     @test marginal_product(model_parameters, k_s) * model_parameters.β ≈ 1
     @test product(model_parameters, k_s) - c_s ≈ k_s
 end
-approximation_scheme = (; policy_coefficients = 10)
+approximation_parameters = (; policy_coefficients = 10)
 approximation_basis = SKX.make_approximation_basis(model_family, derived_quantities,
-                                                   approximation_scheme)
+                                                   approximation_parameters)
 policy_transformations = SKX.describe_policy_transformations(model_family)
 θ0 = SKX.calculate_initial_guess(model_family, model_parameters, derived_quantities,
                                  policy_transformations, approximation_basis)
@@ -143,6 +143,7 @@ policy_functions = SKX.make_policy_functions(model_family, policy_transformation
 @test SKX.calculate_residuals(model_family, model_parameters, policy_functions,
                               derived_quantities.k_s).Euler ≈ 0 atol = 1e-8
 approximation_grid = SKX.make_approximation_grid(model_family, model_parameters,
+                                                 approximation_parameters,
                                                  derived_quantities, approximation_basis)
 
 @test @inferred SKX.sum_of_squared_residuals(model_family, model_parameters, policy_functions,

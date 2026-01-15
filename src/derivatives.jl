@@ -510,9 +510,9 @@ end
     end
 end
 
-function _product_type(::Type{D}, source_eltypes) where {Ps,D<:∂Derivatives{Ps}}
+function _product_type(::Type{D}, source_eltypes::NTuple{M}) where {Ps,D<:∂Derivatives{Ps},M}
     T = _product_type(Nothing, map(eltype, source_eltypes))
-    N = length(_partials_canonical_expansion(Val(N), fieldtypes(Ps)))
+    N = length(_partials_canonical_expansion(Val(M), fieldtypes(Ps)))
     ∂Expansion{D,N,T}
 end
 

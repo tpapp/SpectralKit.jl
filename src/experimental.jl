@@ -120,7 +120,7 @@ $(USERNOTE)
 function calculate_derived_quantities end
 
 """
-$(FUNCTIONNAME)(model_family, derived_quantities, approximation_scheme)
+$(FUNCTIONNAME)(model_family, derived_quantities, approximation_parameters)
 
 Construct an approximation basis.
 
@@ -204,8 +204,8 @@ $(SIGNATURES)
 Return a grid for calculating the residuals. The default implementation just uses the
 grid that corresponds to the approximation basis.
 """
-function make_approximation_grid(model_family, model_parameters, derived_quantities,
-                                 approximation_basis)
+function make_approximation_grid(model_family, model_parameters, approximation_parameters,
+                                 derived_quantities, approximation_basis)
     SpectralKit.grid(approximation_basis)
 end
 

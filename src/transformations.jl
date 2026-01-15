@@ -123,7 +123,7 @@ end
 
 function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
                       Dx::∂CoordinateExpansion)
-    ∂CoordinateExpansion(x.∂D, transform_to(domain, ct, x.x))
+    ∂CoordinateExpansion(Dx.∂D, transform_to(domain, ct, Dx.x))
 end
 
 function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
@@ -323,7 +323,7 @@ function transform_to(domain::PM1, t::InfRational, y::𝑑Expansion{Dp1}) where 
     (; A, L) = t
     (; coefficients) = y
     x0 = transform_to(domain, t, coefficients[1])
-    Dp1 == 1 && return Coefficients(SVector(x0))
+    Dp1 == 1 && return SVector(x0)
     # based on Boyd (2001), Table E.5
     Q = 1 - abs2(x0)
     sQ = √Q
