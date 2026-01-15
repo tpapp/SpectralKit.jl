@@ -7,7 +7,7 @@ makedocs(
     format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
-    pages = Any["index.md"],
+    pages = Any["index.md", "experimental.md"],
     clean = true,
     checkdocs = :exports,
 )

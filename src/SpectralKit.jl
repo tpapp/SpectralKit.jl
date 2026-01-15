@@ -13,5 +13,6 @@ include("generic_api.jl")
 include("chebyshev.jl")
 include("smolyak_traversal.jl")
 include("smolyak_api.jl")
+include("experimental.jl") # experimental code is not part of the API, see its module docstring
 
 end # module

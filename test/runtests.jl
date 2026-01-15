@@ -1,5 +1,18 @@
-using SpectralKit
-using Test, DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
+using SpectralKit, Test
+
+using JET
+@testset "static analysis with JET.jl" begin
+    @test isempty(JET.get_reports(report_package(SpectralKit,
+                                                 target_modules=(SpectralKit,),
+                                                 ignored_modules = (SpectralKit.Experimental,))))
+end
+
+@testset "QA with Aqua" begin
+    import Aqua
+    Aqua.test_all(SpectralKit)
+end
+
+using DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
 
 include("utilities.jl")
 
@@ -11,13 +24,4 @@ include("test_chebyshev.jl")
 include("test_smolyak_traversal.jl")
 include("test_smolyak.jl")
 include("test_generic_api.jl")  # NOTE moved last as it used constructs from above
-
-using JET
-@testset "static analysis with JET.jl" begin
-    @test isempty(JET.get_reports(report_package(SpectralKit, target_modules=(SpectralKit,))))
-end
-
-@testset "QA with Aqua" begin
-    import Aqua
-    Aqua.test_all(SpectralKit)
-end
+include("test_experimental.jl") # NOTE experimental code is not public API
