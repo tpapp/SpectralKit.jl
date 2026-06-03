@@ -1,6 +1,6 @@
 name = "SpectralKit"
 uuid = "5c252ae7-b5b6-46ab-a016-b0e3d78320b7"
-version = "0.16.1"
+version = "0.16.2"
 authors = ["Tamas K. Papp <tkpapp@gmail.com>"]
 
 [workspace]
