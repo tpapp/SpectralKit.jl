@@ -2,6 +2,7 @@ import SpectralKit.Experimental as SKX
 using LogExpFunctions: logistic
 using Test
 using SpectralKit
+using InverseFunctions: inverse
 
 ####
 #### generic api
@@ -148,3 +149,17 @@ approximation_grid = SKX.make_approximation_grid(model_family, model_parameters,
 
 @test @inferred SKX.sum_of_squared_residuals(model_family, model_parameters, policy_functions,
                                              approximation_grid) isa Float64
+
+@testset "bridge" begin
+    i = InfRational(0, 1)
+    o = BoundedLinear(3, 5)
+    b = SKX.bridge(o, i)
+    ib = inverse(b)
+    @test domain(b) == domain(i)
+    @test domain(ib) == domain(o)
+    for _ in 1:100
+        x = randn() * 10
+        @test ib(b(x)) ≈ x
+        @test 3 ≤ b(x) ≤ 5
+    end
+end

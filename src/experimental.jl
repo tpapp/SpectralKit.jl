@@ -23,13 +23,15 @@ using Compat: @compat
 @compat public model_parameters_dimension, make_model_parameters,
     calculate_derived_quantities, make_approximation_basis, describe_policy_transformations,
     policy_coefficients_dimension, make_policy_functions, constant_initial_guess,
-    calculate_initial_guess, sum_of_squared_residuals
+    calculate_initial_guess, sum_of_squared_residuals, bridge
 
-import ..SpectralKit
+using ..SpectralKit: SpectralKit, Chebyshev, TransformedBasis, SmolyakBasis, PM1,
+    AbstractUnivariateTransformation, dimension, linear_combination, grid, domain,
+    transform_from, transform_to
 
 using ArgCheck: @argcheck
 using DocStringExtensions: FUNCTIONNAME, SIGNATURES
-using InverseFunctions: inverse
+import InverseFunctions
 
 ####
 #### utilities
@@ -63,18 +65,18 @@ y` for all `x` in the domain.
 """
 function constant_coefficients end
 
-function constant_coefficients(basis::SpectralKit.Chebyshev, y)
+function constant_coefficients(basis::Chebyshev, y)
     θ = zeros(basis.N)
     θ[1] = y
     θ
 end
 
-function constant_coefficients(basis::SpectralKit.TransformedBasis, y)
+function constant_coefficients(basis::TransformedBasis, y)
     constant_coefficients(parent(basis), y)
 end
 
-function constant_coefficients(basis::SpectralKit.SmolyakBasis, y)
-    θ = zeros(SpectralKit.dimension(basis))
+function constant_coefficients(basis::SmolyakBasis, y)
+    θ = zeros(dimension(basis))
     θ[1] = y
     θ
 end
@@ -148,18 +150,18 @@ $(USERNOTE)
 function calculate_residuals end
 
 function policy_coefficients_dimension(policy_transformations::NamedTuple, approximation_basis)
-    SpectralKit.dimension(approximation_basis) * length(policy_transformations)
+    dimension(approximation_basis) * length(policy_transformations)
 end
 
 function make_policy_functions(model_family, policy_transformations::NamedTuple,
                                approximation_basis, coefficients)
-    d = SpectralKit.dimension(approximation_basis)
+    d = dimension(approximation_basis)
     # QUESTION line below assumes all univariate, generalize?
     ranges = named_cumulative_ranges(map(_ -> d, policy_transformations))
     @argcheck firstindex(coefficients) == 1
     @argcheck lastindex(coefficients) == last(last(ranges))
     map(ranges, policy_transformations) do r, t
-        t ∘ SpectralKit.linear_combination(approximation_basis, @view coefficients[r])
+        t ∘ linear_combination(approximation_basis, @view coefficients[r])
     end
 end
 
@@ -184,14 +186,14 @@ function calculate_initial_guess(model_family, model_parameters, derived_quantit
                                  policy_transformations::NamedTuple{N},
                                  approximation_basis) where N
     constant_guess = constant_initial_guess(model_family, model_parameters, derived_quantities)
-    d = SpectralKit.dimension(approximation_basis)
+    d = dimension(approximation_basis)
     # QUESTION line below assumes all univariate, generalize?
     ranges = named_cumulative_ranges(map(_ -> d, policy_transformations))
     coefficients = zeros(last(last(ranges)))
     for (name, transformation) in pairs(policy_transformations)
         r = getproperty(ranges, name)
         transformed_y = getproperty(constant_guess, name)
-        y = inverse(transformation)(transformed_y)
+        y = InverseFunctions.inverse(transformation)(transformed_y)
         # FIXME a constant_coefficient! API would have fewer allocations
         coefficients[r] .= constant_coefficients(approximation_basis, y)
     end
@@ -206,7 +208,7 @@ grid that corresponds to the approximation basis.
 """
 function make_approximation_grid(model_family, model_parameters, approximation_parameters,
                                  derived_quantities, approximation_basis)
-    SpectralKit.grid(approximation_basis)
+    grid(approximation_basis)
 end
 
 """
@@ -229,5 +231,38 @@ function sum_of_squared_residuals(model_family, model_parameters, policy_functio
                                      gridpoint))
     end
 end
+
+####
+#### bridge — expose the univariate algebraic transformations
+####
+
+"""
+Implementation of [`bridge`](@ref). Not part of the (experimental) API.
+"""
+struct Bridge{O<:AbstractUnivariateTransformation,I<:AbstractUnivariateTransformation}
+    outer_transformation::O
+    inner_transformation::I
+end
+
+"""
+$(SIGNATURES)
+
+Transform using the `outer_transformation⁻¹ ∘ inner_transformation`. Return a callable
+that supports [`InverseFunctions.inverse`](@ref).
+"""
+function bridge(outer_transformation::AbstractUnivariateTransformation,
+                inner_transformation::AbstractUnivariateTransformation)
+    Bridge(outer_transformation, inner_transformation)
+end
+
+function (b::Bridge)(x)
+    (; outer_transformation, inner_transformation) = b
+    d = PM1()
+    transform_from(d, outer_transformation, transform_to(d, inner_transformation, x))
+end
+
+SpectralKit.domain(b::Bridge) = domain(b.inner_transformation)
+
+InverseFunctions.inverse(b::Bridge) = Bridge(b.inner_transformation, b.outer_transformation)
 
 end
