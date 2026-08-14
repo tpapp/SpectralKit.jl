@@ -1,3 +1,11 @@
+#####
+##### utilities
+#####
+
+####
+#### printing
+####
+
 const _SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹']
 
 const _SUBSCRIPT_DIGITS = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉']
@@ -52,6 +60,10 @@ Base.print(io::IO, s::SubScript) = print_number(io, _SUBSCRIPT_DIGITS, s.i)
 #         end
 #     end
 # end
+
+####
+#### conversions
+####
 
 """
 $(SIGNATURES)

@@ -46,7 +46,11 @@ function rand_in_domain(basis::TransformedBasis)
     transform_from(parent, transformation, rand_in_domain(parent))
 end
 
-"Flags (`true`) for elements in `a` that are within `atol` of some element in `b`."
+"""
+$(SIGNATURES)
+
+Flags (`true`) for elements in `a` that are within `atol` of some element in `b`.
+"""
 function is_approximately_in(a, b; atol = √eps())
     _same(a::Real, b::Real) = a == b || abs(a - b) ≤ atol # Inf = Inf, etc
     _same(a::AbstractVector, b::AbstractVector) = all(_same.(a, b))
@@ -54,7 +58,11 @@ function is_approximately_in(a, b; atol = √eps())
     map(a -> any(b -> _same(a, b), b), a)
 end
 
-"Are elements in `a` in `b`, approximately."
+"""
+$(SIGNATURES)
+
+Are elements in `a` in `b`, approximately.
+"""
 function is_approximate_subset(a, b; atol = √eps())
     sum(is_approximately_in(a, b; atol = atol)) == length(a)
 end
