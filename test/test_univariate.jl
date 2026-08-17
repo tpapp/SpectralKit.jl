@@ -115,55 +115,22 @@ end
     @test adjust_basis(basis0, -3) ≡ nothing
 end
 
-#     # compatible and incompatible grids
-#     @testset "augment Chebyshev coefficients — errors" begin
-#         basis = Chebyshev(InteriorGrid(), 5)
-#         θ = randn(5)
-#         # different grids are compatible
-#         basis2_G = Chebyshev(EndpointGrid(), 6)
-#         @test is_subset_basis(basis, basis2_G)
-#         # fewer dimensions are not compatible
-#         basis2_N = Chebyshev(InteriorGrid(), 4)
-#         @test !is_subset_basis(basis, basis2_N)
-#         @test_throws ArgumentError augment_coefficients(basis, basis2_N, θ)
-#         # too few coefficients
-#         @test_throws ArgumentError augment_coefficients(basis, basis, randn(4))
-#     end
-# end
-
-# @testset "augmentation of transformed basis" begin
-#     N = 5
-#     M = N + 3
-#     t = SemiInfRational(0.3, 0.9)
-#     grid_kind = InteriorGrid()
-#     basis =  Chebyshev(grid_kind, N) ∘ t
-#     basis′ =  Chebyshev(grid_kind, M) ∘ t
-#     @test is_subset_basis(basis, basis′)
-#     for _ in 1:100
-#         x = rand_in_domain(basis)
-#         θ = rand(N)
-#         θ′ = augment_coefficients(basis, basis′, θ)
-#         @test linear_combination(basis, θ, x) ≈ linear_combination(basis′, θ′, x)
-#     end
-# end
-
-# @testset "univariate derivatives" begin
-#     basis = Chebyshev(InteriorGrid(), 5)
-#     for (transformation, N) in ((BoundedLinear(-2, 3), 5),
-#                                 (SemiInfRational(0.7, 0.3), 1),
-#                                 (InfRational(0.4, 0.9), 1))
-#         D = 𝑑^Val(N)
-#         transformed_basis = basis ∘ transformation
-#         f = linear_combination(transformed_basis, randn(dimension(transformed_basis)))
-#         for _ in 1:50
-#             x = transform_from(basis, transformation, rand_in_domain(basis))
-#             y = f(D(x))
-#             for i in 0:N
-#                 @test y[i] ≈ DD(f, x, i) atol = 1e-6
-#             end
-#         end
-#     end
-# end
+@testset "univariate derivatives" begin
+    for (transformation, N) in ((BoundedLinear(lower = -2, upper = 3), 5),
+                                (SemiInfRational(endpoint = 0.7, scale = 0.3), 1),
+                                (InfRational(center = 0.4, scale = 0.9), 1))
+        basis = univariate_basis(Chebyshev(), Interior(), transformation, 3)
+        D = 𝑑^Val(N)
+        f = linear_combination(basis, randn(dimension(basis)))
+        for _ in 1:50
+            x = rand_in_domain(basis)
+            y = f(D(x))
+            for i in 0:N
+                @test y[i] ≈ DD(f, x, i) atol = 1e-6
+            end
+        end
+    end
+end
 
 # @testset "endpoint continuity for derivatives" begin
 #     N = 10
