@@ -34,17 +34,20 @@ Return a random value in the domain of the given basis, putting an atomic mass o
 
 The intention is to provide comprehensive testing for endpoints.
 """
-rand_in_domain(::Chebyshev) = rand_pm1()
-
-function rand_in_domain(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-    (; univariate_parent) = basis
-    SVector(ntuple(_ -> rand_in_domain(univariate_parent), Val(N)))
+function rand_in_domain(basis::SpectralKit.UnivariateBasis{Chebyshev})
+    transform_from(PM1(), basis.domain_transformation, rand_pm1())
 end
 
-function rand_in_domain(basis::TransformedBasis)
-    (; parent, transformation) = basis
-    transform_from(parent, transformation, rand_in_domain(parent))
-end
+# function rand_in_domain(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
+#     (; univariate_parent) = basis
+#     SVector(ntuple(_ -> rand_in_domain(univariate_parent), Val(N)))
+# end
+
+# FIXME remove
+# function rand_in_domain(basis::TransformedBasis)
+#     (; parent, transformation) = basis
+#     transform_from(parent, transformation, rand_in_domain(parent))
+# end
 
 """
 $(SIGNATURES)
@@ -54,7 +57,7 @@ Flags (`true`) for elements in `a` that are within `atol` of some element in `b`
 function is_approximately_in(a, b; atol = √eps())
     _same(a::Real, b::Real) = a == b || abs(a - b) ≤ atol # Inf = Inf, etc
     _same(a::AbstractVector, b::AbstractVector) = all(_same.(a, b))
-    _same(a::Tuple, b::Tuple) = mapreduce((x, y) -> abs(x - y), max, a, b) ≤ atol
+    _same(a::Tuple, b::Tuple) = mapreduce((x, y) -> abs(x - y), max, a, b; init = 0.0) ≤ atol
     map(a -> any(b -> _same(a, b), b), a)
 end
 
