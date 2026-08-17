@@ -97,13 +97,22 @@ end
 end
 
 @testset "Chebysev adjusted basis" begin
-transformation = SemiInfRational
-    level = 3
+    transformation = SemiInfRational(; endpoint = 3.0, scale = 7.0)
     for grid_kind in (Interior(), Endpoints())
-        basis = univariate_basis(Chebyshev(), grid_kind,
+        level0 = 3
+        basis0 = univariate_basis(Chebyshev(), grid_kind, transformation, level0)
+        θ0 = randn(dimension(basis0))
         for Δ in 1:4
-
-
+            basis = adjust_basis(basis0, Δ)
+            θ = adjust_coefficients(θ0, basis0, basis)
+            @test basis.level == basis0.level + Δ
+            for _ in 1:10
+                x = rand_in_domain(basis0)
+                @test linear_combination(basis0, θ0, x) ≈ linear_combination(basis, θ, x)
+            end
+        end
+    end
+    @test adjust_basis(basis0, -3) ≡ nothing
 end
 
 #     # compatible and incompatible grids

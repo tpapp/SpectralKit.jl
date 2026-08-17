@@ -183,7 +183,7 @@ end
 function adjust_basis(U::UnivariateBasis, Δ::Int)
     level′ = U.level + Δ
     if level′ > 0
-        UnivariateBasis(U.family, U.grid_kind, U.domain_transformation, U.level - Δ)
+        UnivariateBasis(U.family, U.grid_kind, U.domain_transformation, level′)
     else
         nothing
     end
@@ -195,9 +195,9 @@ function adjust_coefficients(θ1::AbstractVector, U1::UnivariateBasis{Chebyshev}
     @argcheck length(θ1) == d1 "coefficients are not compatible with the first basis"
     @argcheck(U1.domain_transformation == U2.domain_transformation,
               "incompatible domain transformations")
-    if d2 ≤ d1
-        θ1[1:d1]
-    else
+    if d2 ≤ d1                  # truncate
+        θ1[1:d2]
+    else                        # pad with zeros
         θ2 = zeros(d2)
         θ2[1:d1] .= θ1
         θ2
