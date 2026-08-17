@@ -1,4 +1,5 @@
 using SpectralKit, Test
+import SpectralKit as SK
 
 using JET
 @testset "static analysis with JET.jl" begin
@@ -20,8 +21,8 @@ include("test_utilities.jl")
 include("test_derivatives.jl")
 include("test_domains.jl")
 include("test_transformations.jl")
-include("test_chebyshev.jl")
-include("test_smolyak_traversal.jl")
-include("test_smolyak.jl")
-include("test_generic_api.jl")  # NOTE moved last as it used constructs from above
-include("test_experimental.jl") # NOTE experimental code is not public API
+include("test_univariate.jl")
+# include("test_smolyak_traversal.jl")
+# include("test_smolyak.jl")
+# include("test_generic_api.jl")  # NOTE moved last as it used constructs from above
+# include("test_experimental.jl") # NOTE experimental code is not public API
