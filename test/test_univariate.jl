@@ -6,11 +6,11 @@
 For testing Chebyshev blocks and shuffle.
 """
 function _shuffle(len::Int; endpoints = true)
-    if len == 1
-        return [[1]]
-    end
     if !endpoints
         len += 2            # for Interior, we start the algorithm with two extra points
+    end
+    if len == 1
+        return [[1]]
     end
     shuffle = [[len ÷ 2 + 1], [1, len]]
     while sum(length, shuffle) < len
@@ -39,10 +39,10 @@ end
             @test sum(block_lengths) == N
             S = _shuffle(N; endpoints = kind == Endpoints())
             @test block_lengths == map(length, S)
+            @test map(i -> SK._chebyshev_extremum_shuffle(kind, i, level), 1:N) == foldl(vcat, S)
         end
     end
 end
-
 
 @testset "Chebyshev grid" begin
     for kind in [Interior(), Endpoints()]
@@ -56,7 +56,6 @@ end
         end
     end
 end
-
 
 @testset "Chebyshev basics" begin
     transformation = BoundedLinear(; lower = 1.0, upper = 3.0)
@@ -91,6 +90,9 @@ end
             @test length(g) == N
             a, b = extrema(domain(basis))
             @test all(a .≤ g .≤ b)
+            if kind ≡ Interior()
+                @test all(a .< g .< b)
+            end
             @test all(x -> is_chebyshev_extrema(transform_to(PM1(), transformation, x),
                                                 kind ≡ Interior() ? N + 2 : N), g)
         end

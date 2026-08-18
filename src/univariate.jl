@@ -42,7 +42,8 @@ end
 $(SIGNATURES)
 
 Helper function to calculate the extrema of the `N`th Chebyshev polynomial, indexed by
-`1 ≤ i ≤ N` (not checked). `N==1` (the constant) is special cases to zero, for nesting.
+`1 ≤ i ≤ N` (not checked). Results are in `[-1,1]`. `N==1` (the constant) is special
+cased to zero, for nesting.
 """
 function _chebyshev_extremum(::Type{T}, i::Int, N::Int) where {T <: Real}
     if N == 1
@@ -52,47 +53,50 @@ function _chebyshev_extremum(::Type{T}, i::Int, N::Int) where {T <: Real}
     end
 end
 
-struct ChebyshevShuffle
-    N::Int
-    endpoints::Bool
-    ChebyshevShuffle(N::Int; endpoints) = new(N, endpoints)
-end
-
-function Base.length(shuffle::ChebyshevShuffle)
-    (; N, endpoints) = shuffle
-    endpoints ? N : max(1, N - 2)
-end
-
-Base.eltype(::Type{ChebyshevShuffle}) = Int
-
-function Base.iterate(shuffle::ChebyshevShuffle, state = (0, -1))
-    (; N, endpoints) = shuffle
-    i, step = state
-    if step == -1               # sentinel for first element
-        i = (N + 1) ÷ 2
-        if endpoints            # go to 1
-            i′ = 1
-            step′ = N - 1
-        else                    # skip endpoints, go to next layer
-            step′ = (N - 1) ÷ 2
-            i′ = step′ ÷ 2 + 1
-        end
-        i, (i′, step′)
-    elseif step ≤ 1             # N = 1, iteration is done
-        nothing
-    else
-        i′ = i + step
-        if i′ > N               # overrun, halve step and back
-            step = step ÷ 2
-            i′ = step ÷ 2 + 1
-        end
-        i, (i′, step)
-    end
-end
-
 ####
-#### grids
+#### kinds
 ####
+
+"""
+$(TYPEDEF)
+
+Like [`Endpoints`](@ref), but with endpoints dropped.
+"""
+struct Interior end
+
+"""
+$(SIGNATURES)
+
+Length of a univariate grid.
+"""
+function grid_length(::Chebyshev, ::Interior, level::Int)
+    @argcheck level ≥ 1
+    (1 << level) - 1
+end
+
+"""
+$(SIGNATURES)
+
+Length of a single block, these are concatenated to form the grid.
+"""
+function block_length(::Chebyshev, ::Interior, level::Int)
+    @argcheck level ≥ 1
+    1 << (level - 1)
+end
+
+"""
+$(SIGNATURES)
+
+Map `i` to an integer for calling [`_chebyshev_extremum_shuffle`](@ref). Interior
+indices start from `2`, endpoint from `1`. Caller is responsible for making sure that
+`i` is in the valid range `1:grid_length(Chebyshev(), kind, level)`, this is not checked.
+"""
+function _chebyshev_extremum_shuffle(kind::Interior, i::Int, level::Int)
+    p = ndigits(i, base = 2)    # trust constant folding fast path to top_set_bit
+    remainder = i - (1 << (p - 1))
+    start = 1 << (level - p)
+    start + remainder * (start << 1) + 1
+end
 
 """
 $(TYPEDEF)
@@ -114,22 +118,19 @@ function block_length(::Chebyshev, ::Endpoints, level::Int)
     level ≤ 2 ? level : 1 << (level - 2)
 end
 
-"""
-$(TYPEDEF)
-
-Like [`Endpoints`](@ref), but with endpoints dropped.
-"""
-struct Interior end
-
-function grid_length(::Chebyshev, ::Interior, level::Int)
-    @argcheck level ≥ 1
-    (1 << level) - 1
+function _chebyshev_extremum_shuffle(::Endpoints, i::Int, level::Int)
+    if i > 3
+        _chebyshev_extremum_shuffle(Interior(), i - 2, level - 1)
+    elseif i == 1
+        1 + 1 << (level - 2)
+    else
+        1 + (i - 2) * (1 << (level - 1))
+    end
 end
 
-function block_length(::Chebyshev, ::Interior, level::Int)
-    @argcheck level ≥ 1
-    1 << (level - 1)
-end
+####
+#### univariate bases
+####
 
 """
 Implementation of univariate bases. Not part of the API.
@@ -163,19 +164,18 @@ function basis_at(U::UnivariateBasis{Chebyshev}, x::Scalar)
     Iterators.take(ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x)), dimension(U))
 end
 
-function grid(::Type{T},
-              U::UnivariateBasis{Chebyshev,K}) where {T <: AbstractFloat,
-                                                      K <: Union{Interior,Endpoints}}
+function grid(::Type{T}, U::UnivariateBasis{Chebyshev}) where {T <: AbstractFloat}
     (; family, kind, domain_transformation, level) = U
     N = grid_length(family, kind, level)
-    if K ≡ Interior
-        N += 2                  # account for dropped endpoints
-        endpoints = false
+    if kind ≡ Interior()
+        N̂ = N + 2
     else
-        endpoints = true
+        @assert kind ≡ Endpoints()
+        N̂ = N
     end
-    (transform_from(PM1(), U.domain_transformation, _chebyshev_extremum(T, i, N))
-     for i in ChebyshevShuffle(N; endpoints))
+    (transform_from(PM1(), U.domain_transformation,
+                    _chebyshev_extremum(T, _chebyshev_extremum_shuffle(kind, i, level), N̂))
+     for i in 1:N)
 end
 
 function adjust_basis(U::UnivariateBasis, Δ::Int)
