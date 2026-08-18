@@ -2,9 +2,8 @@
 ##### Generic API
 #####
 
-export is_function_basis, dimension, basis_at, linear_combination, InteriorGrid,
-    InteriorGrid2, EndpointGrid, grid, collocation_matrix, augment_coefficients,
-    is_subset_basis, transformation
+export is_function_basis, dimension, basis_at, linear_combination, grid, collocation_matrix,
+    adjust_basis, adjust_coefficients
 
 """
 $(TYPEDEF)
@@ -16,8 +15,6 @@ Not part of the API, just used internally for dispatch. See [`is_function_basis`
 abstract type FunctionBasis end
 
 Broadcast.broadcastable(basis::FunctionBasis) = Ref(basis)
-
-abstract type UnivariateBasis <: FunctionBasis end
 
 abstract type MultivariateBasis <: FunctionBasis end
 
@@ -31,7 +28,7 @@ interface:
 
 - [`domain`](@ref) for querying the domain,
 
-- [`dimension`](@ref) for the dimension,
+- [`parameter_dimension`](@ref) for the dimension,
 
 - [`basis_at`](@ref) for function evaluation,
 
@@ -69,7 +66,7 @@ function domain end
 """
 `$(FUNCTIONNAME)(basis)`
 
-Return the dimension of `basis`, a positive `Int`.
+Return the dimension parameters of `basis`, a positive `Int`.
 """
 function dimension end
 
@@ -160,38 +157,6 @@ though working with `basis ∘ transformation` may be preferred.
 linear_combination(basis, θ) = LinearCombination(basis, θ)
 
 """
-$(TYPEDEF)
-
-Abstract type for all grid specifications.
-"""
-abstract type AbstractGrid end
-
-"""
-$(TYPEDEF)
-
-Grid with interior points (eg Gauss-Chebyshev).
-"""
-struct InteriorGrid <: AbstractGrid end
-
-"""
-$(TYPEDEF)
-
-Grid that includes endpoints (eg Gauss-Lobatto).
-
-!!! note
-    For small dimensions may fall back to a grid that does not contain endpoints.
-"""
-struct EndpointGrid <: AbstractGrid end
-
-"""
-$(TYPEDEF)
-
-Grid with interior points that results in smaller grids than `InteriorGrid` when nested.
-Equivalent to an `EndpointGrid` with endpoints dropped.
-"""
-struct InteriorGrid2 <: AbstractGrid end
-
-"""
 `$(FUNCTIONNAME)([T], basis)`
 
 Return an iterator for the grid recommended for collocation, with `dimension(basis)`
@@ -227,104 +192,100 @@ function collocation_matrix(basis, x = grid(basis))
 end
 
 """
-`$(FUNCTIONNAME)(basis1, basis2, θ1)`
+`$(FUNCTIONNAME)(basis, Δ)`
 
-Return a set of coefficients `θ2` for `basis2` such that
+Make `basis` thicker (`Δ > 0`) or thinner (`Δ < 0`). Return `nothing` if this is not
+possible.
+"""
+function adjust_basis end
+
+"""
+`$(FUNCTIONNAME)(θ1, basis1, basis2)`
+
+Return a set of coefficients `θ2` for `basis2` such that is either augmentes
 ```julia
-linear_combination(basis1, θ1, x) == linear_combination(basis2, θ2, x)
+linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
 ```
-for any `x` in the domain. In practice this means padding with zeros.
+for any `x` in the domain. In practice this means either padding with zeros, or
+truncating the coefficients.
 
-Throw a `ArgumentError` if the bases are incompatible with each other or `x`, or this is not
-possible. Methods may not be defined for incompatible bases, compatibility between bases can
-be checked with [`is_subset_basis`](@ref).
+Throw a `ArgumentError` if this is not possible. See [`adjust_basis`](@ref).
 """
-function augment_coefficients end
+function adjust_coefficients end
 
-"""
-$(SIGNATURES)
+# FIXME remove this
+# ####
+# #### transformed basis
+# ####
 
-Return a `Bool` indicating whether coefficients in `basis1` can be augmented to `basis2`
-with [`augment_coefficients`](@ref).
+# """
+# Transform the domain of a basis.
+# """
+# struct TransformedBasis{B,T} <: FunctionBasis
+#     parent::B
+#     transformation::T
+#     function TransformedBasis(parent::B, transformation::T) where {B,T}
+#         @argcheck domain_kind(domain(parent)) ≡ domain_kind(T)
+#         new{B,T}(parent, transformation)
+#     end
+# end
 
-!!! note
-    `true` does not mean that coefficients from `basis1` can just be padded with zeros,
-    since they may be in different positions. Always use [`augment_coefficients`](@ref).
-"""
-is_subset_basis(basis1::FunctionBasis, basis2::FunctionBasis) = false
+# function Base.:(∘)(parent::FunctionBasis, transformation)
+#     TransformedBasis(parent, transformation)
+# end
 
-####
-#### transformed basis
-####
+# Base.parent(basis::TransformedBasis) = basis.parent
 
-"""
-Transform the domain of a basis.
-"""
-struct TransformedBasis{B,T} <: FunctionBasis
-    parent::B
-    transformation::T
-    function TransformedBasis(parent::B, transformation::T) where {B,T}
-        @argcheck domain_kind(domain(parent)) ≡ domain_kind(T)
-        new{B,T}(parent, transformation)
-    end
-end
+# """
+# $(SIGNATURES)
 
-function Base.:(∘)(parent::FunctionBasis, transformation)
-    TransformedBasis(parent, transformation)
-end
+# Return the transformation of transformed bases, or `nothing` it not applicable.
+# """
+# transformation(basis::TransformedBasis) = basis.transformation
 
-Base.parent(basis::TransformedBasis) = basis.parent
+# transformation(::FunctionBasis) = nothing
 
-"""
-$(SIGNATURES)
+# domain(basis::TransformedBasis) = domain(basis.transformation)
 
-Return the transformation of transformed bases, or `nothing` it not applicable.
-"""
-transformation(basis::TransformedBasis) = basis.transformation
+# dimension(basis::TransformedBasis) = dimension(basis.parent)
 
-transformation(::FunctionBasis) = nothing
+# function basis_at(basis::TransformedBasis, x)
+#     (; parent, transformation) = basis
+#     basis_at(parent, transform_to(domain(parent), transformation, x))
+# end
 
-domain(basis::TransformedBasis) = domain(basis.transformation)
+# function grid(::Type{T}, basis::TransformedBasis) where T
+#     (; parent, transformation) = basis
+#     d = domain(parent)
+#     Iterators.map(x -> transform_from(d, transformation, x), grid(T, parent))
+# end
 
-dimension(basis::TransformedBasis) = dimension(basis.parent)
+# function Base.:(∘)(linear_combination::LinearCombination, transformation)
+#     (; basis, θ) = linear_combination
+#     LinearCombination(basis ∘ transformation, θ)
+# end
 
-function basis_at(basis::TransformedBasis, x)
-    (; parent, transformation) = basis
-    basis_at(parent, transform_to(domain(parent), transformation, x))
-end
+# Base.length(basis::TransformedBasis{<:MultivariateBasis}) = length(basis.parent)
 
-function grid(::Type{T}, basis::TransformedBasis) where T
-    (; parent, transformation) = basis
-    d = domain(parent)
-    Iterators.map(x -> transform_from(d, transformation, x), grid(T, parent))
-end
+# function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
+#     (; parent, transformation) = basis
+#     TransformedBasis(parent[i], Tuple(transformation)[i])
+# end
 
-function Base.:(∘)(linear_combination::LinearCombination, transformation)
-    (; basis, θ) = linear_combination
-    LinearCombination(basis ∘ transformation, θ)
-end
+# function is_subset_basis(basis1::TransformedBasis, basis2::TransformedBasis)
+#     basis1.transformation ≡ basis2.transformation &&
+#         is_subset_basis(basis1.parent, basis2.parent)
+# end
 
-Base.length(basis::TransformedBasis{<:MultivariateBasis}) = length(basis.parent)
+# function augment_coefficients(basis1::TransformedBasis, basis2::TransformedBasis, θ1)
+#     @argcheck is_subset_basis(basis1, basis2)
+#     augment_coefficients(basis1.parent, basis2.parent, θ1)
+# end
 
-function Base.getindex(basis::TransformedBasis{<:MultivariateBasis}, i::Int)
-    (; parent, transformation) = basis
-    TransformedBasis(parent[i], Tuple(transformation)[i])
-end
+# function transform_to(basis::FunctionBasis, transformation, x)
+#     transform_to(domain(basis), transformation, x)
+# end
 
-function is_subset_basis(basis1::TransformedBasis, basis2::TransformedBasis)
-    basis1.transformation ≡ basis2.transformation &&
-        is_subset_basis(basis1.parent, basis2.parent)
-end
-
-function augment_coefficients(basis1::TransformedBasis, basis2::TransformedBasis, θ1)
-    @argcheck is_subset_basis(basis1, basis2)
-    augment_coefficients(basis1.parent, basis2.parent, θ1)
-end
-
-function transform_to(basis::FunctionBasis, transformation, x)
-    transform_to(domain(basis), transformation, x)
-end
-
-function transform_from(basis::FunctionBasis, transformation, x)
-    transform_from(domain(basis), transformation, x)
-end
+# function transform_from(basis::FunctionBasis, transformation, x)
+#     transform_from(domain(basis), transformation, x)
+# end
