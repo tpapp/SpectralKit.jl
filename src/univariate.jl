@@ -21,23 +21,21 @@ struct Chebyshev end
 
 struct ChebyshevIterator{T}
     x::T
-    N::Int
 end
 
 Base.eltype(::Type{<:ChebyshevIterator{T}}) where {T} = T
 
-Base.length(itr::ChebyshevIterator) = itr.N
+Base.IteratorSize(::Type{<:ChebyshevIterator}) = Base.IsInfinite()
 
 function Base.iterate(itr::ChebyshevIterator{T}) where T
     (; x) = itr
-    _one(T), (2, _one(T), x)
+    _one(T), (_one(T), x)
 end
 
-function Base.iterate(itr::ChebyshevIterator{T}, (i, fp, fpp)) where T
-    (; x, N) = itr
-    i > N && return nothing
+function Base.iterate(itr::ChebyshevIterator{T}, (fp, fpp)) where T
+    (; x) = itr
     f = _sub(_mul(2, x, fp), fpp)
-    f::T, (i + 1, f, fp)
+    f::T, (f, fp)
 end
 
 """
@@ -162,7 +160,7 @@ domain(U::UnivariateBasis) = domain(U.domain_transformation)
 dimension(U::UnivariateBasis) = grid_length(U.family, U.kind, U.level)
 
 function basis_at(U::UnivariateBasis{Chebyshev}, x::Scalar)
-    ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x), dimension(U))
+    Iterators.take(ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x)), dimension(U))
 end
 
 function grid(::Type{T},
