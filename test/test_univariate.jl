@@ -33,9 +33,9 @@ end
 
 @testset "blocks and shuffle" begin
     for kind in [Interior(), Endpoints()]
-        for level in 1:5
+        for level in 0:5
             N = SK.grid_length(Chebyshev(), kind, level)
-            block_lengths = map(level -> SK.block_length(Chebyshev(), kind, level), 1:level)
+            block_lengths = map(level -> SK.block_length(Chebyshev(), kind, level), 0:level)
             @test sum(block_lengths) == N
             S = _shuffle(N; endpoints = kind == Endpoints())
             @test block_lengths == map(length, S)

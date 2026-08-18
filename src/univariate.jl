@@ -70,8 +70,8 @@ $(SIGNATURES)
 Length of a univariate grid.
 """
 function grid_length(::Chebyshev, ::Interior, level::Int)
-    @argcheck level ≥ 1
-    (1 << level) - 1
+    @argcheck level ≥ 0
+    (1 << (level + 1)) - 1
 end
 
 """
@@ -80,8 +80,8 @@ $(SIGNATURES)
 Length of a single block, these are concatenated to form the grid.
 """
 function block_length(::Chebyshev, ::Interior, level::Int)
-    @argcheck level ≥ 1
-    1 << (level - 1)
+    @argcheck level ≥ 0
+    1 << level
 end
 
 """
@@ -92,8 +92,8 @@ indices start from `2`, endpoint from `1`. Caller is responsible for making sure
 `i` is in the valid range `1:grid_length(Chebyshev(), kind, level)`, this is not checked.
 """
 function _chebyshev_extremum_shuffle(kind::Interior, i::Int, level::Int)
-    p = ndigits(i, base = 2)    # trust constant folding fast path to top_set_bit
-    remainder = i - (1 << (p - 1))
+    p = ndigits(i, base = 2) - 1    # trust constant folding fast path to top_set_bit
+    remainder = i - (1 << p)
     start = 1 << (level - p)
     start + remainder * (start << 1) + 1
 end
@@ -109,22 +109,22 @@ Chebyshev-Lobatto grid. The extrema of Chebyshev polynomials, including endpoint
 struct Endpoints end
 
 function grid_length(::Chebyshev, ::Endpoints, level::Int)
-    @argcheck level ≥ 1
-    (level ≤ 2 ? (level - 1) * 2 : (1 << (level - 1))) + 1
+    @argcheck level ≥ 0
+    (level ≤ 1 ? level * 2 : (1 << level)) + 1
 end
 
 function block_length(::Chebyshev, ::Endpoints, level::Int)
-    @argcheck level ≥ 1
-    level ≤ 2 ? level : 1 << (level - 2)
+    @argcheck level ≥ 0
+    level ≤ 1 ? (level + 1) : (1 << (level - 1))
 end
 
 function _chebyshev_extremum_shuffle(::Endpoints, i::Int, level::Int)
     if i > 3
         _chebyshev_extremum_shuffle(Interior(), i - 2, level - 1)
     elseif i == 1
-        1 + 1 << (level - 2)
+        1 + 1 << (level - 1)
     else
-        1 + (i - 2) * (1 << (level - 1))
+        1 + (i - 2) * (1 << level)
     end
 end
 
@@ -147,9 +147,8 @@ $(SIGNATURES)
 
 Univariate basis from `family`, using the given `kind`.
 
-`level` is an integer, starting from `1`, specifying the number of *blocks* used to
-build the grid, which in turn determine
-
+`level` is an integer, starting from `0`, specifying the number of *blocks* used to
+build the grid.
 """
 function univariate_basis(family, kind, domain_transformation, level)
     @argcheck level ≥ 1

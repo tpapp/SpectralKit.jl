@@ -31,7 +31,7 @@ $(SIGNATURES)
 Test if `x` is an extrema of the `n`th Chebyshev polynomial, by checking derivatives to
 be within tolerance (±1 special cased).
 """
-function is_chebyshev_extrema(x, n; tol = 1e-10)
+function is_chebyshev_extrema(x, n; tol = 1e-8)
     if abs(abs(x) - 1) ≤ tol
         true
     else
