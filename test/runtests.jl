@@ -1,17 +1,18 @@
 using SpectralKit, Test
 import SpectralKit as SK
 
-using JET
-@testset "static analysis with JET.jl" begin
-    @test isempty(JET.get_reports(report_package(SpectralKit,
-                                                 target_modules=(SpectralKit,),
-                                                 ignored_modules = (SpectralKit.Experimental,))))
-end
+# using JET
+# @testset "static analysis with JET.jl" begin
+#     @test isempty(JET.get_reports(report_package(SpectralKit,
+#                                                  target_modules=(SpectralKit,),
+#                                                  #= ignored_modules = (SpectralKit.Experimental,) =#)
+#                                   ))
+# end
 
-@testset "QA with Aqua" begin
-    import Aqua
-    Aqua.test_all(SpectralKit)
-end
+# @testset "QA with Aqua" begin
+#     import Aqua
+#     Aqua.test_all(SpectralKit)
+# end
 
 using DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
 

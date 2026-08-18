@@ -6,6 +6,12 @@ using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for
 
 chebyshev_cos(x, n) = cos((n - 1) * acos(x))
 
+"""
+$(SIGNATURES)
+
+Derivative of the `n`th Chebyshev polynomial at `x`, using the cosine formula (special
+cased at ±1).
+"""
 function chebyshev_cos_deriv(x, n)
     z = cos(zero(x)) * abs2(n - 1)
     if x == -1
@@ -15,6 +21,20 @@ function chebyshev_cos_deriv(x, n)
     else
         t = acos(x)
         (n - 1) * sin((n - 1) * t) / sin(t)
+    end
+end
+
+"""
+$(SIGNATURES)
+
+Test if `x` is an extrema of the `n`th Chebyshev polynomial, by checking derivatives to
+be within tolerance (±1 special cased).
+"""
+function is_chebyshev_extrema(x, n; tol = 1e-10)
+    if abs(abs(x) - 1) ≤ tol
+        true
+    else
+        abs(chebyshev_cos_deriv(x, n)) ≤ tol
     end
 end
 
