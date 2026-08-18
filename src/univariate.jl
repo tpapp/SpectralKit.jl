@@ -138,7 +138,7 @@ Implementation of univariate bases. Not part of the API.
 """
 @concrete struct UnivariateBasis <: FunctionBasis
     family
-    grid_kind
+    kind
     domain_transformation
     level
 end
@@ -146,20 +146,20 @@ end
 """
 $(SIGNATURES)
 
-Univariate basis from `family`, using the given `grid_kind`..
+Univariate basis from `family`, using the given `kind`.
 
 `level` is an integer, starting from `1`, specifying the number of *blocks* used to
 build the grid, which in turn determine
 
 """
-function univariate_basis(family, grid_kind, domain_transformation, level)
+function univariate_basis(family, kind, domain_transformation, level)
     @argcheck level ≥ 1
-    UnivariateBasis(family, grid_kind, domain_transformation, level)
+    UnivariateBasis(family, kind, domain_transformation, level)
 end
 
 domain(U::UnivariateBasis) = domain(U.domain_transformation)
 
-dimension(U::UnivariateBasis) = grid_length(U.family, U.grid_kind, U.level)
+dimension(U::UnivariateBasis) = grid_length(U.family, U.kind, U.level)
 
 function basis_at(U::UnivariateBasis{Chebyshev}, x::Scalar)
     ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x), dimension(U))
@@ -168,8 +168,8 @@ end
 function grid(::Type{T},
               U::UnivariateBasis{Chebyshev,K}) where {T <: AbstractFloat,
                                                       K <: Union{Interior,Endpoints}}
-    (; family, grid_kind, domain_transformation, level) = U
-    N = grid_length(family, grid_kind, level)
+    (; family, kind, domain_transformation, level) = U
+    N = grid_length(family, kind, level)
     if K ≡ Interior
         N += 2                  # account for dropped endpoints
         endpoints = false
@@ -183,7 +183,7 @@ end
 function adjust_basis(U::UnivariateBasis, Δ::Int)
     level′ = U.level + Δ
     if level′ > 0
-        UnivariateBasis(U.family, U.grid_kind, U.domain_transformation, level′)
+        UnivariateBasis(U.family, U.kind, U.domain_transformation, level′)
     else
         nothing
     end

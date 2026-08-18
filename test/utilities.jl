@@ -2,7 +2,8 @@
 ##### utility functions for tests
 #####
 
-using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for rand_in_domain
+# FIXME reenable what is needed
+# using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for rand_in_domain
 
 chebyshev_cos(x, n) = cos((n - 1) * acos(x))
 
