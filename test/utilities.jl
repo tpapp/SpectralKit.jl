@@ -2,6 +2,9 @@
 ##### utility functions for tests
 #####
 
+"kinds we test on"
+const KINDS = [Endpoints(), Interior()]
+
 # FIXME reenable what is needed
 # using SpectralKit: TransformedBasis, SmolyakBasis, SmolyakIndices # dispatch for rand_in_domain
 

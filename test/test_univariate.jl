@@ -32,7 +32,7 @@ function _shuffle(len::Int; endpoints = true)
 end
 
 @testset "blocks and shuffle" begin
-    for kind in [Interior(), Endpoints()]
+    for kind in KINDS
         for level in 0:5
             N = SK.grid_length(Chebyshev(), kind, level)
             block_lengths = map(level -> SK.block_length(Chebyshev(), kind, level), 0:level)
@@ -45,7 +45,7 @@ end
 end
 
 @testset "Chebyshev grid" begin
-    for kind in [Interior(), Endpoints()]
+    for kind in KINDS
         previous = Float64[]
         for level in 1:7
             b = univariate_basis(Chebyshev(), kind,
@@ -60,7 +60,7 @@ end
 @testset "Chebyshev basics" begin
     transformation = BoundedLinear(; lower = 1.0, upper = 3.0)
     @test_throws ArgumentError univariate_basis(Chebyshev(), Endpoints(), transformation, 0)
-    for kind in (Interior(), Endpoints())
+    for kind in KINDS
         for level in 1:5
             basis = univariate_basis(Chebyshev(), kind, transformation, level)
             @test is_function_basis(basis)
@@ -101,7 +101,7 @@ end
 
 @testset "Chebysev adjusted basis" begin
     transformation = SemiInfRational(; endpoint = 3.0, scale = 7.0)
-    for kind in (Interior(), Endpoints())
+    for kind in KINDS
         level0 = 3
         basis0 = univariate_basis(Chebyshev(), kind, transformation, level0)
         θ0 = randn(dimension(basis0))
