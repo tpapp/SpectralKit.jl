@@ -186,7 +186,8 @@ function adjust_basis(U::UnivariateBasis, Δ::Int)
     end
 end
 
-function adjust_coefficients(θ1::AbstractVector, U1::UnivariateBasis{Chebyshev}, U2::UnivariateBasis{Chebyshev})
+function adjust_coefficients(θ1::AbstractVector,
+                             U1::UnivariateBasis{F}, U2::UnivariateBasis{F}) where F
     d1 = dimension(U1)
     d2 = dimension(U2)
     @argcheck length(θ1) == d1 "coefficients are not compatible with the first basis"

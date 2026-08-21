@@ -123,3 +123,57 @@ function DD(f, x, n = 1; p = 10)
         central_fdm(p, n)(f, x)
     end
 end
+
+"""
+$(SIGNATURES)
+
+A vector of Smolyak indices traversed in column-major order. For testing.
+"""
+function naive_smolyak_indices(family, kind, ::Val{N}, total, each) where N
+    # map indices to levels
+    I = SpectralKit.grid_length(family, kind, total)
+    index_to_level = zeros(I)
+    i = 0
+    for level in 0:total
+        b = SpectralKit.block_length(family, kind, level)
+        index_to_level[(i+1):(i+b)] .= level
+        i += b
+    end
+    # collect indices
+    indices = Vector{NTuple{N,Int}}()
+    for ι in Iterators.product(ntuple(_ -> 1:I, Val(N))...)
+        levels = map(i -> index_to_level[i], ι)
+        if all(levels .≤ each) && sum(levels) ≤ total
+            push!(indices, ι)
+        end
+    end
+    indices
+end
+
+"""
+$(SIGNATURES)
+
+Test the Smolyak iterator implementation building blocks directly using a parallel,
+naive calculation and checking invariants.
+"""
+function test_smolyak_step(family, kind, total, each, f, itrs::NTuple{N}) where N
+    i = 1
+    reference = naive_smolyak_indices(family, kind, Val(N), total, each)
+    x, slack, remainders, states, cached, levels = SpectralKit.__smolyak_init(family, kind, total, f, itrs)
+    while true
+        @test slack + sum(levels) == total # simple sanity check
+        cs = map((itr, i) -> first(Iterators.drop(itr, i - 1)),
+                 itrs, reference[i])
+        expected_x, expected_cached... = reverse(accumulate(f, reverse(cs)))
+        @test x == expected_x
+        @test cached == expected_cached
+        next = SpectralKit.__smolyak_step(family, kind, each, f, itrs, slack, remainders,
+                                          states, cached, levels)
+        next ≡ nothing && break
+        (x, Δ, remainders, states, cached, levels) = next
+        slack += Δ
+        i += 1
+    end
+    @test i == length(reference) # we used up all elements
+    nothing
+end
