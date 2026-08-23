@@ -18,7 +18,12 @@ $(SIGNATURES) → x, Δ, remainders′, states′, cached′, levels′
 
 Step through Smolyak indices of iterators.
 
-`itrs` yield the `xs`, `(x, cached...)` is equivalent to `reverse(accumulate(reverse(...)))` applied to t
+`itrs` yield the `xs`.
+
+`(x, cached...)` is equivalent to `reverse(accumulate(reverse(...)))` applied to the `xs`.
+
+`Δ` is the change in `slack`. Design note: easier to apply recursively than `slack`,
+caller should make the adjustment.
 """
 function __smolyak_step(family, kind, each::Int, f::F, itrs::NTuple{N},
                         slack::Int, remainders::NTuple{N}, states::NTuple{N},
