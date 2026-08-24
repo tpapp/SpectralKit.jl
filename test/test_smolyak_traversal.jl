@@ -6,7 +6,7 @@
                 for each in 1:4
                     xs = XS[1:N]
                     test_smolyak_step(Chebyshev(), Interior(), total, each,
-                                      (a, b) -> isempty(b) ? a : a * first(b),
+                                      (a, b) -> isempty(b) ? @show((a,)) : @show((a * first(b), b...)),
                                       map(SpectralKit.ChebyshevIterator, xs))
                 end
             end

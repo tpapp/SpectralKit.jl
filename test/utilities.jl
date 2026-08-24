@@ -156,21 +156,20 @@ $(SIGNATURES)
 Test the Smolyak iterator implementation building blocks directly using a parallel,
 naive calculation and checking invariants.
 """
-function test_smolyak_step(family, kind, total, each, f, itrs::NTuple{N}) where N
+function test_smolyak_step(family, kind, total, each, f, itrs::NTuple{N,Any}) where N
     i = 1
     reference = naive_smolyak_indices(family, kind, Val(N), total, each)
-    x, slack, remainders, states, cached, levels = SpectralKit.__smolyak_init(family, kind, total, f, itrs)
+    (accum, slack, remainders, states, levels) = SpectralKit.__smolyak_init(family, kind,
+                                                                            total, f, itrs)
     while true
         @test slack + sum(levels) == total # simple sanity check
         cs = map((itr, i) -> first(Iterators.drop(itr, i - 1)),
                  itrs, reference[i])
-        expected_x, expected_cached... = reverse(accumulate(f, reverse(cs)))
-        @test x == expected_x
-        @test cached == expected_cached
-        next = SpectralKit.__smolyak_step(family, kind, each, f, itrs, slack, remainders,
-                                          states, cached, levels)
+        @test accum == foldr(f, cs; init = ())
+        next = SpectralKit.__smolyak_step(family, kind, each, f, itrs,
+                                          accum, slack, remainders, states, levels)
         next ≡ nothing && break
-        (x, Δ, remainders, states, cached, levels) = next
+        (accum, Δ, remainders, states, levels) = next
         slack += Δ
         i += 1
     end

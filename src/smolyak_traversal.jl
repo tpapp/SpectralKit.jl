@@ -2,69 +2,73 @@
 ##### Smolyak implementation details
 #####
 
-function __smolyak_init(family, kind, total::Int, f::F, itrs::NTuple{N}) where {F,N}
+"""
+$(SIGNATURES) → accum, slack, remainders, states, levels
+
+Initialize the state for [`__smolyak_step`](@ref), states are documented there.
+"""
+function __smolyak_init(family, kind, total::Int, f::F, itrs::NTuple{N,Any}) where {F,N}
     slack = total
     r = block_length(family, kind, 0)
     remainders = ntuple(_ -> r - 1, Val(N))
     itr_results = map(iterate, itrs)
     states = map(last, itr_results)
     levels = ntuple(_ -> 0, Val(N))
-    x, cached... = reverse(accumulate(f, reverse(map(first, itr_results))))
-    x, slack, remainders, states, cached, levels
+    accum = foldr(f, map(first, itr_results); init = ())
+    accum, slack, remainders, states, levels
 end
 
 """
-$(SIGNATURES) → x, Δ, remainders′, states′, cached′, levels′
+$(SIGNATURES) → accum, Δ, remainders′, states′, levels′
 
 Step through Smolyak indices of iterators.
 
-`itrs` yield the `xs`.
+`itrs` yield the `xs`. **The iterators should be stateless.**
 
-`(x, cached...)` is equivalent to `reverse(accumulate(reverse(...)))` applied to the `xs`.
+`accum` is equivalent to `foldr(f, xs)`. `f` should map a value and a tuple to a tuple
+of one more element.
 
-`Δ` is the change in `slack`. Design note: easier to apply recursively than `slack`,
-caller should make the adjustment.
+`slack` is the `total - sum(levels)`. `Δ` is the change in `slack`. Design note: easier
+to apply recursively than `slack`, caller should make the adjustment.
+
+`remainders` contains the count of elements left in each level before we move to a
+different combination.
+
+`states` are states of iterators. `levels` are the levels currently visited.
 """
-function __smolyak_step(family, kind, each::Int, f::F, itrs::NTuple{N},
-                        slack::Int, remainders::NTuple{N}, states::NTuple{N},
-                        cached, levels::NTuple{N}) where {F,N}
-    @assert length(cached) == N - 1
+function __smolyak_step(family, kind, each::Int, f::F, itrs::NTuple{N,Any},
+                        accum::NTuple{N,Any}, slack::Int, remainders::NTuple{N,Any},
+                        states::NTuple{N,Any}, levels::NTuple{N,Any}) where {F,N}
     I1, Iτ... = itrs
-    s1, sτ... = states
+    a1, aτ... = accum
     r1, rτ... = remainders
+    s1, sτ... = states
     l1, lτ... = levels
     if r1 > 0                   # step within block
         x1, s1′ = iterate(I1, s1)
-        (f(x1, cached),         # product
+        (f(x1, aτ),
          0,                     # no change in slack
          (r1 - 1, rτ...),       # one less element in 1
          (s1′, sτ...),          # step iterator
-         cached,
          levels)
     elseif l1 < each && slack > 0 # next block, same tail
         x1, s1′ = iterate(I1, s1)
-        (f(x1, cached),         # step to next block
+        (f(x1, aτ),
          -1,                    # decrease slack
          (block_length(family, kind, l1 + 1) - 1, rτ...), # remaining elements: all in block
-
          (s1′, sτ...),          # step state 1
-         cached,
          (l1+1, lτ...))         # next level
     elseif N == 1
         nothing                 # done with iteration
     else                        # go into tail
-        _, cτ... = cached
-        next = __smolyak_step(family, kind, each, f, Iτ,
-                              slack + l1, rτ, sτ, cτ, lτ)
+        next = __smolyak_step(family, kind, each, f, Iτ, aτ, slack + l1, rτ, sτ, lτ)
         next ≡ nothing && return nothing
-        xτ, Δτ, rτ′, sτ′, cτ′, lτ′ = next
+        aτ′, Δτ, rτ′, sτ′, lτ′ = next
         x1, s1 = iterate(I1)
-        cached′ = (xτ, cτ′...)
-        (f(x1, cached′),
+        (f(x1, aτ′),
          l1 + Δτ,                                     # more slack as we reset 1
          (block_length(family, kind, 0) - 1, rτ′...), # all remaining in block 0
          (s1, sτ′...),                                # states with tail
-         cached′,                                     # cache updated as above
          (0, lτ′...))                                 # back to level 0 here
     end
 end

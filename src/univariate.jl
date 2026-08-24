@@ -163,18 +163,29 @@ function basis_at(U::UnivariateBasis{Chebyshev}, x::Scalar)
     Iterators.take(ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x)), dimension(U))
 end
 
-function grid(::Type{T}, U::UnivariateBasis{Chebyshev}) where {T <: AbstractFloat}
+@concrete struct ChebyshevGrid{T} <: AbstractVector{T}
+    kind
+    domain_transformation
+    level::Int
+    N::Int
+    N̂::Int
+end
+
+Base.size(g::ChebyshevGrid) = (g.N, )
+
+function Base.getindex(g::ChebyshevGrid{T}, i::Int) where T
+    (; kind, domain_transformation, level, N̂) = g
+    transform_from(PM1(), domain_transformation,
+                   _chebyshev_extremum(T, _chebyshev_extremum_shuffle(kind, i, level), N̂))::T
+end
+
+function grid(::Type{T},
+              U::UnivariateBasis{Chebyshev,
+                                 <:Union{Endpoints,Interior}}) where {T <: AbstractFloat}
     (; family, kind, domain_transformation, level) = U
     N = grid_length(family, kind, level)
-    if kind ≡ Interior()
-        N̂ = N + 2
-    else
-        @assert kind ≡ Endpoints()
-        N̂ = N
-    end
-    (transform_from(PM1(), U.domain_transformation,
-                    _chebyshev_extremum(T, _chebyshev_extremum_shuffle(kind, i, level), N̂))
-     for i in 1:N)
+    ChebyshevGrid{T}(kind, domain_transformation, level, N,
+                     kind ≡ Interior() ? N̂ = N + 2 : N)
 end
 
 function adjust_basis(U::UnivariateBasis, Δ::Int)

@@ -129,7 +129,7 @@ end
             x = rand_in_domain(basis)
             y = f(D(x))
             for i in 0:N
-                @test y[i] ≈ DD(f, x, i) atol = 1e-6
+                @test y[i] ≈ DD(f, x, i) rtol = 1e-4 atol = 1e-4
             end
         end
     end

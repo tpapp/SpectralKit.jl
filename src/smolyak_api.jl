@@ -2,25 +2,85 @@
 ##### Smolyak bases
 #####
 
-export smolyak_basis
+export SmolyakLevel, smolyak_basis
 
-struct SmolyakBasis{I<:SmolyakIndices,U<:UnivariateBasis} <: MultivariateBasis
-    smolyak_indices::I
-    univariate_parent::U
+struct SmolyakLevel
+    total::Int
+    each::Int
+    @doc """
+    $(SIGNATURES)
+
+    Level specification for a Smolyak basis.
+
+    `total` constrains the *sum* of levels in all axes.
+
+    `each` constrains the level along *each* axis.
+
+    Formally, ``0 ≤ ℓᵢ ≤ each ∀ i; ∑ᵢ ℓᵢ ≤ total`` where each `i` is an axis.
+
+    If `each > total`, the normalization `each = total` is set with a warning.
+    """
+    function SmolyakLevel(; total::Int, each::Int = total)
+        @argcheck total ≥ 1
+        @argcheck each ≥ 1
+        if each > total
+            @warn "‘each’ normalized to ‘total’" each total
+            each = total
+        end
+        new(total, each)
+    end
 end
 
-function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-    (; smolyak_indices, univariate_parent) = smolyak_basis
-    print(io, "Sparse multivariate basis on ℝ", SuperScript(N), "\n  ", smolyak_indices,
-          "\n  using ", univariate_parent)
+"""
+$(SIGNATURES)
+
+A wrapper for iterating through Smolyak indices. See [`__smolyak__init`](@ref) and
+[`__smolyak_step`](@ref). Can be plugged straight into `iterate`.
+
+`g` transforms the value.
+"""
+function __smolyak_iterate(family, kind, level::SmolyakLevel, f, itrs, g,
+                           state = nothing)
+    if state ≡ nothing
+        accum, state... = __smolyak_init(family, kind, level.total, f, itrs)
+        g(accum), (accum, state...)
+    else
+        result = __smolyak_step(family, kind, level.each, f, itrs,
+                                state...)
+        if result ≡ nothing
+            nothing
+        else
+            slack = state[2]
+            accum, Δ, rest... = result
+            g(accum), (accum, slack + Δ, rest...)
+        end
+    end
 end
 
-Base.length(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N = N
-
-function Base.getindex(basis::SmolyakBasis, i::Int)
-    @argcheck 1 ≤ i ≤ length(basis) BoundsError(basis, i)
-    basis.univariate_parent
+function Base.show(io::IO, level::SmolyakLevel)
+    (; total, each) = level
+    print(io, "Smolyak parameters, ∑ℓᵢ ≤ $(total), all ℓᵢ ≤ $(each)")
 end
+
+@concrete struct SmolyakBasis <: MultivariateBasis
+    family
+    kind
+    domain_transformations
+    level
+end
+
+# function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
+#     (; smolyak_indices, univariate_parent) = smolyak_basis
+#     print(io, "Sparse multivariate basis on ℝ", SuperScript(N), "\n  ", smolyak_indices,
+#           "\n  using ", univariate_parent)
+# end
+
+# Base.length(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N = N
+
+# function Base.getindex(basis::SmolyakBasis, i::Int)
+#     @argcheck 1 ≤ i ≤ length(basis) BoundsError(basis, i)
+#     basis.univariate_parent
+# end
 
 """
 $(SIGNATURES)
@@ -29,19 +89,20 @@ Create a sparse Smolyak basis.
 
 # Arguments
 
-- `univariate_family`: should be a callable that takes a `grid_kind` and a `dimension`
-  parameter, eg `Chebyshev`.
+- `family`: univariate function family, eg `Chebyshev`.
 
-- `grid_kind`: the grid kind, eg `InteriorGrid()` etc.
+- `kind`: the grid kind, eg `Interior()` or `Endpoints()`.
 
-- `smolyak_parameters`: the Smolyak grid specification parameters, see
-  [`SmolyakParameters`](@ref).
+- `domain_transformations`
+
+- `smolyak_level`: the Smolyak level specificaion, see [`SmolyakLevel`](@ref).
 
 - `N`: the dimension. wrapped in a `Val` for type stability, a convenience constructor also
   takes integers.
 
 ## Example
 
+FIXME these examples need to be updated
 ```jldoctest
 julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
 Sparse multivariate basis on ℝ²
@@ -60,149 +121,162 @@ julia> domain(basis)
 *Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
 contains points of the cruder grid.
 """
-function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
-                       smolyak_parameters::SmolyakParameters, ::Val{N}) where {N}
-    @argcheck N ≥ 1
-    smolyak_indices = SmolyakIndices{N}(grid_kind, smolyak_parameters)
-    univariate_parent = univariate_family(grid_kind, highest_visited_index(smolyak_indices))
-    SmolyakBasis(smolyak_indices, univariate_parent)
+function smolyak_basis(univariate_family, kind, domain_transformations::Tuple, level::SmolyakLevel)
+    SmolyakBasis(univariate_family, kind, domain_transformations, level)
 end
 
-# convenience constructor
-@inline function smolyak_basis(univariate_family, grid_kind::AbstractGrid,
-                       smolyak_parameters::SmolyakParameters, N::Integer)
-    smolyak_basis(univariate_family, grid_kind, smolyak_parameters, Val(N))
+function domain(smolyak_basis::SmolyakBasis)
+    map(domain, smolyak_basis.domain_transformations)
 end
 
-function domain(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where {N}
-    D = domain(smolyak_basis.univariate_parent)
-    coordinate_domains(Val(N), D)
+function dimension(smolyak_basis::SmolyakBasis)
+    (; family, kind, domain_transformations, level) = smolyak_basis
+    N = length(domain_transformations)
+    __smolyak_length(family, kind, N, level.total, level.each)
 end
 
-dimension(smolyak_basis::SmolyakBasis) = length(smolyak_basis.smolyak_indices)
-
-"""
-$(SIGNATURES)
-
-Helper function to make univariate bases for a Smolyak basis.
-"""
-function _univariate_bases_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}},
-                              x) where {N,H}
-    (; univariate_parent) = smolyak_basis
-    map(x -> sacollect(SVector{H}, basis_at(univariate_parent, x)), x)
+struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}
+    family::F
+    kind::K
+    level::L
+    itrs::I
+    product_kind::P
 end
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
-                  x::Union{Tuple,AbstractVector}) where {N}
-    @argcheck length(x) == N
-    SmolyakProduct(smolyak_basis.smolyak_indices,
-                   _univariate_bases_at(smolyak_basis, NTuple{N}(x)),
-                   nothing)
+function Base.eltype(::Type{<:SmolyakBasisAt{I,P}}) where {I,P}
+    _product_type(P, map(eltype, fieldtypes(I)))
 end
 
-function basis_at(smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}},
-                  Dx::∂CoordinateExpansion) where {N}
-    (; ∂D, x) = Dx
-    @argcheck length(x) == N
-    SmolyakProduct(smolyak_basis.smolyak_indices,
-                   _univariate_bases_at(smolyak_basis, x),
-                   ∂D)
+function Base.length(itr::SmolyakBasisAt)
+    (; family, kind, level, itrs, product_kind) = itr
+    N = length(itrs)
+    __smolyak_length(family, kind, N, level.total, level.each)
 end
 
-struct SmolyakGridIterator{T,I,S}
-    smolyak_indices::I
-    sources::S
+function Base.iterate(itr::SmolyakBasisAt, state = nothing)
+    (; family, kind, level, itrs, product_kind) = itr
+    # FIXME this does not yet work for derivatives
+    __smolyak_iterate(family, kind, level,
+                      (a, b) -> isempty(b) ? (a,) : (a * first(b), b...),
+                      itrs, first, state)
 end
 
-Base.eltype(::Type{<:SmolyakGridIterator{T}}) where {T} = T
-
-Base.length(itr::SmolyakGridIterator) = length(itr.smolyak_indices)
-
-function grid(::Type{T},
-              smolyak_basis::SmolyakBasis{<:SmolyakIndices{N,H}}) where {T<:Real,N,H}
-    (; smolyak_indices, univariate_parent) = smolyak_basis
-    sources = sacollect(SVector{H}, gridpoint(T, univariate_parent, i)
-                        for i in SmolyakGridShuffle(univariate_parent.grid_kind, H))
-    SmolyakGridIterator{NTuple{N,T},typeof(smolyak_indices),typeof(sources)}(smolyak_indices, sources)
+function basis_at(smolyak_basis::SmolyakBasis, x::Tuple)
+    (; family, kind, domain_transformations, level) = smolyak_basis
+    @argcheck length(x) == length(domain_transformations)
+    itrs = map((x, d) -> basis_at(univariate_basis(family, kind, d, level.each), x),
+               x, domain_transformations)
+    SmolyakBasisAt(family, kind, level, itrs, nothing)
 end
 
-function Base.iterate(itr::SmolyakGridIterator, state...)
-    (; smolyak_indices, sources) = itr
-    result = iterate(smolyak_indices, state...)
-    result ≡ nothing && return nothing
-    ι, state′ = result
-    map(i -> sources[i], ι), state′
+function basis_at(smolyak_basis::SmolyakBasis, x::SVector)
+    basis_at(smolyak_basis, Tuple(x))
 end
 
-"""
-$(SIGNATURES)
+# function basis_at(smolyak_basis::SmolyakBasis, Dx::∂CoordinateExpansion)
+#     (; family, kind, domain_transformations, level) = smolyak_basis
+#     (; ∂D, x) = Dx
+#     itrs = map((x, d) -> basis_at(univariate_basis(family, kind, d, each), x),
+#                x, domain_transformations)
+#     BasisAt(family, kind, total, each, itrs, ∂D)
+# end
 
-Utility function to check is `basis1` is a subset of `basis2` with shared indices.
-"""
-function _is_shared_index_subset(basis1::Chebyshev{K1}, basis2::Chebyshev{K2}) where {K1,K2}
-    K1 == K2 && basis1.N ≤ basis2.N
+struct SmolyakGrid{I,F,K,S<:SmolyakLevel}
+    family::F
+    kind::K
+    level::S
+    itrs::I
 end
 
-function is_subset_basis(basis1::SmolyakBasis{<:SmolyakIndices{N1,H1,B1,M1}},
-                         basis2::SmolyakBasis{<:SmolyakIndices{N2,H2,B2,M2}}) where {N1,H1,B1,M1,N2,H2,B2,M2}
-    (N1 == N2 && B2 ≥ B1 && M2 ≥ M1 &&
-        # NOTE: traversal relies on the same (column major) ordering of indices in both
-        # bases. Testing for this is currently innocuous, as Chebyshev has this property.
-        # If some basis is added to the code which doesn't this should be tested for in
-        # `augment_coefficients` which should then use a different code path.
-        _is_shared_index_subset(basis1.univariate_parent, basis2.univariate_parent))
+function Base.eltype(::Type{<:SmolyakGrid{I}}) where {I}
+    Tuple{map(eltype, fieldtypes(I))...}
 end
 
-"""
-$(TYPEDEF)
-
-Given two iterations `ι1 ∈ itr1` and `ι2 ∈ itr2`, and a vector `θ1` such that `length(θ1) ==
-length(itr1)`, return an iterator that returns elements of `θ1` when `ι1 == ι2` and zero
-otherwise.
-
-# Internals
-
-state is a tuple of:
-
-- index for the next upcoming element of `θ1`,
-- the next item in `itr1`, set to `(0, 0, …)` after all of them are used
-- the corresponding iterator state (ignore for sentinel value `(0, 0, …)`
-- state of `itr2` (only after the first call to `iterate`)
-"""
-struct PaddingIterator{V1,I1,I2}
-    θ1::V1
-    itr1::I1
-    itr2::I2
+function Base.length(itr::SmolyakGrid)
+    __smolyak_length(itr.family, itr.kind, length(itr.itrs), itr.level.total, itr.level.each)
 end
 
-Base.length(itr::PaddingIterator) = length(itr.itr2)
-
-Base.eltype(itr::PaddingIterator) = eltype(itr.θ1)
-
-function Base.iterate(itr::PaddingIterator, state = (firstindex(itr.θ1),
-                                                     iterate(itr.itr1)...))
-    (; θ1, itr1, itr2) = itr
-    i, ι1, state1, state2... = state
-    res2 = iterate(itr2, state2...)
-    res2 ≡ nothing && return nothing
-    ι2, state2 = res2
-    if ι1 == ι2
-        x = itr.θ1[i]
-        res1 = iterate(itr.itr1, state1)
-        if res1 ≡ nothing
-            ι1 = map(_ -> 0, ι1) # sentinel ensures never visiting ι1 == ι2 branch again
-        else
-            ι1, state1 = res1
-            i += 1
-        end
-    else
-        x = zero(eltype(itr.θ1))
-    end
-    x, (i, ι1, state1, state2)
+function Base.iterate(itr::SmolyakGrid, state = nothing)
+    (; family, kind, level, itrs) = itr
+    __smolyak_iterate(family, kind, level, (a, b) -> (a, b...), itrs, identity, state)
 end
 
-function augment_coefficients(basis1::SmolyakBasis, basis2::SmolyakBasis, θ1::AbstractVector)
-    @argcheck is_subset_basis(basis1, basis2)
-    @argcheck dimension(basis1) == length(θ1)
-    collect(PaddingIterator(θ1, basis1.smolyak_indices, basis2.smolyak_indices))
+function grid(::Type{T}, smolyak_basis::SmolyakBasis) where {T<:AbstractFloat}
+    (; family, kind, domain_transformations, level) = smolyak_basis
+    (; each) = level
+    itrs = map(d -> grid(T, univariate_basis(family, kind, d, each)), domain_transformations)
+    SmolyakGrid(family, kind, level, itrs)
 end
+
+# """
+# $(SIGNATURES)
+
+# Utility function to check is `basis1` is a subset of `basis2` with shared indices.
+# """
+# function _is_shared_index_subset(basis1::Chebyshev{K1}, basis2::Chebyshev{K2}) where {K1,K2}
+#     K1 == K2 && basis1.N ≤ basis2.N
+# end
+
+# function is_subset_basis(basis1::SmolyakBasis{<:SmolyakIndices{N1,H1,B1,M1}},
+#                          basis2::SmolyakBasis{<:SmolyakIndices{N2,H2,B2,M2}}) where {N1,H1,B1,M1,N2,H2,B2,M2}
+#     (N1 == N2 && B2 ≥ B1 && M2 ≥ M1 &&
+#         # NOTE: traversal relies on the same (column major) ordering of indices in both
+#         # bases. Testing for this is currently innocuous, as Chebyshev has this property.
+#         # If some basis is added to the code which doesn't this should be tested for in
+#         # `augment_coefficients` which should then use a different code path.
+#         _is_shared_index_subset(basis1.univariate_parent, basis2.univariate_parent))
+# end
+
+# """
+# $(TYPEDEF)
+
+# Given two iterations `ι1 ∈ itr1` and `ι2 ∈ itr2`, and a vector `θ1` such that `length(θ1) ==
+# length(itr1)`, return an iterator that returns elements of `θ1` when `ι1 == ι2` and zero
+# otherwise.
+
+# # Internals
+
+# state is a tuple of:
+
+# - index for the next upcoming element of `θ1`,
+# - the next item in `itr1`, set to `(0, 0, …)` after all of them are used
+# - the corresponding iterator state (ignore for sentinel value `(0, 0, …)`
+# - state of `itr2` (only after the first call to `iterate`)
+# """
+# struct PaddingIterator{V1,I1,I2}
+#     θ1::V1
+#     itr1::I1
+#     itr2::I2
+# end
+
+# Base.length(itr::PaddingIterator) = length(itr.itr2)
+
+# Base.eltype(itr::PaddingIterator) = eltype(itr.θ1)
+
+# function Base.iterate(itr::PaddingIterator, state = (firstindex(itr.θ1),
+#                                                      iterate(itr.itr1)...))
+#     (; θ1, itr1, itr2) = itr
+#     i, ι1, state1, state2... = state
+#     res2 = iterate(itr2, state2...)
+#     res2 ≡ nothing && return nothing
+#     ι2, state2 = res2
+#     if ι1 == ι2
+#         x = itr.θ1[i]
+#         res1 = iterate(itr.itr1, state1)
+#         if res1 ≡ nothing
+#             ι1 = map(_ -> 0, ι1) # sentinel ensures never visiting ι1 == ι2 branch again
+#         else
+#             ι1, state1 = res1
+#             i += 1
+#         end
+#     else
+#         x = zero(eltype(itr.θ1))
+#     end
+#     x, (i, ι1, state1, state2)
+# end
+
+# function augment_coefficients(basis1::SmolyakBasis, basis2::SmolyakBasis, θ1::AbstractVector)
+#     @argcheck is_subset_basis(basis1, basis2)
+#     @argcheck dimension(basis1) == length(θ1)
+#     collect(PaddingIterator(θ1, basis1.smolyak_indices, basis2.smolyak_indices))
+# end
