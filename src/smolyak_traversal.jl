@@ -73,6 +73,93 @@ function __smolyak_step(family, kind, each::Int, f::F, itrs::NTuple{N,Any},
     end
 end
 
+struct NonIncreasingSmolyakLevels{N}
+    total::Int
+    each::Int
+    @doc """
+    $(SIGNATURES) → itr
+
+    An iterable which yields `ℓ::Ntuple{N,Int}`, with the following properties:
+
+    1. each tuple `ℓ` is non-increasing (weakly decreasing),
+    2. each element of each tuple is between `0` and `each` (inclusive),
+    3. the sum of all elements in each tuple is not larger than total.
+    """
+    function NonIncreasingSmolyakLevels{N}(total, each) where N
+        @argcheck N isa Integer && N ≥ 1
+        @argcheck each ≤ total
+        new{N}(total, each)
+    end
+end
+
+Base.eltype(::Type{NonIncreasingSmolyakLevels{N}}) where N = NTuple{N,Int}
+
+Base.IteratorSize(::Type{<:NonIncreasingSmolyakLevels}) = Base.SizeUnknown()
+
+function __step_noninc(total::Int, each::Int, Σ_and_indices::Int...)
+    Σ, i1, iτ... = Σ_and_indices
+    if Σ < total && isempty(iτ)
+        # single index, increment if possible
+        (i1 + 1, i1 + 1)
+    elseif Σ < total && i1 > last(iτ)
+        # room to increment indices in the tail
+        Σ′, iτ′... = __step_noninc(total - i1, i1, Σ - i1, iτ...)
+        (i1 + Σ′, i1, iτ′...)
+    elseif !isempty(iτ) && first(iτ) < min(i1, each) && first(iτ) + i1 < total
+        # can increment next index, zero out tail of tail
+        i2 = first(iτ)
+        (i1 + i2 + 1, i1, i2 + 1, ntuple(_ -> 0, Val(length(iτ) - 1))...)
+    else
+        # increment first index; stop iteration if this is > each
+        (i1 + 1, i1 + 1, ntuple(_ -> 0, Val(length(iτ)))...)
+    end
+end
+
+function Base.iterate(itr::NonIncreasingSmolyakLevels{N}, state = nothing) where N
+    (; total, each) = itr
+    if state ≡ nothing
+        indices = ntuple(_ -> 0, N)
+        indices, (0, indices...)
+    else
+        state′ = __step_noninc(total, each, state...)
+        Σ′, indices′... = state′
+        if first(indices′) ≤ each
+            indices′, state′
+        else
+            nothing
+        end
+    end
+end
+
+"""
+$(SIGNATURES)
+
+Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
+"""
+function __smolyak_length(family, kind, ::Val{N}, total::Int, each::Int) where N
+    L = 0
+    P = factorial(N)            # permutations
+    for ℓ in NonIncreasingSmolyakLevels{N}(total, each)
+        p = P                   # combinations, accounting for repetitions
+        C = 1                   # will contain product of block lengths after loop below
+        l_prev = -1             # previous value (sentinel)
+        r = 1                   # run counter for repeated values
+        for l in ℓ
+            C *= block_length(family, kind, l)
+            if l == l_prev
+                r += 1
+                p ÷= r          # account for repetitions
+            else
+                l_prev = l
+                r = 1           # reset counter
+            end
+        end
+        L += p * C
+    end
+    L
+end
+
+
 ####
 #### index traversal
 ####
@@ -132,32 +219,6 @@ end
 #         end
 #     end
 # end
-
-"""
-$(SIGNATURES)
-
-Calculate the length of a [`SmolyakIndices`](@ref) iterator. Argument as in the latter.
-"""
-function __smolyak_length(family, kind, N::Int, total::Int, each::Int)
-    # implicit assumption: each ≤ total, enforced by the SmolyakParameters constructor
-    _bl(b) = block_length(family, kind, b)
-    c = zeros(Int, total + 1) # indexed as 0, …, total
-    each = min(each, total)
-    for b in 0:each
-        c[b + 1] = _bl(b)
-    end
-    for n in 2:N
-        for b in total:(-1):0            # blocks with indices that sum to b
-            s = 0
-            for a in 0:min(b, each)
-                s += _bl(a) * c[b - a + 1]
-            end
-            # can safely overwrite since they will not be used again for n + 1
-            c[b + 1] = s
-        end
-    end
-    sum(c)
-end
 
 # """
 # $(TYPEDEF)

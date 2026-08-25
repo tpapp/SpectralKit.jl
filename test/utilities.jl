@@ -176,3 +176,19 @@ function test_smolyak_step(family, kind, total, each, f, itrs::NTuple{N,Any}) wh
     @test i == length(reference) # we used up all elements
     nothing
 end
+
+"""
+$(SIGNATURES)
+
+Implementation of non-increasing Smolyak levels, for unit testing.
+"""
+function nonincreasing_smolyak_levels(::Val{N}, total, each)  where N
+    I = 0:each
+    c = Vector{NTuple{N,Int}}()
+    for i in Iterators.product(ntuple(_ -> I, Val(N))...)
+        if sum(i) ≤ total && issorted(i, rev = true)
+            push!(c, i)
+        end
+    end
+    c
+end

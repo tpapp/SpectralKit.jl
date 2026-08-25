@@ -132,7 +132,7 @@ end
 function dimension(smolyak_basis::SmolyakBasis)
     (; family, kind, domain_transformations, level) = smolyak_basis
     N = length(domain_transformations)
-    __smolyak_length(family, kind, N, level.total, level.each)
+    __smolyak_length(family, kind, Val(N), level.total, level.each)
 end
 
 struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}
@@ -150,7 +150,7 @@ end
 function Base.length(itr::SmolyakBasisAt)
     (; family, kind, level, itrs, product_kind) = itr
     N = length(itrs)
-    __smolyak_length(family, kind, N, level.total, level.each)
+    __smolyak_length(family, kind, Val(N), level.total, level.each)
 end
 
 function Base.iterate(itr::SmolyakBasisAt, state = nothing)
@@ -193,7 +193,7 @@ function Base.eltype(::Type{<:SmolyakGrid{I}}) where {I}
 end
 
 function Base.length(itr::SmolyakGrid)
-    __smolyak_length(itr.family, itr.kind, length(itr.itrs), itr.level.total, itr.level.each)
+    __smolyak_length(itr.family, itr.kind, Val(length(itr.itrs)), itr.level.total, itr.level.each)
 end
 
 function Base.iterate(itr::SmolyakGrid, state = nothing)
