@@ -90,15 +90,11 @@ end
     @test y_minf[1] == 0
 end
 
-@testset "printing, promotion, broadcasting" begin
-    v = [1.0, 2.0]
+@testset "printing, promotion" begin
     t1 = BoundedLinear(; lower = 2.0, upper = 3)
     @test repr(t1) == "BoundedLinear(lower = 2.0, upper = 3.0)"
-    @test transform_to.(PM1(), t1, v) isa Vector
     t2 = SemiInfRational(; endpoint = 7.0)
     @test repr(t2) == "SemiInfRational(endpoint = 7.0, scale = 1.0)"
-    @test transform_to.(PM1(), t2, v) isa Vector
     t3 = InfRational(; center = 0.5, scale = 1)
     @test repr(t3) == "InfRational(; center = 0.5, scale = 1.0)"
-    @test transform_to.(PM1(), t3, v) isa Vector
 end

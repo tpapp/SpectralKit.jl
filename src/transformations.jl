@@ -16,8 +16,6 @@ An abstract type for univariate transformations.
 """
 abstract type AbstractUnivariateTransformation end
 
-Broadcast.broadcastable(transformation::AbstractUnivariateTransformation) = Ref(transformation)
-
 domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
 """
