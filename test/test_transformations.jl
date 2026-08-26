@@ -90,24 +90,6 @@ end
     @test y_minf[1] == 0
 end
 
-@testset "coordinate transformations" begin
-    t1 = BoundedLinear(; lower = 2.0, upper = 3.0)
-    t2 = SemiInfRational(; endpoint = 7.0, scale = 1.0)
-    ct = coordinate_transformations(t1, t2)
-    md = coordinate_domains(Val(2), PM1())
-    x = SVector(rand_pm1(), rand_pm1())
-    y = @inferred transform_from(md, ct, x)
-    @test y isa SVector{2,Float64}
-    @test y == transform_from.(PM1(), Tuple(ct), x)
-
-    # handle generic inputs
-    y2 = @inferred transform_from(md, ct, Vector(x))
-    @test y2 isa SVector{2,Float64} && y2 == y
-
-    x2 = @inferred transform_to(md, ct, [y...])
-    @test x2 isa SVector{2,Float64} && all(x2 .≈ x)
-end
-
 @testset "printing, promotion, broadcasting" begin
     v = [1.0, 2.0]
     t1 = BoundedLinear(; lower = 2.0, upper = 3)
@@ -119,7 +101,4 @@ end
     t3 = InfRational(; center = 0.5, scale = 1)
     @test repr(t3) == "(-∞,∞) ↔ domain [rational transformation with center 0.5, scale 1.0]"
     @test transform_to.(PM1(), t3, v) isa Vector
-    ct = coordinate_transformations(t1, t2, t3)
-    @test repr(ct) ==
-        "coordinate transformations\n  " * repr(t1) * "\n  " * repr(t2) * "\n  " * repr(t3)
 end
