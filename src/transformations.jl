@@ -62,17 +62,20 @@ struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
 
     `lower < upper` is enforced.
     """
-    function BoundedLinear(; lower::Real, upper::Real)
+    function BoundedLinear(lower::T, upper::T) where {T<:Real}
         @argcheck isfinite(lower) && isfinite(upper) DomainError
-        lower, upper = promote(lower, upper)
         @argcheck upper > lower DomainError((; lower, upper), "Need `lower < upper`.")
         new{typeof(lower)}(lower, upper)
     end
 end
 
+BoundedLinear(lower::Real, upper::Real) = BoundedLinear(promote(lower, upper)...)
+
+BoundedLinear(; lower, upper) = BoundedLinear(lower, upper)
+
 function Base.show(io::IO, transformation::BoundedLinear)
     (; lower, upper) = transformation
-    print(io, "BoundedLinear(lower = ", lower, ", upper = ", upper, ")")
+    print(io, "BoundedLinear(", lower, ", ", upper, ")")
 end
 
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)

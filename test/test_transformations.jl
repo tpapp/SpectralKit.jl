@@ -1,11 +1,11 @@
 using SpectralKit: PM1
 
 @testset "bounded linear domain transformations" begin
-    @test_throws DomainError BoundedLinear(; lower = -1.0, upper = Inf)
-    @test_throws DomainError BoundedLinear(; lower = -1.0, upper = -2.0)
+    @test_throws DomainError BoundedLinear(-1.0, Inf)
+    @test_throws DomainError BoundedLinear(-1.0, -2.0)
 
     A, B = 1, 5
-    trans = BoundedLinear(; lower = A, upper = B)
+    trans = BoundedLinear(A, B)
 
     @test extrema(domain(trans)) == (A, B)
 
@@ -91,8 +91,8 @@ end
 end
 
 @testset "printing, promotion" begin
-    t1 = BoundedLinear(; lower = 2.0, upper = 3)
-    @test repr(t1) == "BoundedLinear(lower = 2.0, upper = 3.0)"
+    t1 = BoundedLinear(2.0, 3)
+    @test repr(t1) == "BoundedLinear(2.0, 3.0)"
     t2 = SemiInfRational(; endpoint = 7.0)
     @test repr(t2) == "SemiInfRational(endpoint = 7.0, scale = 1.0)"
     t3 = InfRational(; center = 0.5, scale = 1)

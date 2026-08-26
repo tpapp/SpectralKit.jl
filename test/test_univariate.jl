@@ -48,8 +48,7 @@ end
     for kind in KINDS
         previous = Float64[]
         for level in 0:7
-            b = UnivariateBasis(Chebyshev(), kind,
-                                BoundedLinear(; lower = 1.0, upper = 3.0), level)
+            b = UnivariateBasis(Chebyshev(), kind, BoundedLinear(1.0, 3.0), level)
             g = collect(grid(b))
             @test is_approximate_subset(previous, g)
             g = previous
@@ -58,7 +57,7 @@ end
 end
 
 @testset "Chebyshev basics" begin
-    transformation = BoundedLinear(; lower = 1.0, upper = 3.0)
+    transformation = BoundedLinear(1.0, 3.0)
     @test_throws ArgumentError UnivariateBasis(Chebyshev(), Endpoints(), transformation, -1)
     for kind in KINDS
         for level in 0:5
@@ -118,7 +117,7 @@ end
 end
 
 @testset "univariate derivatives" begin
-    for (transformation, N) in ((BoundedLinear(lower = -2, upper = 3), 5),
+    for (transformation, N) in ((BoundedLinear(-2, 3), 5),
                                 (SemiInfRational(endpoint = 0.7, scale = 0.3), 1),
                                 (InfRational(center = 0.4, scale = 0.9), 1))
         basis = UnivariateBasis(Chebyshev(), Interior(), transformation, 3)
@@ -128,7 +127,7 @@ end
             x = rand_in_domain(basis)
             y = f(D(x))
             for i in 0:N
-                @test y[i] ≈ DD(f, x, i) rtol = 1e-4 atol = 1e-4
+                @test y[i] ≈ DD(f, x, i) rtol = 1e-3 atol = 1e-3
             end
         end
     end

@@ -59,7 +59,8 @@ end
 
 function Base.show(io::IO, level::SmolyakLevel)
     (; total, each) = level
-    print(io, "Smolyak parameters, ∑ℓᵢ ≤ $(total), all ℓᵢ ≤ $(each)")
+    explanation = "∑ℓᵢ ≤ $(total), all ℓᵢ ≤ $(each)"
+    print(io, "SmolyakLevel(total = $(total), each = $(each)) #= $(explanation) =#")
 end
 
 struct SmolyakBasis{F,K,D} <: MultivariateBasis
@@ -81,7 +82,7 @@ function Base.show(io::IO, basis::SmolyakBasis)
     lead = "SmolyakBasis("
     next = ",\n" * ' '^length(lead)
     print(io, "SmolyakBasis(", family, next, kind, next, domain_transformations, next,
-          level, ") # dimension: ", dimension(basis))
+          level, ")    # dimension: ", dimension(basis))
 end
 
 
@@ -253,9 +254,9 @@ function adjust_coefficients(θ1::AbstractVector{T}, basis1::SmolyakBasis,
         return copy(θ1)
     end
     θ = Dict{NTuple{length(domain_transformations),Int},T}()
-    for (x, ι) in zip(θ1, smolyak_indices(basis1))
+    for (x, ι) in zip(θ1, SmolyakIndices(basis1))
         θ[ι] = x
     end
     z = zero(T)
-    [get(θ, ι, z) for ι in smolyak_indices(basis2)]
+    [get(θ, ι, z) for ι in SmolyakIndices(basis2)]
 end

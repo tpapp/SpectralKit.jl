@@ -3,7 +3,8 @@
 ####
 
 @testset "printing SmolyakLevels" begin
-    @test repr(SmolyakLevel(; total = 3, each = 2)) == "Smolyak parameters, ∑ℓᵢ ≤ 3, all ℓᵢ ≤ 2"
+    @test repr(SmolyakLevel(; total = 3, each = 2)) ==
+        "SmolyakLevel(total = 3, each = 2) #= ∑ℓᵢ ≤ 3, all ℓᵢ ≤ 2 =#"
 end
 
 @testset "Smolyak API checks" begin
@@ -12,8 +13,8 @@ end
 
 @testset "Smolyak API sanity checks" begin
     f(x) = (x[1] - 3) * (x[2] + 5) # linear function, just a sanity check
-    transformations = (BoundedLinear(lower = 2, upper = 3), # approximation should be exact
-                       BoundedLinear(lower = 3.0, upper = 4.5))
+    transformations = (BoundedLinear(2, 3), # approximation should be exact
+                       BoundedLinear(3.0, 4.5))
     basis = SmolyakBasis(Chebyshev(), Interior(), transformations, SmolyakLevel(total = 2))
     @test @inferred(domain(basis)) ≡ domain.(transformations)
     g = grid(Float64, basis)
@@ -70,10 +71,14 @@ end
     end
 end
 
-
-###
-### augment coefficients
-###
+@testset "Smolyak adjusted coefficients" begin
+    t = (BoundedLinear(2.0, 3.7), SemiInfRational())
+    basis1 = SmolyakBasis(Chebyshev(), Interior(), t, SmolyakLevel(; total = 2, each = 1))
+    basis2 = @set basis1.level = SmolyakLevel(; total = 3, each = 2)
+    θ1 = randn(dimension(basis1))
+    θ2 = adjust_coefficients(θ1, basis1, basis2)
+    @test sum(θ1 .≠ 0) == sum(θ2 .≠ 0)
+end
 
 # @testset "Smolyak augment coefficients" begin
 #     basis1 = SmolyakBasis(Chebyshev, InteriorGrid(), SmolyakParameters(2, 2), 2)
