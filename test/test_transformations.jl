@@ -93,12 +93,12 @@ end
 @testset "printing, promotion, broadcasting" begin
     v = [1.0, 2.0]
     t1 = BoundedLinear(; lower = 2.0, upper = 3)
-    @test repr(t1) == "(2.0,3.0) ↔ domain [linear transformation]"
+    @test repr(t1) == "BoundedLinear(lower = 2.0, upper = 3.0)"
     @test transform_to.(PM1(), t1, v) isa Vector
     t2 = SemiInfRational(; endpoint = 7.0)
-    @test repr(t2) == "(7.0,∞) ↔ domain [rational transformation with scale 1.0]"
+    @test repr(t2) == "SemiInfRational(endpoint = 7.0, scale = 1.0)"
     @test transform_to.(PM1(), t2, v) isa Vector
     t3 = InfRational(; center = 0.5, scale = 1)
-    @test repr(t3) == "(-∞,∞) ↔ domain [rational transformation with center 0.5, scale 1.0]"
+    @test repr(t3) == "InfRational(; center = 0.5, scale = 1.0)"
     @test transform_to.(PM1(), t3, v) isa Vector
 end

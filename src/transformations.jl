@@ -53,10 +53,10 @@ function transform_from end
 ###
 
 struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
-    "Midpoint `m`."
-    m::T
-    "Scale `s`."
-    s::T
+    "Lower limit."
+    lower::T
+    "Upper limit."
+    upper::T
     @doc """
     $(SIGNATURES)
 
@@ -67,41 +67,39 @@ struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
     function BoundedLinear(; lower::Real, upper::Real)
         @argcheck isfinite(lower) && isfinite(upper) DomainError
         lower, upper = promote(lower, upper)
-        s = (upper - lower) / 2
-        m = (lower + upper) / 2
-        @argcheck s > 0 DomainError((; lower, upper), "Need `lower < upper`.")
-        m, s = promote(m, s)
-        new{typeof(m)}(m, s)
+        @argcheck upper > lower DomainError((; lower, upper), "Need `lower < upper`.")
+        new{typeof(lower)}(lower, upper)
     end
 end
 
 function Base.show(io::IO, transformation::BoundedLinear)
-    (; m, s) = transformation
-    print(io, "(", m - s, ",", m + s, ") ↔ domain [linear transformation]")
+    (; lower, upper) = transformation
+    print(io, "BoundedLinear(lower = ", lower, ", upper = ", upper, ")")
 end
 
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)
-    (; m, s) = t
-    x * s + m
+    (; lower, upper) = t
+    (x+1) / 2 * (upper-lower)  + lower
 end
 
 function transform_to(::PM1, t::BoundedLinear, y::Real)
-    (; m, s) = t
-    (y - m) / s
+    (; lower, upper) = t
+    (y-lower) / (upper-lower) * 2 - 1
 end
 
 function transform_to(domain::PM1, t::BoundedLinear, y::𝑑Expansion{Dp1}) where Dp1
-    (; m, s) = t
+    (; lower, upper) = t
     (; coefficients) = y
     y0, yD... = coefficients
     x0 = transform_to(domain, t, y0)
+    s = (upper - lower) / 2
     xD = map(y -> y / s, yD)
     𝑑Expansion(SVector(x0, xD...))
 end
 
 function domain(t::BoundedLinear)
-    (; m, s) = t
-    UnivariateDomain(m - s, m + s)
+    (; lower, upper) = t
+    UnivariateDomain(lower, upper)
 end
 
 ###
@@ -137,12 +135,7 @@ end
 
 function Base.show(io::IO, transformation::SemiInfRational)
     (; endpoint, scale) = transformation
-    if scale > 0
-        D = "($(endpoint),∞)"
-    else
-        D = "(-∞,$(endpoint))"
-    end
-    print(io, D, " ↔ domain [rational transformation with scale ", scale, "]")
+    print(io, "SemiInfRational(endpoint = ", endpoint, ", scale = ", scale, ")")
 end
 
 transform_from(::PM1, t::SemiInfRational, x) = t.endpoint + t.scale * (1 + x) / (1 - x)
@@ -206,7 +199,7 @@ end
 
 function Base.show(io::IO, transformation::InfRational)
     (; center, scale) = transformation
-    print(io, "(-∞,∞) ↔ domain [rational transformation with center ", center, ", scale ", scale, "]")
+    print(io, "InfRational(; center = ", center, ", scale = ", scale, ")")
 end
 
 InfRational(; center::Real = 0.0, scale::Real = 1.0) = InfRational(promote(center, scale)...)
