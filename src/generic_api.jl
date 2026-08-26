@@ -3,7 +3,7 @@
 #####
 
 export is_function_basis, dimension, basis_at, linear_combination, grid, collocation_matrix,
-    adjust_basis, adjust_coefficients
+    adjust_coefficients
 
 """
 $(TYPEDEF)
@@ -192,14 +192,6 @@ function collocation_matrix(basis, x = grid(basis))
 end
 
 """
-`$(FUNCTIONNAME)(basis, Δ)`
-
-Make `basis` thicker (`Δ > 0`) or thinner (`Δ < 0`). Return `nothing` if this is not
-possible.
-"""
-function adjust_basis end
-
-"""
 `$(FUNCTIONNAME)(θ1, basis1, basis2)`
 
 Return a set of coefficients `θ2` for `basis2` such that is either augmentes
@@ -209,7 +201,7 @@ linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
 for any `x` in the domain. In practice this means either padding with zeros, or
 truncating the coefficients.
 
-Throw a `ArgumentError` if this is not possible. See [`adjust_basis`](@ref).
+Throw an error if this is not possible.
 """
 function adjust_coefficients end
 

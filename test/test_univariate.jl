@@ -1,5 +1,5 @@
 ####
-#### Chebyshev on [-1,1]
+#### Chebyshev building blocks and univariate bases
 ####
 
 """
@@ -99,14 +99,14 @@ end
     end
 end
 
-@testset "Chebysev adjusted basis" begin
+@testset "Chebysev adjusted coefficients" begin
     transformation = SemiInfRational(; endpoint = 3.0, scale = 7.0)
     for kind in KINDS
         level0 = 3
         basis0 = univariate_basis(Chebyshev(), kind, transformation, level0)
         θ0 = randn(dimension(basis0))
         for Δ in 1:4
-            basis = adjust_basis(basis0, Δ)
+            basis = @set basis0.level = level0 + Δ
             θ = adjust_coefficients(θ0, basis0, basis)
             @test basis.level == basis0.level + Δ
             for _ in 1:10
@@ -114,7 +114,6 @@ end
                 @test linear_combination(basis0, θ0, x) ≈ linear_combination(basis, θ, x)
             end
         end
-        @test adjust_basis(basis0, -3) ≡ nothing
     end
 end
 

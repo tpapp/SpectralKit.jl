@@ -188,15 +188,6 @@ function grid(::Type{T},
                      kind ≡ Interior() ? N̂ = N + 2 : N)
 end
 
-function adjust_basis(U::UnivariateBasis, Δ::Int)
-    level′ = U.level + Δ
-    if level′ > 0
-        UnivariateBasis(U.family, U.kind, U.domain_transformation, level′)
-    else
-        nothing
-    end
-end
-
 function adjust_coefficients(θ1::AbstractVector,
                              U1::UnivariateBasis{F}, U2::UnivariateBasis{F}) where F
     d1 = dimension(U1)
