@@ -2,7 +2,7 @@
 #### Chebyshev polynomials on [-1,1]
 ####
 
-export Chebyshev, Endpoints, Interior, univariate_basis
+export Chebyshev, Endpoints, Interior, UnivariateBasis
 
 ####
 #### generic building blocks
@@ -135,24 +135,24 @@ end
 """
 Implementation of univariate bases. Not part of the API.
 """
-@concrete struct UnivariateBasis <: FunctionBasis
-    family
-    kind
-    domain_transformation
-    level
-end
+struct UnivariateBasis{F,K,D} <: FunctionBasis
+    family::F
+    kind::K
+    domain_transformation::D
+    level::Int
+    @doc """
+    $(SIGNATURES)
 
-"""
-$(SIGNATURES)
+    Univariate basis from `family`, using the given `kind`.
 
-Univariate basis from `family`, using the given `kind`.
-
-`level` is an integer, starting from `0`, specifying the number of *blocks* used to
-build the grid.
-"""
-function univariate_basis(family, kind, domain_transformation, level)
-    @argcheck level ≥ 1
-    UnivariateBasis(family, kind, domain_transformation, level)
+    `level` is an integer, starting from `0`, specifying the number of *blocks* used to
+    build the grid.
+    """
+    function UnivariateBasis(family::F, kind::K, domain_transformation::D,
+                             level::Int) where {F,K,D}
+        @argcheck level ≥ 0
+        new{F,K,D}(family, kind, domain_transformation, level)
+    end
 end
 
 domain(U::UnivariateBasis) = domain(U.domain_transformation)

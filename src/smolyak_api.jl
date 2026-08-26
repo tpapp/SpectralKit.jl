@@ -2,7 +2,7 @@
 ##### Smolyak bases
 #####
 
-export SmolyakLevel, smolyak_basis
+export SmolyakLevel, SmolyakBasis
 
 struct SmolyakLevel
     total::Int
@@ -62,68 +62,70 @@ function Base.show(io::IO, level::SmolyakLevel)
     print(io, "Smolyak parameters, ∑ℓᵢ ≤ $(total), all ℓᵢ ≤ $(each)")
 end
 
-@concrete struct SmolyakBasis <: MultivariateBasis
-    family
-    kind
-    domain_transformations
-    level
+struct SmolyakBasis{F,K,D} <: MultivariateBasis
+    family::F
+    kind::K
+    domain_transformations::D
+    level::SmolyakLevel
+    @doc """
+    $(SIGNATURES)
+    """
+    function SmolyakBasis(family::F, kind::K, domain_transformations::D,
+                          level::SmolyakLevel) where {F,K,D<:Tuple}
+        new{F,K,D}(family, kind, domain_transformations, level)
+    end
 end
 
-# function Base.show(io::IO, smolyak_basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-#     (; smolyak_indices, univariate_parent) = smolyak_basis
-#     print(io, "Sparse multivariate basis on ℝ", SuperScript(N), "\n  ", smolyak_indices,
-#           "\n  using ", univariate_parent)
-# end
-
-# Base.length(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N = N
-
-# function Base.getindex(basis::SmolyakBasis, i::Int)
-#     @argcheck 1 ≤ i ≤ length(basis) BoundsError(basis, i)
-#     basis.univariate_parent
-# end
-
-"""
-$(SIGNATURES)
-
-Create a sparse Smolyak basis.
-
-# Arguments
-
-- `family`: univariate function family, eg `Chebyshev`.
-
-- `kind`: the grid kind, eg `Interior()` or `Endpoints()`.
-
-- `domain_transformations`
-
-- `smolyak_level`: the Smolyak level specificaion, see [`SmolyakLevel`](@ref).
-
-- `N`: the dimension. wrapped in a `Val` for type stability, a convenience constructor also
-  takes integers.
-
-## Example
-
-FIXME these examples need to be updated
-```jldoctest
-julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
-Sparse multivariate basis on ℝ²
-  Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
-  using Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 27
-
-julia> dimension(basis)
-81
-
-julia> domain(basis)
-[-1,1]²
-```
-
-## Properties
-
-*Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
-contains points of the cruder grid.
-"""
-function smolyak_basis(univariate_family, kind, domain_transformations::Tuple, level::SmolyakLevel)
-    SmolyakBasis(univariate_family, kind, domain_transformations, level)
+function Base.show(io::IO, basis::SmolyakBasis) where N
+    (; family, kind, domain_transformations, level) = basis
+    lead = "SmolyakBasis("
+    next = ",\n" * ' '^length(lead)
+    print(io, "SmolyakBasis(", family, next, kind, next, domain_transformations, next,
+          level,
+          ") # dimension: ",
+          dimension(basis))
 end
+
+
+# """
+# $(SIGNATURES)
+
+# Create a sparse Smolyak basis.
+
+# # Arguments
+
+# - `family`: univariate function family, eg `Chebyshev`.
+
+# - `kind`: the grid kind, eg `Interior()` or `Endpoints()`.
+
+# - `domain_transformations`
+
+# - `smolyak_level`: the Smolyak level specificaion, see [`SmolyakLevel`](@ref).
+
+# - `N`: the dimension. wrapped in a `Val` for type stability, a convenience constructor also
+#   takes integers.
+
+# ## Example
+
+# FIXME these examples need to be updated
+# ```jldoctest
+# julia> basis = smolyak_basis(Chebyshev, InteriorGrid(), SmolyakParameters(3), 2)
+# Sparse multivariate basis on ℝ²
+#   Smolyak indexing, ∑bᵢ ≤ 3, all bᵢ ≤ 3, dimension 81
+#   using Chebyshev polynomials (1st kind), InteriorGrid(), dimension: 27
+
+# julia> dimension(basis)
+# 81
+
+# julia> domain(basis)
+# [-1,1]²
+# ```
+
+# ## Properties
+
+# *Grids nest*: increasing arguments of `SmolyakParameters` result in a refined grid that
+# contains points of the cruder grid.
+# """
 
 function domain(smolyak_basis::SmolyakBasis)
     map(domain, smolyak_basis.domain_transformations)
@@ -164,7 +166,7 @@ end
 function basis_at(smolyak_basis::SmolyakBasis, x::Tuple)
     (; family, kind, domain_transformations, level) = smolyak_basis
     @argcheck length(x) == length(domain_transformations)
-    itrs = map((x, d) -> basis_at(univariate_basis(family, kind, d, level.each), x),
+    itrs = map((x, d) -> basis_at(UnivariateBasis(family, kind, d, level.each), x),
                x, domain_transformations)
     SmolyakBasisAt(family, kind, level, itrs, nothing)
 end
@@ -176,7 +178,7 @@ end
 # function basis_at(smolyak_basis::SmolyakBasis, Dx::∂CoordinateExpansion)
 #     (; family, kind, domain_transformations, level) = smolyak_basis
 #     (; ∂D, x) = Dx
-#     itrs = map((x, d) -> basis_at(univariate_basis(family, kind, d, each), x),
+#     itrs = map((x, d) -> basis_at(UnivariateBasis(family, kind, d, each), x),
 #                x, domain_transformations)
 #     BasisAt(family, kind, total, each, itrs, ∂D)
 # end
@@ -204,8 +206,49 @@ end
 function grid(::Type{T}, smolyak_basis::SmolyakBasis) where {T<:AbstractFloat}
     (; family, kind, domain_transformations, level) = smolyak_basis
     (; each) = level
-    itrs = map(d -> grid(T, univariate_basis(family, kind, d, each)), domain_transformations)
+    itrs = map(d -> grid(T, UnivariateBasis(family, kind, d, each)), domain_transformations)
     SmolyakGrid(family, kind, level, itrs)
+end
+
+@concrete struct SmolyakIndices
+    family
+    kind
+    level
+    itrs
+end
+
+"""
+$(SIGNATURES)
+
+Iterate through indices of
+"""
+function smolyak_indices(basis::SmolyakBasis)
+    (; family, kind, domain_transformations, level) = basis
+    itr1 = 1:level.each
+    itrs = ntuple(_ -> itr1, Val(length(domain_transformations)))
+    SmolyakIndices(family, kind, level, itrs)
+end
+
+function Base.iterate(itr::SmolyakIndices, state = nothing)
+    (; family, kind, level, itrs) = itr
+    __smolyak_iterate(family, kind, level, (a, b) -> (a, b...), itrs, identity, state)
+end
+
+function adjust_coefficients(θ1::AbstractVector{T}, basis1::SmolyakBasis,
+                             basis2::SmolyakBasis) where T
+    (; family, kind, level, domain_transformations) = basis1
+    @argcheck family ≡ basis2.family
+    @argcheck domain_transformations == basis2.domain_transformations
+    if kind ≡ basis2.kind && level == basis2.level
+        # these are the same bases
+        return copy(θ1)
+    end
+    θ = Dict{NTuple{length(domain_transformations),Int},T}()
+    for (x, ι) in zip(θ1, smolyak_indices(basis1))
+        θ[ι] = x
+    end
+    z = zero(T)
+    [get(θ, ι, z) for ι in smolyak_indices(basis2)]
 end
 
 # """

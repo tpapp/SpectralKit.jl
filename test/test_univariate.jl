@@ -47,9 +47,9 @@ end
 @testset "Chebyshev grid" begin
     for kind in KINDS
         previous = Float64[]
-        for level in 1:7
-            b = univariate_basis(Chebyshev(), kind,
-                                 BoundedLinear(; lower = 1.0, upper = 3.0), level)
+        for level in 0:7
+            b = UnivariateBasis(Chebyshev(), kind,
+                                BoundedLinear(; lower = 1.0, upper = 3.0), level)
             g = collect(grid(b))
             @test is_approximate_subset(previous, g)
             g = previous
@@ -59,10 +59,10 @@ end
 
 @testset "Chebyshev basics" begin
     transformation = BoundedLinear(; lower = 1.0, upper = 3.0)
-    @test_throws ArgumentError univariate_basis(Chebyshev(), Endpoints(), transformation, 0)
+    @test_throws ArgumentError UnivariateBasis(Chebyshev(), Endpoints(), transformation, -1)
     for kind in KINDS
-        for level in 1:5
-            basis = univariate_basis(Chebyshev(), kind, transformation, level)
+        for level in 0:5
+            basis = UnivariateBasis(Chebyshev(), kind, transformation, level)
             @test is_function_basis(basis)
             @test is_function_basis(typeof(basis))
             N = @inferred dimension(basis)
@@ -103,7 +103,7 @@ end
     transformation = SemiInfRational(; endpoint = 3.0, scale = 7.0)
     for kind in KINDS
         level0 = 3
-        basis0 = univariate_basis(Chebyshev(), kind, transformation, level0)
+        basis0 = UnivariateBasis(Chebyshev(), kind, transformation, level0)
         θ0 = randn(dimension(basis0))
         for Δ in 1:4
             basis = @set basis0.level = level0 + Δ
@@ -121,7 +121,7 @@ end
     for (transformation, N) in ((BoundedLinear(lower = -2, upper = 3), 5),
                                 (SemiInfRational(endpoint = 0.7, scale = 0.3), 1),
                                 (InfRational(center = 0.4, scale = 0.9), 1))
-        basis = univariate_basis(Chebyshev(), Interior(), transformation, 3)
+        basis = UnivariateBasis(Chebyshev(), Interior(), transformation, 3)
         D = 𝑑^Val(N)
         f = linear_combination(basis, randn(dimension(basis)))
         for _ in 1:50
@@ -142,8 +142,8 @@ end
     x_minf = 𝑑(-Inf)
 
     @testset "SemiInfRational endpoints continuity" begin
-        basis = univariate_basis(Chebyshev(), Interior(),
-                                 SemiInfRational(; endpoint = 2.3, scale = 0.7), 3)
+        basis = UnivariateBasis(Chebyshev(), Interior(),
+                                SemiInfRational(; endpoint = 2.3, scale = 0.7), 3)
         for i in 1:dimension(basis)
             θ = e_i(basis, i)
             y_pinf = @inferred linear_combination(basis, θ, x_pinf)
@@ -153,8 +153,8 @@ end
     end
 
     @testset "InfRational endpoints continuity" begin
-        basis = univariate_basis(Chebyshev(), Interior(),
-                                 InfRational(; center = 2.3, scale = 0.7), 3)
+        basis = UnivariateBasis(Chebyshev(), Interior(),
+                                InfRational(; center = 2.3, scale = 0.7), 3)
         for i in 1:dimension(basis)
             θ = e_i(basis, i)
             y_pinf = @inferred linear_combination(basis, θ, x_pinf)

@@ -14,7 +14,7 @@ import SpectralKit as SK
 #     Aqua.test_all(SpectralKit)
 # end
 
-using DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
+using Accessors, DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
 
 include("utilities.jl")
 
