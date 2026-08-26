@@ -55,6 +55,22 @@ end
     @test @ballocated(linear_combination($basis, $θ, $y)) == 0
 end
 
+@testset "smolyak indices" begin
+    for kind in KINDS
+        for N in 1:5
+            for total in 0:4
+                for each in 0:total
+                    expected = naive_smolyak_indices(Chebyshev(), kind, Val(N), total, each)
+                    basis = SmolyakBasis(Chebyshev(), kind, ntuple(_ -> nothing, Val(N)),
+                                         SmolyakLevel(; total, each))
+                    @test collect(SpectralKit.SmolyakIndices(basis)) == expected
+                end
+            end
+        end
+    end
+end
+
+
 ###
 ### augment coefficients
 ###

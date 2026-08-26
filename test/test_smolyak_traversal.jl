@@ -29,9 +29,8 @@ end
 @testset "__smolyak_length" begin
     for kind in KINDS
         for N in 1:5
-            for total in 1:4
-                for each in 1:total
-                    # kind, N, total, each = Endpoints(), 4, 2, 1
+            for total in 0:4
+                for each in 0:total
                     @test @inferred(SpectralKit.__smolyak_length(Chebyshev(), kind, Val(N), total, each)) ==
                         length(naive_smolyak_indices(Chebyshev(), kind, Val(N), total, each))
                 end
