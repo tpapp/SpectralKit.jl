@@ -155,6 +155,14 @@ struct UnivariateBasis{F,K,D} <: FunctionBasis
     end
 end
 
+function Base.show(io::IO, basis::UnivariateBasis)
+    (; family, kind, domain_transformation, level) = basis
+    lead = "UnivariateBasis("
+    next = ",\n" * ' '^length(lead)
+    print(io, "UnivariateBasis(", family, next, kind, next, domain_transformation, next,
+          level, ") # dimension: ", dimension(basis))
+end
+
 domain(U::UnivariateBasis) = domain(U.domain_transformation)
 
 dimension(U::UnivariateBasis) = grid_length(U.family, U.kind, U.level)

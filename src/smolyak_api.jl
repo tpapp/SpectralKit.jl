@@ -76,14 +76,12 @@ struct SmolyakBasis{F,K,D} <: MultivariateBasis
     end
 end
 
-function Base.show(io::IO, basis::SmolyakBasis) where N
+function Base.show(io::IO, basis::SmolyakBasis)
     (; family, kind, domain_transformations, level) = basis
     lead = "SmolyakBasis("
     next = ",\n" * ' '^length(lead)
     print(io, "SmolyakBasis(", family, next, kind, next, domain_transformations, next,
-          level,
-          ") # dimension: ",
-          dimension(basis))
+          level, ") # dimension: ", dimension(basis))
 end
 
 
