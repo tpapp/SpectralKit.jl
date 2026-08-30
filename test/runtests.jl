@@ -25,5 +25,6 @@ include("test_transformations.jl")
 include("test_univariate.jl")
 include("test_smolyak_traversal.jl")
 include("test_smolyak.jl")
+include("integration_enzyme.jl")
 # include("test_generic_api.jl")  # NOTE moved last as it used constructs from above
 # include("test_experimental.jl") # NOTE experimental code is not public API

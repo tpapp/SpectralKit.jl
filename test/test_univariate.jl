@@ -165,3 +165,11 @@ end
         end
     end
 end
+
+@testset "Chebyshev allocations" begin
+    basis = UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(), 3)
+    y = 0.5
+    θ = randn(dimension(basis))
+    @inferred linear_combination(basis, θ, y)
+    @test @ballocated(linear_combination($basis, $θ, $y)) == 0
+end
