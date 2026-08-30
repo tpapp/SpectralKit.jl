@@ -23,20 +23,18 @@ struct ChebyshevIterator{T}
     x::T
 end
 
-Base.eltype(::Type{<:ChebyshevIterator{T}}) where {T} = T
-
-Base.IteratorSize(::Type{<:ChebyshevIterator}) = Base.IsInfinite()
-
-function Base.iterate(itr::ChebyshevIterator{T}) where T
+function _start(itr::ChebyshevIterator{T}) where T
     (; x) = itr
     _one(T), (_one(T), x)
 end
 
-function Base.iterate(itr::ChebyshevIterator{T}, (fp, fpp)) where T
+function _next(itr::ChebyshevIterator{T}, (fp, fpp)) where T
     (; x) = itr
     f = _sub(_mul(2, x, fp), fpp)
     f::T, (f, fp)
 end
+
+_eltype(::Type{<:ChebyshevIterator{T}}) where {T} = T
 
 """
 $(SIGNATURES)
@@ -168,8 +166,44 @@ domain(U::UnivariateBasis) = domain(U.domain_transformation)
 
 dimension(U::UnivariateBasis) = grid_length(U.family, U.kind, U.level)
 
-function basis_at(U::UnivariateBasis{Chebyshev}, x::Scalar)
-    Iterators.take(ChebyshevIterator(transform_to(PM1(), U.domain_transformation, x)), dimension(U))
+struct UnivariateBasisAt{I}
+    infinite_itr::I
+    N::Int
+end
+
+Base.eltype(::Type{UnivariateBasisAt{I}}) where I = _eltype(I)
+
+Base.length(itr::UnivariateBasisAt) = itr.N
+
+function Base.iterate(itr::UnivariateBasisAt, state = nothing)
+    (; infinite_itr, N) = itr
+    if state ≡ nothing
+        x, inner_state = _start(infinite_itr)
+        x, (1, inner_state)
+    else
+        i, inner_state = state
+        if i < N
+            x, inner_state′ = _next(infinite_itr, inner_state)
+            x, (i + 1, inner_state′)
+        else
+            nothing
+        end
+    end
+end
+
+"""
+$(SIGNATURES)
+
+Return an infinite iterator for the univariate basis functions, using the protocol with
+[`_start`](@ref), [`_next`](@ref), etc.
+"""
+function _univariate_basis_itr(family::Chebyshev, domain_transformation, x::Scalar)
+    ChebyshevIterator(transform_to(PM1(), domain_transformation, x))
+end
+
+function basis_at(U::UnivariateBasis, x::Scalar)
+    UnivariateBasisAt(_univariate_basis_itr(U.family, U.domain_transformation, x),
+                      dimension(U))
 end
 
 @concrete struct ChebyshevGrid{T} <: AbstractVector{T}

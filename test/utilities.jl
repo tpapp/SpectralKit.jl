@@ -153,6 +153,19 @@ end
 """
 $(SIGNATURES)
 
+Get the `n`th element from an infinite iterator. For unit testing.
+"""
+function _nth(infinite_itr, i)
+    x, state = SpectralKit._start(infinite_itr)
+    for _ in 2:i
+        x, state = SpectralKit._next(infinite_itr, state)
+    end
+    x
+end
+
+"""
+$(SIGNATURES)
+
 Test the Smolyak iterator implementation building blocks directly using a parallel,
 naive calculation and checking invariants.
 """
@@ -163,13 +176,12 @@ function test_smolyak_step(family, kind, total, each, f, itrs::NTuple{N,Any}) wh
                                                                             total, f, itrs)
     while true
         @test slack + sum(levels) == total # simple sanity check
-        cs = map((itr, i) -> first(Iterators.drop(itr, i - 1)),
-                 itrs, reference[i])
+        cs = map(_nth, itrs, reference[i])
         @test accum == foldr(f, cs; init = ())
         next = SpectralKit.__smolyak_step(family, kind, each, f, itrs,
                                           accum, slack, remainders, states, levels)
-        next ≡ nothing && break
         (accum, Δ, remainders, states, levels) = next
+        Δ == SpectralKit.Δ_DONE && break
         slack += Δ
         i += 1
     end

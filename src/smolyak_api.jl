@@ -39,19 +39,17 @@ A wrapper for iterating through Smolyak indices. See [`__smolyak__init`](@ref) a
 
 `g` transforms the value.
 """
-function __smolyak_iterate(family, kind, level::SmolyakLevel, f, itrs, g,
-                           state = nothing)
+function __smolyak_iterate(family, kind, level::SmolyakLevel, f::F, itrs, g::G,
+                           state = nothing) where {F,G}
     if state ≡ nothing
         accum, state... = __smolyak_init(family, kind, level.total, f, itrs)
         g(accum), (accum, state...)
     else
-        result = __smolyak_step(family, kind, level.each, f, itrs,
-                                state...)
-        if result ≡ nothing
+        accum, Δ, rest... = __smolyak_step(family, kind, level.each, f, itrs, state...)
+        if Δ == Δ_DONE
             nothing
         else
             slack = state[2]
-            accum, Δ, rest... = result
             g(accum), (accum, slack + Δ, rest...)
         end
     end
@@ -145,7 +143,7 @@ struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}
 end
 
 function Base.eltype(::Type{<:SmolyakBasisAt{I,P}}) where {I,P}
-    _product_type(P, map(eltype, fieldtypes(I)))
+    _product_type(P, map(_eltype, fieldtypes(I)))
 end
 
 function Base.length(itr::SmolyakBasisAt)
@@ -154,19 +152,20 @@ function Base.length(itr::SmolyakBasisAt)
     __smolyak_length(family, kind, Val(N), level.total, level.each)
 end
 
+_prod(a::Real, b::Tuple{}) = (a, )
+
+_prod(a::Real, b::Tuple) = (a * first(b), b...)
+
 function Base.iterate(itr::SmolyakBasisAt, state = nothing)
     (; family, kind, level, itrs, product_kind) = itr
     # FIXME this does not yet work for derivatives
-    __smolyak_iterate(family, kind, level,
-                      (a, b) -> isempty(b) ? (a,) : (a * first(b), b...),
-                      itrs, first, state)
+    __smolyak_iterate(family, kind, level, _prod, itrs, first, state)
 end
 
 function basis_at(smolyak_basis::SmolyakBasis, x::Tuple)
     (; family, kind, domain_transformations, level) = smolyak_basis
     @argcheck length(x) == length(domain_transformations)
-    itrs = map((x, d) -> basis_at(UnivariateBasis(family, kind, d, level.each), x),
-               x, domain_transformations)
+    itrs = map((x, d) -> _univariate_basis_itr(family, d, x), x, domain_transformations)
     SmolyakBasisAt(family, kind, level, itrs, nothing)
 end
 
@@ -190,7 +189,7 @@ struct SmolyakGrid{I,F,K,S<:SmolyakLevel}
 end
 
 function Base.eltype(::Type{<:SmolyakGrid{I}}) where {I}
-    Tuple{map(eltype, fieldtypes(I))...}
+    Tuple{map(_eltype, fieldtypes(I))...}
 end
 
 function Base.length(itr::SmolyakGrid)
@@ -234,8 +233,7 @@ Note: only used as a building block for [`adjust_coefficients`](@ref).
 """
 function SmolyakIndices(basis::SmolyakBasis)
     (; family, kind, domain_transformations, level) = basis
-    itr1 = Iterators.countfrom(1, 1)
-    itrs = ntuple(_ -> itr1, Val(length(domain_transformations)))
+    itrs = ntuple(_ -> Counting(), Val(length(domain_transformations)))
     SmolyakIndices(family, kind, level, itrs)
 end
 

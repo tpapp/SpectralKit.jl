@@ -11,12 +11,17 @@ function __smolyak_init(family, kind, total::Int, f::F, itrs::NTuple{N,Any}) whe
     slack = total
     r = block_length(family, kind, 0)
     remainders = ntuple(_ -> r - 1, Val(N))
-    itr_results = map(iterate, itrs)
+    itr_results = map(_start, itrs)
     states = map(last, itr_results)
     levels = ntuple(_ -> 0, Val(N))
     accum = foldr(f, map(first, itr_results); init = ())
     accum, slack, remainders, states, levels
 end
+
+"""
+Sentinel value for having finished iteration in `__smolyak_step`.
+"""
+const Δ_DONE = typemax(Int)
 
 """
 $(SIGNATURES) → accum, Δ, remainders′, states′, levels′
@@ -45,31 +50,33 @@ function __smolyak_step(family, kind, each::Int, f::F, itrs::NTuple{N,Any},
     s1, sτ... = states
     l1, lτ... = levels
     if r1 > 0                   # step within block
-        x1, s1′ = iterate(I1, s1)
+        x1, s1′ = _next(I1, s1)
         (f(x1, aτ),
          0,                     # no change in slack
          (r1 - 1, rτ...),       # one less element in 1
          (s1′, sτ...),          # step iterator
          levels)
     elseif l1 < each && slack > 0 # next block, same tail
-        x1, s1′ = iterate(I1, s1)
+        x1, s1′ = _next(I1, s1)
         (f(x1, aτ),
          -1,                    # decrease slack
          (block_length(family, kind, l1 + 1) - 1, rτ...), # remaining elements: all in block
          (s1′, sτ...),          # step state 1
          (l1+1, lτ...))         # next level
     elseif N == 1
-        nothing                 # done with iteration
+        accum, Δ_DONE, remainders, states, levels # done with iteration
     else                        # go into tail
-        next = __smolyak_step(family, kind, each, f, Iτ, aτ, slack + l1, rτ, sτ, lτ)
-        next ≡ nothing && return nothing
-        aτ′, Δτ, rτ′, sτ′, lτ′ = next
-        x1, s1 = iterate(I1)
-        (f(x1, aτ′),
-         l1 + Δτ,                                     # more slack as we reset 1
-         (block_length(family, kind, 0) - 1, rτ′...), # all remaining in block 0
-         (s1, sτ′...),                                # states with tail
-         (0, lτ′...))                                 # back to level 0 here
+        aτ′, Δτ, rτ′, sτ′, lτ′ = __smolyak_step(family, kind, each, f, Iτ, aτ, slack + l1, rτ, sτ, lτ)
+        if Δτ == Δ_DONE
+            accum, Δ_DONE, remainders, states, levels # tail is done with iteration
+        else
+            x1, s1 = _start(I1)
+            (f(x1, aτ′),
+             l1 + Δτ,                                     # more slack as we reset 1
+             (block_length(family, kind, 0) - 1, rτ′...), # all remaining in block 0
+             (s1, sτ′...),                                # states with tail
+             (0, lτ′...))                                 # back to level 0 here
+        end
     end
 end
 

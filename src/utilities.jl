@@ -3,6 +3,46 @@
 #####
 
 ####
+#### infinite iteration
+####
+
+"""
+$(SIGNATURES)
+
+This package introduces its own API for infinite iteration. `_start(itr)` is not unlike
+`iterate(itr)`, while `_next(itr, state) → x, state` is not unlike `iterate(itr,
+state)`. Also see [`_eltype`](@ref).
+
+The rationale is to ease the compilation burden by ruling out `Union` types (`nothing`)
+and combinatorial explosition. Julia can cope with it `iterate`, but it causes problems
+with `Enzyme`.
+"""
+_start(itr) = iterate(itr)::Tuple
+
+"""
+$(SIGNATURES) → x, state
+
+Internal API for infinite iteration. See [`_start`](@ref).
+"""
+_next(itr, state) = iterate(itr, state)::Tuple
+
+"""
+$(SIGNATURES) → Type
+
+Internal API for infinite iteration. See [`_start`](@ref).
+"""
+_eltype(::Type{T}) where T = eltype(T)
+
+"Counting integers from 1."
+struct Counting end
+
+_start(::Counting) = 1, 1
+
+_next(::Counting, state) = state + 1, state + 1
+
+_eltype(::Type{Counting}) = Int
+
+####
 #### printing
 ####
 
