@@ -138,6 +138,7 @@ struct UnivariateBasis{F,K,D} <: FunctionBasis
     kind::K
     domain_transformation::D
     level::Int
+    grid_level::Int
     @doc """
     $(SIGNATURES)
 
@@ -147,19 +148,23 @@ struct UnivariateBasis{F,K,D} <: FunctionBasis
     build the grid.
     """
     function UnivariateBasis(family::F, kind::K, domain_transformation::D,
-                             level::Int) where {F,K,D}
+                             level::Int, grid_level::Int = level) where {F,K,D}
         @argcheck level ≥ 0
-        new{F,K,D}(family, kind, domain_transformation, level)
+        new{F,K,D}(family, kind, domain_transformation, level, grid_level)
     end
 end
 
 function Base.show(io::IO, basis::UnivariateBasis)
-    (; family, kind, domain_transformation, level) = basis
+    (; family, kind, domain_transformation, level, grid_level) = basis
     lead = "UnivariateBasis("
     next = ",\n" * ' '^length(lead)
     print(io, "UnivariateBasis(", family,
           next, kind, next, domain_transformation, next,
-          level, ")    # dimension: ", dimension(basis))
+          level)
+    if grid_level ≠ level
+        print(io, next, grid_level)
+    end
+    print(io, ")    # dimension: ", dimension(basis))
 end
 
 domain(U::UnivariateBasis) = domain(U.domain_transformation)
@@ -225,9 +230,9 @@ end
 function grid(::Type{T},
               U::UnivariateBasis{Chebyshev,
                                  <:Union{Endpoints,Interior}}) where {T <: AbstractFloat}
-    (; family, kind, domain_transformation, level) = U
-    N = grid_length(family, kind, level)
-    ChebyshevGrid{T}(kind, domain_transformation, level, N,
+    (; family, kind, domain_transformation, grid_level) = U
+    N = grid_length(family, kind, grid_level)
+    ChebyshevGrid{T}(kind, domain_transformation, grid_level, N,
                      kind ≡ Interior() ? N̂ = N + 2 : N)
 end
 

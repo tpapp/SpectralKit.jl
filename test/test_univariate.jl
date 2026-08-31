@@ -116,6 +116,13 @@ end
     end
 end
 
+@testset "different grid_level" begin
+    basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 1.0), 2, 3)
+    @test length(grid(basis)) ==
+        SpectralKit.grid_length(Chebyshev(), Interior(), 3) ==
+        length(collect(grid(basis)))
+end
+
 @testset "univariate derivatives" begin
     for (transformation, N) in ((BoundedLinear(-2, 3), 5),
                                 (SemiInfRational(endpoint = 0.7, scale = 0.3), 1),
