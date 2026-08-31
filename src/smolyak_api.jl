@@ -4,6 +4,8 @@
 
 export SmolyakLevel, SmolyakBasis
 
+import ConstructionBase
+
 struct SmolyakLevel
     total::Int
     each::Int
@@ -31,6 +33,21 @@ struct SmolyakLevel
     end
 end
 
+function Base.show(io::IO, level::SmolyakLevel)
+    (; total, each) = level
+    explanation = "0 ≤ ∑ℓᵢ ≤ $(total), all 0 ≤ ℓᵢ ≤ $(each)"
+    print(io, "SmolyakLevel(total = $(total), each = $(each)) #= $(explanation) =#")
+end
+
+function ConstructionBase.setproperties(level::SmolyakLevel, patch::NamedTuple)
+    ConstructionBase.setproperties(level; patch...)
+end
+
+function ConstructionBase.setproperties(level::SmolyakLevel;
+                                        total = level.total, each = level.each)
+    SmolyakLevel(; total = Int(total), each = Int(each))
+end
+
 """
 $(SIGNATURES)
 
@@ -55,11 +72,6 @@ function __smolyak_iterate(family, kind, level::SmolyakLevel, f::F, itrs, g::G,
     end
 end
 
-function Base.show(io::IO, level::SmolyakLevel)
-    (; total, each) = level
-    explanation = "∑ℓᵢ ≤ $(total), all ℓᵢ ≤ $(each)"
-    print(io, "SmolyakLevel(total = $(total), each = $(each)) #= $(explanation) =#")
-end
 
 struct SmolyakBasis{F,K,D} <: MultivariateBasis
     family::F

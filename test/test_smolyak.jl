@@ -2,13 +2,24 @@
 #### api
 ####
 
-@testset "printing SmolyakLevels" begin
+using ConstructionBase
+
+@testset "SmolyakLevels printing" begin
     @test repr(SmolyakLevel(; total = 3, each = 2)) ==
-        "SmolyakLevel(total = 3, each = 2) #= ∑ℓᵢ ≤ 3, all ℓᵢ ≤ 2 =#"
+        "SmolyakLevel(total = 3, each = 2) #= 0 ≤ ∑ℓᵢ ≤ 3, all 0 ≤ ℓᵢ ≤ 2 =#"
 end
 
-@testset "Smolyak API checks" begin
+@testset "SmolyakLevel normalization" begin
     @test_logs (:warn, "‘each’ normalized to ‘total’") SmolyakLevel(total = 2, each = 4)
+end
+
+@testset "SmolyakLevel ConstructionBase integration" begin
+    level = SmolyakLevel(; total = 4, each = 3)
+    @test ConstructionBase.setproperties(level, (total = 5,)) ==
+        SmolyakLevel(; total = 5, each = 3)
+    @test ConstructionBase.setproperties(level, (each = 2, total = 5)) ==
+        SmolyakLevel(; total = 5, each = 2)
+    @test_throws MethodError ConstructionBase.setproperties(level, (a_fish = 3,))
 end
 
 @testset "Smolyak API sanity checks" begin
