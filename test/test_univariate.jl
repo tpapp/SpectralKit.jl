@@ -116,6 +116,16 @@ end
     end
 end
 
+@testset "printing" begin
+    basis = UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(), 3)
+    @test repr(basis) ==
+        """# dimension: 15
+UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(endpoint = 0, scale = 1), 3)"""
+    @test repr(@set basis.grid_level = 4) ==
+        """# dimension: 15, grid length: 31
+UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(endpoint = 0, scale = 1), 3, 4)"""
+end
+
 @testset "different grid_level" begin
     basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 1.0), 2, 3)
     @test length(grid(basis)) ==

@@ -35,8 +35,11 @@ end
 
 function Base.show(io::IO, level::SmolyakLevel)
     (; total, each) = level
-    explanation = "0 ≤ ∑ℓᵢ ≤ $(total), all 0 ≤ ℓᵢ ≤ $(each)"
-    print(io, "SmolyakLevel(total = $(total), each = $(each)) #= $(explanation) =#")
+    print(io, "SmolyakLevel(total = $(total), each = $(each))")
+    if !get(io, :compact, false)
+        printstyled(io, "    #= 0 ≤ ∑ℓᵢ ≤ $(total), all 0 ≤ ℓᵢ ≤ $(each) =#";
+                    color = INFO_COLOR)
+    end
 end
 
 function ConstructionBase.setproperties(level::SmolyakLevel, patch::NamedTuple)
@@ -89,11 +92,17 @@ struct SmolyakBasis{F,K,D} <: MultivariateBasis
 end
 
 function Base.show(io::IO, basis::SmolyakBasis)
-    (; family, kind, domain_transformations, level) = basis
+    (; family, kind, domain_transformations, level, grid_level) = basis
+    _print_dimensions(io, basis)
     lead = "SmolyakBasis("
     next = ",\n" * ' '^length(lead)
-    print(io, "SmolyakBasis(", family, next, kind, next, domain_transformations, next,
-          level, ")    # dimension: ", dimension(basis))
+    print(io, lead, family, ", ", kind, next,
+          domain_transformations, next,
+          level)
+    if grid_level ≠ level
+        print(io, next, grid_level)
+    end
+    print(io, ")")
 end
 
 

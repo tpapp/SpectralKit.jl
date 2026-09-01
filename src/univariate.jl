@@ -156,15 +156,11 @@ end
 
 function Base.show(io::IO, basis::UnivariateBasis)
     (; family, kind, domain_transformation, level, grid_level) = basis
-    lead = "UnivariateBasis("
-    next = ",\n" * ' '^length(lead)
-    print(io, "UnivariateBasis(", family,
-          next, kind, next, domain_transformation, next,
+    _print_dimensions(io, basis)
+    print(io, "UnivariateBasis(", family, ", ", kind, ", ", domain_transformation, ", ",
           level)
-    if grid_level ≠ level
-        print(io, next, grid_level)
-    end
-    print(io, ")    # dimension: ", dimension(basis))
+    level ≠ grid_level && print(io, ", ", grid_level)
+    print(io, ")")
 end
 
 domain(U::UnivariateBasis) = domain(U.domain_transformation)

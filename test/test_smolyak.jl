@@ -6,7 +6,7 @@ using ConstructionBase
 
 @testset "SmolyakLevels printing" begin
     @test repr(SmolyakLevel(; total = 3, each = 2)) ==
-        "SmolyakLevel(total = 3, each = 2) #= 0 ≤ ∑ℓᵢ ≤ 3, all 0 ≤ ℓᵢ ≤ 2 =#"
+        "SmolyakLevel(total = 3, each = 2)    #= 0 ≤ ∑ℓᵢ ≤ 3, all 0 ≤ ℓᵢ ≤ 2 =#"
 end
 
 @testset "SmolyakLevel normalization" begin
@@ -20,6 +20,21 @@ end
     @test ConstructionBase.setproperties(level, (each = 2, total = 5)) ==
         SmolyakLevel(; total = 5, each = 2)
     @test_throws MethodError ConstructionBase.setproperties(level, (a_fish = 3,))
+end
+
+@testset "Smolyak printing" begin
+    basis = SmolyakBasis(Chebyshev(), Interior(), (BoundedLinear(0, 1),), SmolyakLevel(total = 3, each = 2))
+    @test repr(basis) ==
+        """# dimension: 7
+SmolyakBasis(Chebyshev(), Interior(),
+             (BoundedLinear(0, 1),),
+             SmolyakLevel(total = 3, each = 2)    #= 0 ≤ ∑ℓᵢ ≤ 3, all 0 ≤ ℓᵢ ≤ 2 =#)"""
+    @test repr(@set basis.grid_level = SmolyakLevel(total = 4, each = 3)) ==
+        """# dimension: 7, grid length: 15
+SmolyakBasis(Chebyshev(), Interior(),
+             (BoundedLinear(0, 1),),
+             SmolyakLevel(total = 3, each = 2)    #= 0 ≤ ∑ℓᵢ ≤ 3, all 0 ≤ ℓᵢ ≤ 2 =#,
+             SmolyakLevel(total = 4, each = 3)    #= 0 ≤ ∑ℓᵢ ≤ 4, all 0 ≤ ℓᵢ ≤ 3 =#)"""
 end
 
 @testset "Smolyak API sanity checks" begin

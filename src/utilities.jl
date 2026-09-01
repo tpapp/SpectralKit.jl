@@ -46,6 +46,25 @@ _eltype(::Type{Counting}) = Int
 #### printing
 ####
 
+"Color for printing additional information."
+const INFO_COLOR = :blue
+
+"""
+$(SIGNATURES)
+
+Helper function to print the dimensions nicely, as a comment. Grid dimensions are only
+printed when different from basis dimensions.
+"""
+function _print_dimensions(io::IO, basis)
+    d = dimension(basis)
+    gl = length(grid(basis))
+    if !get(io, :compact, false)
+        printstyled(io, "# dimension: ", d; color = INFO_COLOR)
+        d ≠ gl && printstyled(io, ", grid length: ", gl; color = INFO_COLOR)
+        println(io)
+    end
+end
+
 const _SUPERSCRIPT_DIGITS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹']
 
 const _SUBSCRIPT_DIGITS = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉']
