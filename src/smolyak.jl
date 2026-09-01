@@ -72,18 +72,19 @@ function __smolyak_iterate(family, kind, level::SmolyakLevel, f::F, itrs, g::G,
     end
 end
 
-
 struct SmolyakBasis{F,K,D} <: MultivariateBasis
     family::F
     kind::K
     domain_transformations::D
     level::SmolyakLevel
+    grid_level::SmolyakLevel
     @doc """
     $(SIGNATURES)
     """
     function SmolyakBasis(family::F, kind::K, domain_transformations::D,
-                          level::SmolyakLevel) where {F,K,D<:Tuple}
-        new{F,K,D}(family, kind, domain_transformations, level)
+                          level::SmolyakLevel,
+                          grid_level::SmolyakLevel = level) where {F,K,D<:Tuple}
+        new{F,K,D}(family, kind, domain_transformations, level, grid_level)
     end
 end
 
@@ -214,14 +215,14 @@ function Base.iterate(itr::SmolyakGrid, state = nothing)
 end
 
 function grid(::Type{T}, smolyak_basis::SmolyakBasis) where {T<:AbstractFloat}
-    (; family, kind, domain_transformations, level) = smolyak_basis
-    (; each) = level
+    (; family, kind, domain_transformations, grid_level) = smolyak_basis
+    (; each) = grid_level
     itrs = map(d -> grid(T, UnivariateBasis(family, kind, d, each)), domain_transformations)
-    SmolyakGrid(family, kind, level, itrs)
+    SmolyakGrid(family, kind, grid_level, itrs)
 end
 
 ####
-#### index traversal
+#### index traversal for adjustment
 ####
 
 @concrete struct SmolyakIndices{I}
