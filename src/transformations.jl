@@ -10,19 +10,11 @@ export domain, domain_kind, transform_to, transform_from, coordinate_transformat
 ####
 
 """
-
-!!! note
-    Abstract type used for code organization, not exported.
-"""
-
-"""
 $(TYPEDEF)
 
 An abstract type for univariate transformations.
 """
 abstract type AbstractUnivariateTransformation end
-
-Broadcast.broadcastable(transformation::AbstractUnivariateTransformation) = Ref(transformation)
 
 domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
@@ -51,94 +43,6 @@ values and derivatives.
 function transform_from end
 
 ####
-#### coordinate transformations
-####
-
-struct CoordinateTransformations{T<:Tuple}
-    transformations::T
-end
-
-domain_kind(::Type{<:CoordinateTransformations}) = :multivariate
-
-function domain(coordinate_transformations::CoordinateTransformations)
-    coordinate_domains(map(domain, coordinate_transformations.transformations))
-end
-
-function Base.Tuple(coordinate_transformations::CoordinateTransformations)
-    coordinate_transformations.transformations
-end
-
-function Base.show(io::IO, ct::CoordinateTransformations)
-    print(io, "coordinate transformations")
-    for t in ct.transformations
-        print(io, "\n  ", t)
-    end
-end
-
-Broadcast.broadcastable(ct::CoordinateTransformations) = Ref(ct)
-
-"""
-$(SIGNATURES)
-
-Wrapper for coordinate-wise transformations. To extract components, convert to Tuple.
-
-```jldoctest
-julia> using StaticArrays
-
-julia> ct = coordinate_transformations(BoundedLinear(0, 2), SemiInfRational(2, 3))
-coordinate transformations
-  (0.0,2.0) ↔ domain [linear transformation]
-  (2,∞) ↔ domain [rational transformation with scale 3]
-
-julia> d1 = domain(Chebyshev(InteriorGrid(), 5))
-[-1,1]
-
-julia> dom = coordinate_domains(d1, d1)
-[-1,1]²
-
-julia> x = transform_from(dom, ct, (0.4, 0.5))
-(1.4, 11.0)
-
-julia> y = transform_to(dom, ct, x)
-(0.3999999999999999, 0.5)
-```
-"""
-function coordinate_transformations(transformations::Tuple)
-    CoordinateTransformations(transformations)
-end
-
-coordinate_transformations(transformations...) = coordinate_transformations(transformations)
-
-function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
-    (; domains) = domain
-    (; transformations) = ct
-    @argcheck length(domains) == length(transformations) == length(x)
-    map((d, t, x) -> transform_to(d, t, x), domains, transformations, x)
-end
-
-function transform_to(domain::CoordinateDomains{T}, ct::CoordinateTransformations,
-                      x::AbstractVector) where T
-    SVector(transform_to(domain, ct, _ntuple_like(T, x)))
-end
-
-function transform_to(domain::CoordinateDomains, ct::CoordinateTransformations,
-                      Dx::∂CoordinateExpansion)
-    ∂CoordinateExpansion(Dx.∂D, transform_to(domain, ct, Dx.x))
-end
-
-function transform_from(domain::CoordinateDomains, ct::CoordinateTransformations, x::Tuple)
-    (; domains) = domain
-    (; transformations) = ct
-    @argcheck length(domains) == length(transformations) == length(x)
-    map((d, t, x) -> transform_from(d, t, x), domains, transformations, x)
-end
-
-function transform_from(domain::CoordinateDomains{T}, ct::CoordinateTransformations,
-                        x::AbstractVector) where {T}
-    SVector(transform_from(domain, ct, _ntuple_like(T, x)))
-end
-
-####
 #### specific transformations
 ####
 
@@ -147,56 +51,56 @@ end
 ###
 
 struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
-    "Midpoint `m`."
-    m::T
-    "Scale `s`."
-    s::T
-    function BoundedLinear(a::T, b::T) where {T <: Real}
-        @argcheck isfinite(a) && isfinite(b) DomainError
-        s = (b - a) / 2
-        m = (a + b) / 2
-        @argcheck s > 0 DomainError((; a, b), "Need `a < b`.")
-        m, s = promote(m, s)
-        new{typeof(m)}(m, s)
+    "Lower limit."
+    lower::T
+    "Upper limit."
+    upper::T
+    @doc """
+    $(SIGNATURES)
+
+    Transform the domain to `y ∈ (lower, upper)`, using a linear mapping.
+
+    `lower < upper` is enforced.
+    """
+    function BoundedLinear(lower::T, upper::T) where {T<:Real}
+        @argcheck isfinite(lower) && isfinite(upper) DomainError
+        @argcheck upper > lower DomainError((; lower, upper), "Need `lower < upper`.")
+        new{typeof(lower)}(lower, upper)
     end
 end
 
+BoundedLinear(lower::Real, upper::Real) = BoundedLinear(promote(lower, upper)...)
+
+BoundedLinear(; lower, upper) = BoundedLinear(lower, upper)
+
 function Base.show(io::IO, transformation::BoundedLinear)
-    (; m, s) = transformation
-    print(io, "(", m - s, ",", m + s, ") ↔ domain [linear transformation]")
+    (; lower, upper) = transformation
+    print(io, "BoundedLinear(", lower, ", ", upper, ")")
 end
 
-"""
-$(TYPEDEF)
-
-Transform the domain to `y ∈ (a, b)`, using ``y = x ⋅ s + m``.
-
-`m` and `s` are calculated and checked by the constructor; `a < b` is enforced.
-"""
-BoundedLinear(a::Real, b::Real) = BoundedLinear(promote(a, b)...)
-
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)
-    (; m, s) = t
-    x * s + m
+    (; lower, upper) = t
+    (x+1) / 2 * (upper-lower)  + lower
 end
 
 function transform_to(::PM1, t::BoundedLinear, y::Real)
-    (; m, s) = t
-    (y - m) / s
+    (; lower, upper) = t
+    (y-lower) / (upper-lower) * 2 - 1
 end
 
 function transform_to(domain::PM1, t::BoundedLinear, y::𝑑Expansion{Dp1}) where Dp1
-    (; m, s) = t
+    (; lower, upper) = t
     (; coefficients) = y
     y0, yD... = coefficients
     x0 = transform_to(domain, t, y0)
+    s = (upper - lower) / 2
     xD = map(y -> y / s, yD)
     𝑑Expansion(SVector(x0, xD...))
 end
 
 function domain(t::BoundedLinear)
-    (; m, s) = t
-    UnivariateDomain(m - s, m + s)
+    (; lower, upper) = t
+    UnivariateDomain(lower, upper)
 end
 
 ###
@@ -204,49 +108,43 @@ end
 ###
 
 struct SemiInfRational{T<:Real} <: AbstractUnivariateTransformation
-    "The finite endpoint `A`."
-    A::T
-    "Scale factor `L ≠ 0`."
-    L::T
-    function SemiInfRational(A::T, L::T) where {T <: Real}
-        @argcheck isfinite(A) DomainError
-        @argcheck isfinite(L) && L ≠ 0 DomainError
-        new{T}(A, L)
+    "The finite endpoint."
+    endpoint::T
+    "Scale factor."
+    scale::T
+    @doc """
+    $(SIGNATURES)
+
+    The domian transformed to  `[endpoint, Inf)` (when `scale > 0`) or `(-Inf,endpoint]`
+    (when `scale < 0`) using ``y = endpoint + scale ⋅ (1 + x) / (1 - x)``.
+
+    When used with Chebyshev polynomials, also known as a “rational Chebyshev” basis.
+
+    # Example mappings for the domain ``(-1,1)``
+
+    - ``-1/2 ↦ endpoint + scale / 3``
+    - ``0 ↦ endpoint + scale``
+    - ``1/2 ↦ endpoint + 3 ⋅ scale``
+    """
+    function SemiInfRational(; endpoint::Real = 0, scale::Real = 1)
+        @argcheck isfinite(endpoint) DomainError
+        @argcheck isfinite(scale) && scale ≠ 0 DomainError
+        endpoint, scale = promote(endpoint, scale)
+        new{typeof(endpoint)}(endpoint, scale)
     end
 end
 
 function Base.show(io::IO, transformation::SemiInfRational)
-    (; A, L) = transformation
-    if L > 0
-        D = "($A,∞)"
-    else
-        D = "(-∞,A)"
-    end
-    print(io, D, " ↔ domain [rational transformation with scale ", L, "]")
+    (; endpoint, scale) = transformation
+    print(io, "SemiInfRational(endpoint = ", endpoint, ", scale = ", scale, ")")
 end
 
-"""
-$(SIGNATURES)
-
-The domian transformed to  `[A, Inf)` (when `L > 0`) or `(-Inf,A]`
-(when `L < 0`) using ``y = A + L ⋅ (1 + x) / (1 - x)``.
-
-When used with Chebyshev polynomials, also known as a “rational Chebyshev” basis.
-
-# Example mappings for the domain ``(-1,1)``
-
-- ``-1/2 ↦ A + L / 3``
-- ``0 ↦ A + L``
-- ``1/2 ↦ A + 3 ⋅ L``
-"""
-SemiInfRational(A::Real, L::Real) = SemiInfRational(promote(A, L)...)
-
-transform_from(::PM1, t::SemiInfRational, x) = t.A + t.L * (1 + x) / (1 - x)
+transform_from(::PM1, t::SemiInfRational, x) = t.endpoint + t.scale * (1 + x) / (1 - x)
 
 function transform_to(::PM1, t::SemiInfRational, y::Real)
-    (; A, L) = t
-    z = y - A
-    x = (z - L) / (z + L)
+    (; endpoint, scale) = t
+    z = y - endpoint
+    x = (z - scale) / (z + scale)
     if y == Inf || y == -Inf
         one(x)
     else
@@ -255,22 +153,22 @@ function transform_to(::PM1, t::SemiInfRational, y::Real)
 end
 
 function transform_to(domain::PM1, t::SemiInfRational, y::𝑑Expansion{Dp1}) where Dp1
-    (; A, L) = t
+    (; scale) = t
     (; coefficients) = y
     x0 = transform_to(domain, t, coefficients[1])
     Dp1 == 1 && return 𝑑Expansion(SVector(x0))
     # based on Boyd (2001), Table E.7
     Q = abs2(x0 - 1)
-    x1 = (coefficients[2] * Q) / (2*L)
+    x1 = (coefficients[2] * Q) / (2*scale)
     Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
     error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
 
 function domain(t::SemiInfRational)
-    (; L, A) = t
-    A = float(A)
-    ∞ = oftype(A, Inf)
-    L > 0 ? UnivariateDomain(A, ∞) : UnivariateDomain(-∞, A)
+    (; endpoint, scale) = t
+    endpoint = float(endpoint)
+    ∞ = oftype(endpoint, Inf)
+    scale > 0 ? UnivariateDomain(endpoint, ∞) : UnivariateDomain(-∞, endpoint)
 end
 
 ###
@@ -278,40 +176,41 @@ end
 ###
 
 struct InfRational{T <: Real} <: AbstractUnivariateTransformation
-    "The center `A`."
-    A::T
-    "Scale factor `L > 0`."
-    L::T
-    function InfRational(A::T, L::T) where {T <: Real}
-        @argcheck isfinite(A) DomainError
-        @argcheck isfinite(L) && L > 0 DomainError
-        new{T}(A, L)
+    "The center"
+    center::T
+    "Scale factor"
+    scale::T
+    @doc """
+    $(SIGNATURES)
+
+    The domain transformed to `(-Inf, Inf)` using
+    ``y = center + scale ⋅ x / √(1 - x^2)``, with `scale > 0`.
+
+    # Example mappings (for domain ``(-1,1)``)
+
+    - ``0 ↦ center``
+    - ``±0.5 ↦ center ± scale / √3``
+    """
+    function InfRational(center::T, scale::T) where {T <: Real}
+        @argcheck isfinite(center) DomainError
+        @argcheck isfinite(scale) && scale > 0 DomainError
+        new{T}(center, scale)
     end
 end
 
 function Base.show(io::IO, transformation::InfRational)
-    (; A, L) = transformation
-    print(io, "(-∞,∞) ↔ domain [rational transformation with center ", A, ", scale ", L, "]")
+    (; center, scale) = transformation
+    print(io, "InfRational(; center = ", center, ", scale = ", scale, ")")
 end
 
-"""
-$(SIGNATURES)
+InfRational(; center::Real = 0.0, scale::Real = 1.0) = InfRational(promote(center, scale)...)
 
-The domain transformed to `(-Inf, Inf)` using ``y = A + L ⋅ x / √(1 - x^2)``, with `L > 0`.
-
-# Example mappings (for domain ``(-1,1)``)
-
-- ``0 ↦ A``
-- ``±0.5 ↦ A ± L / √3``
-"""
-InfRational(A::Real, L::Real) = InfRational(promote(A, L)...)
-
-transform_from(::PM1, T::InfRational, x::Real) = T.A + T.L * x / √(1 - abs2(x))
+transform_from(::PM1, T::InfRational, x::Real) = T.center + T.scale * x / √(1 - abs2(x))
 
 function transform_to(::PM1, t::InfRational, y::Real)
-    (; A, L) = t
-    z = y - A
-    x = z / hypot(z, L)
+    (; center, scale) = t
+    z = y - center
+    x = z / hypot(z, scale)
     if isinf(y)
         y > 0 ? one(x) : -one(x)
     else
@@ -320,14 +219,14 @@ function transform_to(::PM1, t::InfRational, y::Real)
 end
 
 function transform_to(domain::PM1, t::InfRational, y::𝑑Expansion{Dp1}) where Dp1
-    (; A, L) = t
+    (; scale) = t
     (; coefficients) = y
     x0 = transform_to(domain, t, coefficients[1])
     Dp1 == 1 && return SVector(x0)
     # based on Boyd (2001), Table E.5
     Q = 1 - abs2(x0)
     sQ = √Q
-    x1 = (coefficients[2] * Q * sQ) / L
+    x1 = (coefficients[2] * Q * sQ) / scale
     Dp1 == 2 && return 𝑑Expansion(SVector(x0, x1))
     error("$(Dp1-1)th derivative not implemented yet, open an issue.")
 end
