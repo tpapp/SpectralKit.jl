@@ -115,12 +115,30 @@ function iterator_sanity_checks(itr)
     @test count(_ -> true, itr) == length(itr)
 end
 
-"nth derivative of f at x."
-function DD(f, x, n = 1; p = 10)
+"""
+$(SIGNATURES)
+
+`n`th derivative of f at x.
+
+`p` gives the degree of the finite difference rule. `domain`
+"""
+function DD(f, x, n = 1; p = 10, domain = (-Inf,Inf))
+    A, B = extrema(domain)
+    a = x - A
+    b = B - x
     if n == 0
         f(x)
+    elseif a == 0
+        forward_fdm(p, n)(f, x)
+    elseif b == 0
+        backward_fdm(p, n)(f, x)
     else
-        central_fdm(p, n)(f, x)
+        r = min(a, b)
+        if isfinite(r)
+            central_fdm(p, n, max_range = r)(f, x)
+        else
+            central_fdm(p, n)(f, x)
+        end
     end
 end
 

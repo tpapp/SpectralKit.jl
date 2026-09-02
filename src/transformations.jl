@@ -2,7 +2,8 @@
 ##### transformations
 #####
 
-export domain, domain_kind, transform_to, transform_from, coordinate_transformations,
+export domain, domain_kind, ErrorOutsideDomain, NearestInDomain,
+    transform_to, transform_from, coordinate_transformations,
     BoundedLinear, InfRational, SemiInfRational
 
 ####
@@ -43,6 +44,25 @@ values and derivatives.
 function transform_from end
 
 ####
+#### handling out of bounds values
+####
+
+"""
+Error when the value is outside the domain.
+"""
+struct ErrorOutsideDomain end
+
+"""
+Use the nearest value in the domain.
+"""
+struct NearestInDomain end
+
+"""
+Default handling of values outside domain. Not part of the API.
+"""
+const OUTSIDE_DOMAIN = ErrorOutsideDomain()
+
+####
 #### specific transformations
 ####
 
@@ -50,42 +70,65 @@ function transform_from end
 ### bounded linear
 ###
 
-struct BoundedLinear{T <: Real} <: AbstractUnivariateTransformation
+struct BoundedLinear{T <: Real,O} <: AbstractUnivariateTransformation
     "Lower limit."
     lower::T
     "Upper limit."
     upper::T
+    "Handling values outside the domain."
+    outside_domain::O
     @doc """
     $(SIGNATURES)
 
     Transform the domain to `y ∈ (lower, upper)`, using a linear mapping.
 
     `lower < upper` is enforced.
+
+    `outside_domain` determines how values outside `[lower, upper]` are handled. See
+    [`ErrorOutsideDomain`](@ref) and [`NearestInDomain`](@ref).
     """
-    function BoundedLinear(lower::T, upper::T) where {T<:Real}
+    function BoundedLinear(lower::T, upper::T,
+                           outside_domain::O = OUTSIDE_DOMAIN) where {T<:Real,O}
         @argcheck isfinite(lower) && isfinite(upper) DomainError
         @argcheck upper > lower DomainError((; lower, upper), "Need `lower < upper`.")
-        new{typeof(lower)}(lower, upper)
+        new{typeof(lower),O}(lower, upper, outside_domain)
     end
 end
 
-BoundedLinear(lower::Real, upper::Real) = BoundedLinear(promote(lower, upper)...)
+function BoundedLinear(lower::Real, upper::Real, outside_domain = OUTSIDE_DOMAIN)
+    BoundedLinear(promote(lower, upper)..., outside_domain)
+end
 
-BoundedLinear(; lower, upper) = BoundedLinear(lower, upper)
+function BoundedLinear(; lower, upper, outside_domain = OUTSIDE_DOMAIN())
+    BoundedLinear(lower, upper, outside_domain)
+end
 
 function Base.show(io::IO, transformation::BoundedLinear)
-    (; lower, upper) = transformation
-    print(io, "BoundedLinear(", lower, ", ", upper, ")")
+    (; lower, upper, outside_domain) = transformation
+    print(io, "BoundedLinear(", lower, ", ", upper)
+    outside_domain ≠ OUTSIDE_DOMAIN && print(io, ", ", outside_domain)
+    print(io, ")")
+end
+
+function _handle_domain(t::BoundedLinear{<:Real,ErrorOutsideDomain}, x::Real)
+    (; lower, upper) = t
+    @argcheck lower ≤ x ≤ upper DomainError(x, "outside domain")
+    x
+end
+
+function _handle_domain(t::BoundedLinear{<:Real,NearestInDomain}, x::Real)
+    (; lower, upper) = t
+    clamp(x, lower, upper)
 end
 
 function transform_from(::PM1, t::BoundedLinear, x::Scalar)
     (; lower, upper) = t
-    (x+1) / 2 * (upper-lower)  + lower
+    (x + 1) / 2 * (upper-lower) + lower
 end
 
-function transform_to(::PM1, t::BoundedLinear, y::Real)
-    (; lower, upper) = t
-    (y-lower) / (upper-lower) * 2 - 1
+function transform_to(domain::PM1, t::BoundedLinear, y::Real)
+    (; lower, upper, outside_domain) = t
+    (_handle_domain(t, y) - lower) / (upper-lower) * 2 - 1
 end
 
 function transform_to(domain::PM1, t::BoundedLinear, y::𝑑Expansion{Dp1}) where Dp1

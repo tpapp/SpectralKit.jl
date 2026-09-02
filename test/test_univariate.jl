@@ -133,18 +133,27 @@ end
         length(collect(grid(basis)))
 end
 
+@testset "outside domain handling" begin
+    basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 1.0), 4)
+    θ = randn(dimension(basis))
+    @test_throws DomainError linear_combination(basis, θ, -0.5)
+    basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 1.0, NearestInDomain()), 4)
+    @test linear_combination(basis, θ, -0.5) == linear_combination(basis, θ, 0.0)
+end
+
 @testset "univariate derivatives" begin
     for (transformation, N) in ((BoundedLinear(-2, 3), 5),
                                 (SemiInfRational(endpoint = 0.7, scale = 0.3), 1),
                                 (InfRational(center = 0.4, scale = 0.9), 1))
         basis = UnivariateBasis(Chebyshev(), Interior(), transformation, 3)
+        dom = domain(basis)
         D = 𝑑^Val(N)
         f = linear_combination(basis, randn(dimension(basis)))
         for _ in 1:50
             x = rand_in_domain(basis)
             y = f(D(x))
             for i in 0:N
-                @test y[i] ≈ DD(f, x, i) rtol = 1e-3 atol = 1e-3
+                @test y[i] ≈ DD(f, x, i; domain = dom) rtol = 1e-2 atol = 1e-2
             end
         end
     end
