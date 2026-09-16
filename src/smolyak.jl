@@ -122,14 +122,6 @@ function Base.getindex(basis::SmolyakBasis, i::Integer)
     UnivariateBasis(family, kind, domain_transformations[i], level.each, grid_level.each)
 end
 
-# """
-# $(SIGNATURES)
-
-Create a sparse Smolyak basis.
-
-# Arguments
-
-
 # ## Example
 
 # FIXME these examples need to be updated
