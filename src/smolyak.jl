@@ -83,6 +83,18 @@ struct SmolyakBasis{F,K,D} <: MultivariateBasis
     grid_level::SmolyakLevel
     @doc """
     $(SIGNATURES)
+
+    Smolyak (sparse) basis from `family`, using the given `kind`.
+
+    `domain_transformations::Tuple` determine the domain and the relevant transformation
+    to the domain of `family` along each coordinate.
+
+    `level` is a [`SmolyakLevel`](@ref), specifying the number of *blocks* used to build
+    the grid.
+
+    ### Miscellaneous
+
+    As a convenience, `smolyak_basis[i]` returns an univariate basis along coordinate `i`.
     """
     function SmolyakBasis(family::F, kind::K, domain_transformations::D,
                           level::SmolyakLevel,
@@ -105,24 +117,18 @@ function Base.show(io::IO, basis::SmolyakBasis)
     print(io, ")")
 end
 
+function Base.getindex(basis::SmolyakBasis, i::Integer)
+    (; family, kind, domain_transformations, level, grid_level) = basis
+    UnivariateBasis(family, kind, domain_transformations[i], level.each, grid_level.each)
+end
 
 # """
 # $(SIGNATURES)
 
-# Create a sparse Smolyak basis.
+Create a sparse Smolyak basis.
 
-# # Arguments
+# Arguments
 
-# - `family`: univariate function family, eg `Chebyshev`.
-
-# - `kind`: the grid kind, eg `Interior()` or `Endpoints()`.
-
-# - `domain_transformations`
-
-# - `smolyak_level`: the Smolyak level specificaion, see [`SmolyakLevel`](@ref).
-
-# - `N`: the dimension. wrapped in a `Val` for type stability, a convenience constructor also
-#   takes integers.
 
 # ## Example
 

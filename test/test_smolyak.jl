@@ -58,6 +58,8 @@ end
         end
     end
 
+    @test basis[1] == UnivariateBasis(Chebyshev(), Interior(), transformations[1], 2)
+
     # FIXME re-enable once we have derivatives
     # @testset "sanity check for derivatives" begin
     #     # NOTE this just checks that it runs and is inferred, but does not check

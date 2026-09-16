@@ -144,6 +144,9 @@ struct UnivariateBasis{F,K,D} <: FunctionBasis
 
     Univariate basis from `family`, using the given `kind`.
 
+    `domain_transformation` determines the domain and the relevant transformation to the
+    domain of `family`.
+
     `level` is an integer, starting from `0`, specifying the number of *blocks* used to
     build the grid.
     """
