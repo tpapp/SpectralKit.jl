@@ -264,20 +264,20 @@ Return a `NamedTuple` with the following values.
 """
 function _inf_to_pm1_intermediate(z::Real, s::Real)
     z, s = promote(float(z), float(s))
-    m = max(abs(z), abs(s))
-    z_scaled = z / m
-    s_scaled = s / m
+    e = exponent(max(abs(z), abs(s)))
+    z_scaled = ldexp(z, -e)
+    s_scaled = ldexp(s, -e)
     h_scaled = hypot(z_scaled, s_scaled)
     x = z_scaled / h_scaled
-    (; x, m, s_scaled, h_scaled)
+    (; x, e, s_scaled, h_scaled)
 end
 
 function _inf_to_pm1_partials(intermediate)
-    (; x, m, s_scaled, h_scaled) = intermediate
+    (; x, e, s_scaled, h_scaled) = intermediate
     s_over_h = s_scaled / h_scaled
     d = s_over_h / h_scaled        # common term, |d| ≤ 1
-    dx_dz = (s_over_h / m) * d # group divisions against underflow
-    dx_ds = -(x / m) * d
+    dx_dz = ldexp(s_over_h, -e) * d # group divisions against underflow
+    dx_ds = -ldexp(x, -e) * d
     dx_dz, dx_ds
 end
 
@@ -299,11 +299,11 @@ end
 function transform_to(::PM1, t::InfRational, y::Real)
     (; center, scale) = t
     z = y - center
-    x = _inf_to_pm1(z, scale)
     if isinf(y)
-        y > 0 ? one(x) : -one(x)
+        x = √(one(z) / one(scale)) # for type stability
+        y > 0 ? x : -x
     else
-        x
+        _inf_to_pm1(z, scale)
     end
 end
 
