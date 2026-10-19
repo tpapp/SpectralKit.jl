@@ -250,14 +250,60 @@ InfRational(; center::Real = 0.0, scale::Real = 1.0) = InfRational(promote(cente
 
 transform_from(::PM1, T::InfRational, x::Real) = T.center + T.scale * x / √(1 - abs2(x))
 
+"""
+$(SIGNATURES)
+
+Intermediate results for calculating ``x = z / √(z²+s²)``.
+
+Return a `NamedTuple` with the following values.
+
+- `m`, which is `max(abs(z), abs(s))`
+- `z_scaled`: `z/m`
+- `h_scaled`: mathematically equivalent to `hypot(z, s)/m`
+- `x`: the result.
+"""
+function _inf_to_pm1_intermediate(z::Real, s::Real)
+    z, s = promote(float(z), float(s))
+    e = exponent(max(abs(z), abs(s)))
+    z_scaled = ldexp(z, -e)
+    s_scaled = ldexp(s, -e)
+    h_scaled = hypot(z_scaled, s_scaled)
+    x = z_scaled / h_scaled
+    (; x, e, s_scaled, h_scaled)
+end
+
+function _inf_to_pm1_partials(intermediate)
+    (; x, e, s_scaled, h_scaled) = intermediate
+    s_over_h = s_scaled / h_scaled
+    d = s_over_h / h_scaled        # common term, |d| ≤ 1
+    dx_dz = ldexp(s_over_h, -e) * d # group divisions against underflow
+    dx_ds = -ldexp(x, -e) * d
+    dx_dz, dx_ds
+end
+
+_inf_to_pm1(z::Real, s::Real) = _inf_to_pm1_intermediate(z, s).x
+
+function ChainRulesCore.frule((_, ż, ṡ), ::typeof(_inf_to_pm1), z::Real, s::Real)
+    intermediate = _inf_to_pm1_intermediate(z, s)
+    dx_dz, dx_ds = _inf_to_pm1_partials(intermediate)
+    return intermediate.x, dx_dz * ż + dx_ds * ṡ
+end
+
+function ChainRulesCore.rrule(::typeof(_inf_to_pm1), z::Real, s::Real)
+    intermediate = _inf_to_pm1_intermediate(z, s)
+    dx_dz, dx_ds = _inf_to_pm1_partials(intermediate) # could be deferred into the pullback?
+    f_pullback(ȳ) = (NoTangent(), dx_dz * ȳ, dx_ds * ȳ)
+    return intermediate.x, f_pullback
+end
+
 function transform_to(::PM1, t::InfRational, y::Real)
     (; center, scale) = t
     z = y - center
-    x = z / hypot(z, scale)
     if isinf(y)
-        y > 0 ? one(x) : -one(x)
+        x = √(one(z) / one(scale)) # for type stability
+        y > 0 ? x : -x
     else
-        x
+        _inf_to_pm1(z, scale)
     end
 end
 
