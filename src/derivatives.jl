@@ -485,7 +485,7 @@ end
 """
 $(SIGNATURES)
 
-Conceptually equivalent to `prod(x))`, which it returns when `kind` is `nothing`, a
+Conceptually equivalent to `prod(x)`, which it returns when `kind` is `nothing`, a
 placeholder calculating any derivatives. Internal.
 """
 _product(kind::Nothing, x::Tuple) = prod(x)

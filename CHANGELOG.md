@@ -1,4 +1,24 @@
+
 # Unreleased
+
+
+## Unreleased
+
+### Added
+### Changed
+
+- change transformation interface, informatively named keyword arguments
+- rename grid kinds
+-
+
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+# v0.16.2
+
+No changelog kept between 0.4.0 and 0.16.2, sorry.
 
 # v0.4.0
 
