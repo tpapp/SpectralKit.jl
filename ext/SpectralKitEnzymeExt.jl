@@ -4,18 +4,28 @@ using Enzyme
 import Enzyme.EnzymeRules: forward, needs_shadow, needs_primal, augmented_primal, reverse
 import SpectralKit as SK
 
-function forward(config::EnzymeRules.FwdConfigWidth{1}, ::Const{typeof(SK._inf_to_pm1)},
-                 ::Type{RT}, z::Union{Const,Duplicated},
-                 s::Union{Const,Duplicated}) where {RT<:Union{Const,Duplicated,DuplicatedNoNeed}}
+_d(y::Const, d, i) = false       # 0
+_d(y::Duplicated, d, i) = d * y.dval
+_d(y::BatchDuplicated, d, i) = d * y.dval[i]
+
+function forward(config::EnzymeRules.FwdConfigWidth{W}, ::Const{typeof(SK._inf_to_pm1)},
+                 ::Type{RT}, z::Union{Const,Duplicated,BatchDuplicated},
+                 s::Union{Const,Duplicated,BatchDuplicated}) where {W,RT<:Union{Const,Duplicated,DuplicatedNoNeed}}
     intermediate = SK._inf_to_pm1_intermediate(z.val, s.val)
     if needs_shadow(config)
         dx_dz, dx_ds = SK._inf_to_pm1_partials(intermediate)
-        tangent = zero(intermediate.x)
-        z isa Duplicated && (tangent += dx_dz * z.dval)
-        s isa Duplicated && (tangent += dx_ds * s.dval)
-        needs_primal(config) ? Duplicated(intermediate.x, tangent) : tangent
+        shadow = ntuple(i -> _d(z, dx_dz, i) + _d(s, dx_ds, i), Val(W))
+        if needs_primal(config)
+            if W == 1
+                Duplicated(intermediate.x, shadow[1])
+            else
+                BatchDuplicated(intermediate.x, shadow)
+            end
+        else
+            W == 1 ? shadow[1] : shadow
+        end
     else
-        needs_primal(config) ? intermediate.value : nothing
+        needs_primal(config) ? intermediate.x : nothing
     end
 end
 
