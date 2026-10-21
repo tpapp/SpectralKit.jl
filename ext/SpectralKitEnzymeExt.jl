@@ -8,9 +8,11 @@ _d(y::Const, d, i) = false       # 0
 _d(y::Duplicated, d, i) = d * y.dval
 _d(y::BatchDuplicated, d, i) = d * y.dval[i]
 
-function forward(config::EnzymeRules.FwdConfigWidth{W}, ::Const{typeof(SK._inf_to_pm1)},
-                 ::Type{RT}, z::Union{Const,Duplicated,BatchDuplicated},
-                 s::Union{Const,Duplicated,BatchDuplicated}) where {W,RT<:Union{Const,Duplicated,DuplicatedNoNeed}}
+function forward(config::EnzymeRules.FwdConfigWidth{W},
+                 ::Const{typeof(SK._inf_to_pm1)},
+                 ::Type{<:Union{Const,Duplicated,DuplicatedNoNeed,BatchDuplicated}},
+                 z::Union{Const,Duplicated,BatchDuplicated},
+                 s::Union{Const,Duplicated,BatchDuplicated}) where {W}
     intermediate = SK._inf_to_pm1_intermediate(z.val, s.val)
     if needs_shadow(config)
         dx_dz, dx_ds = SK._inf_to_pm1_partials(intermediate)
