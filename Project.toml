@@ -17,7 +17,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 ArgCheck = "1, 2"
 Compat = "4.18.0"
-DocStringExtensions = "0.8, 0.9"
+DocStringExtensions = "0.8, 0.9, 0.10"
 InverseFunctions = "0.1"
 OrderedCollections = "1, 2"
 StaticArrays = "1"
