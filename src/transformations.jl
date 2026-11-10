@@ -2,9 +2,8 @@
 ##### transformations
 #####
 
-export domain, domain_kind, ErrorOutsideDomain, NearestInDomain,
-    transform_to, transform_from, coordinate_transformations,
-    BoundedLinear, InfRational, SemiInfRational
+export domain, domain_kind, ErrorOutsideDomain, NearestInDomain, transform_to,
+    transform_from, BoundedLinear, InfRational, SemiInfRational
 
 ####
 #### generic api
@@ -99,7 +98,7 @@ function BoundedLinear(lower::Real, upper::Real, outside_domain = OUTSIDE_DOMAIN
     BoundedLinear(promote(lower, upper)..., outside_domain)
 end
 
-function BoundedLinear(; lower, upper, outside_domain = OUTSIDE_DOMAIN())
+function BoundedLinear(; lower, upper, outside_domain = OUTSIDE_DOMAIN)
     BoundedLinear(lower, upper, outside_domain)
 end
 
@@ -283,7 +282,7 @@ end
 
 _inf_to_pm1(z::Real, s::Real) = _inf_to_pm1_intermediate(z, s).x
 
-function ChainRulesCore.frule((_, ż, ṡ), ::typeof(_inf_to_pm1), z::Real, s::Real)
+function ChainRulesCore.frule((_, ż, ṡ)::Tuple, ::typeof(_inf_to_pm1), z::Real, s::Real)
     intermediate = _inf_to_pm1_intermediate(z, s)
     dx_dz, dx_ds = _inf_to_pm1_partials(intermediate)
     return intermediate.x, dx_dz * ż + dx_ds * ṡ
@@ -292,7 +291,7 @@ end
 function ChainRulesCore.rrule(::typeof(_inf_to_pm1), z::Real, s::Real)
     intermediate = _inf_to_pm1_intermediate(z, s)
     dx_dz, dx_ds = _inf_to_pm1_partials(intermediate) # could be deferred into the pullback?
-    f_pullback(ȳ) = (NoTangent(), dx_dz * ȳ, dx_ds * ȳ)
+    f_pullback(ȳ) = (ChainRulesCore.NoTangent(), dx_dz * ȳ, dx_ds * ȳ)
     return intermediate.x, f_pullback
 end
 

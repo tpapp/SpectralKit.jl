@@ -9,10 +9,10 @@ using JET
                                   ))
 end
 
-# @testset "QA with Aqua" begin
-#     import Aqua
-#     Aqua.test_all(SpectralKit)
-# end
+@testset "QA with Aqua" begin
+    import Aqua
+    Aqua.test_all(SpectralKit)
+end
 
 using Accessors, DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
 

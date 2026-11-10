@@ -90,17 +90,6 @@ function basis_at end
 """
 $(SIGNATURES)
 
-Helper function for iteration. Errors when arguments do not finish at the same time.
-Internal.
-"""
-@inline _is_done(::Nothing, ::Nothing) = true
-@inline _is_done(θI::Nothing, BI::Tuple) = throw(ArgumentError("not enough coefficients"))
-@inline _is_done(θI::Tuple, BI::Nothing) = throw(ArgumentError("too many coefficients"))
-@inline _is_done(::Tuple, ::Tuple) = false
-
-"""
-$(SIGNATURES)
-
 Helper function for linear combinations of basis elements at `x`. Always checks that `θ`
 and `basis` have compatible dimensions.
 
@@ -114,13 +103,20 @@ and `basis` have compatible dimensions.
     B = basis_at(basis, x)
     a = iterate(θ)
     b = iterate(B)
-    @argcheck !_is_done(a, b)
+    @argcheck a ≢ nothing && b ≢ nothing "Empty coefficients or coordinates."
     s = _mul(a[1], b[1])
     while true
         a = iterate(θ, a[2])
         b = iterate(B, b[2])
-        _is_done(a, b) && return s
-        s = _add(s, _mul(a[1], b[1]))
+        if a ≡ nothing && b ≡ nothing
+            return s
+        elseif a ≡ nothing
+            throw(ArgumentError("not enough coefficients"))
+        elseif b ≡ nothing
+            throw(ArgumentError("too many coefficients"))
+        else
+            s = _add(s, _mul(a[1], b[1]))
+        end
     end
 end
 
