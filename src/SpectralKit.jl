@@ -15,6 +15,5 @@ include("generic_api.jl")
 include("univariate.jl")
 include("smolyak_traversal.jl")
 include("smolyak.jl")
-# include("experimental.jl") # experimental code is not part of the API, see its module docstring
 
 end # module
