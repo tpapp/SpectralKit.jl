@@ -25,7 +25,7 @@ using Compat: @compat
     policy_coefficients_dimension, make_policy_functions, constant_initial_guess,
     calculate_initial_guess, sum_of_squared_residuals, bridge
 
-using ..SpectralKit: SpectralKit, Chebyshev, TransformedBasis, SmolyakBasis, PM1,
+using ..SpectralKit: SpectralKit, Chebyshev, SmolyakBasis, PM1,
     AbstractUnivariateTransformation, dimension, linear_combination, grid, domain,
     transform_from, transform_to
 
@@ -69,10 +69,6 @@ function constant_coefficients(basis::Chebyshev, y)
     θ = zeros(basis.N)
     θ[1] = y
     θ
-end
-
-function constant_coefficients(basis::TransformedBasis, y)
-    constant_coefficients(parent(basis), y)
 end
 
 function constant_coefficients(basis::SmolyakBasis, y)
