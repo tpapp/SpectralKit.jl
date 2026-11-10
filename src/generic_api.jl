@@ -66,7 +66,7 @@ function domain end
 """
 `$(FUNCTIONNAME)(basis)`
 
-Return the dimension parameters of `basis`, a positive `Int`.
+Return the dimension of `basis`, a positive `Int`.
 """
 function dimension end
 
@@ -194,7 +194,7 @@ end
 """
 `$(FUNCTIONNAME)(θ1, basis1, basis2)`
 
-Return a set of coefficients `θ2` for `basis2` such that is either augmentes
+Return a set of coefficients `θ2` for `basis2` such that
 ```julia
 linear_combination(basis1, θ1, x) ≈ linear_combination(basis2, θ2, x)
 ```
