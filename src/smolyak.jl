@@ -154,6 +154,12 @@ function dimension(smolyak_basis::SmolyakBasis)
     __smolyak_length(family, kind, Val(N), level.total, level.each)
 end
 
+function constant_coefficients(U::SmolyakBasis{Chebyshev}, y::T) where {T<:Real}
+    θ = zeros(T, dimension(U))
+    θ[1] = y
+    θ
+end
+
 struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}
     family::F
     kind::K

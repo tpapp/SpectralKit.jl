@@ -2,8 +2,8 @@
 ##### Generic API
 #####
 
-export is_function_basis, dimension, basis_at, linear_combination, grid, collocation_matrix,
-    adjust_coefficients
+export is_function_basis, dimension, basis_at, constant_coefficients, linear_combination,
+    grid, collocation_matrix, adjust_coefficients
 
 """
 $(TYPEDEF)
@@ -86,6 +86,14 @@ Methods are type stable.
     Consequences are undefined when evaluating outside the domain.
 """
 function basis_at end
+
+"""
+`$(FUNCTIONNAME)(basis, y)`
+
+Return coefficients `θ` so that `linear_combination(basis, θ, x) ≈ y` for all `x` in the
+domain.
+"""
+function constant_coefficients end
 
 """
 $(SIGNATURES)

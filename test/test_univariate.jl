@@ -84,6 +84,14 @@ end
                     sum(chebyshev_cos_deriv(y, i) * θ for (i,θ) in enumerate(θ))
             end
 
+            # constant coefficients
+            let y = randn()
+                θ = constant_coefficients(basis, y)
+                for _ in 1:100
+                    @test linear_combination(basis, θ, rand_in_domain(basis)) ≈ y
+                end
+            end
+
             # check grid
             g = @inferred collect(grid(basis))
             @test length(g) == N

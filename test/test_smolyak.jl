@@ -60,6 +60,13 @@ end
 
     @test basis[1] == UnivariateBasis(Chebyshev(), Interior(), transformations[1], 2)
 
+    let y = randn()
+        θ = constant_coefficients(basis, y)
+        for _ in 1:100
+            @test linear_combination(basis, θ, rand_in_domain(basis)) ≈ y
+        end
+    end
+
     # FIXME re-enable once we have derivatives
     # @testset "sanity check for derivatives" begin
     #     # NOTE this just checks that it runs and is inferred, but does not check

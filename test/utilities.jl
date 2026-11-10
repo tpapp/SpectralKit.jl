@@ -59,10 +59,9 @@ function rand_in_domain(basis::SpectralKit.UnivariateBasis{Chebyshev})
     transform_from(PM1(), basis.domain_transformation, rand_pm1())
 end
 
-# function rand_in_domain(basis::SmolyakBasis{<:SmolyakIndices{N}}) where N
-#     (; univariate_parent) = basis
-#     SVector(ntuple(_ -> rand_in_domain(univariate_parent), Val(N)))
-# end
+function rand_in_domain(basis::SmolyakBasis{Chebyshev}) where N
+    SVector(map(d -> transform_from(PM1(), d, rand_pm1()), basis.domain_transformations))
+end
 
 """
 $(SIGNATURES)
