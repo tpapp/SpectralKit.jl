@@ -2,6 +2,9 @@
 ##### utility functions for tests
 #####
 
+using SpectralKit: PM1
+import Enzyme
+
 "kinds we test on"
 const KINDS = [Endpoints(), Interior()]
 
@@ -59,7 +62,7 @@ function rand_in_domain(basis::SpectralKit.UnivariateBasis{Chebyshev})
     transform_from(PM1(), basis.domain_transformation, rand_pm1())
 end
 
-function rand_in_domain(basis::SmolyakBasis{Chebyshev}) where N
+function rand_in_domain(basis::SmolyakBasis{Chebyshev})
     SVector(map(d -> transform_from(PM1(), d, rand_pm1()), basis.domain_transformations))
 end
 
@@ -108,26 +111,23 @@ end
 """
 $(SIGNATURES)
 
-`n`th derivative of f at x.
-
-`p` gives the degree of the finite difference rule. `domain`
+`N`th derivative of f at x.
 """
-function DD(f, x, n = 1; p = 10, domain = (-Inf,Inf))
-    A, B = extrema(domain)
-    a = x - A
-    b = B - x
-    if n == 0
+function DD(::Val{N}, f, x) where N
+    if N == 0
         f(x)
-    elseif a == 0
-        forward_fdm(p, n)(f, x)
-    elseif b == 0
-        backward_fdm(p, n)(f, x)
     else
-        r = min(a, b)
-        if isfinite(r)
-            central_fdm(p, n, max_range = r)(f, x)
+        @assert N > 0
+        if isfinite(x)
+            # this is overkill but works
+            Enzyme.autodiff(Enzyme.Forward, Enzyme.Const(x -> DD(Val(N-1), f, x)),
+                            Enzyme.Duplicated(x, 1.0))[1]
+        elseif isinf(x)
+            zero(x)             # transformations converge to constant
+        elseif isnan(x)
+            oftype(x, NaN)
         else
-            central_fdm(p, n)(f, x)
+            error("don't know how to AD at $x")
         end
     end
 end

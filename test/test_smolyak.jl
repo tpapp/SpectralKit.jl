@@ -67,7 +67,6 @@ end
         end
     end
 
-    # FIXME re-enable once we have derivatives
     # @testset "sanity check for derivatives" begin
     #     # NOTE this just checks that it runs and is inferred, but does not check
     #     # correctness, derivatives derived below should be compared
@@ -76,8 +75,8 @@ end
     #     # f2(x) = x[1] - 3
     #     # f12(x) = 1
     #     D = ∂(1, 1)
-    #     y = SVector(1.0, 2.0)
-    #     @test @inferred(linear_combination(basis, θ, D(y))) isa ∂Expansion
+    #     y = SVector(2.5, 3.5)
+    #     @test @inferred(linear_combination(basis, θ, D(y))) isa ∂Result
     # end
 end
 

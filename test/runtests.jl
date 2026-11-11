@@ -12,7 +12,7 @@ end
     Aqua.test_all(SpectralKit)
 end
 
-using Accessors, DocStringExtensions, StaticArrays, BenchmarkTools, FiniteDifferences
+using Accessors, DocStringExtensions, StaticArrays, BenchmarkTools
 
 include("utilities.jl")
 

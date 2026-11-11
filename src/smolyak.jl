@@ -165,7 +165,15 @@ struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}
     kind::K
     level::L
     itrs::I
-    product_kind::P
+    product::P
+end
+
+_prod(a::Real, b::Tuple{}) = (a, )
+
+_prod(a::Real, b::Tuple) = (a * first(b), b...)
+
+function _product_type(::Type{typeof(_prod)}, source_eltypes)
+    mapfoldl(eltype, promote_type, source_eltypes)
 end
 
 function Base.eltype(::Type{<:SmolyakBasisAt{I,P}}) where {I,P}
@@ -173,39 +181,35 @@ function Base.eltype(::Type{<:SmolyakBasisAt{I,P}}) where {I,P}
 end
 
 function Base.length(itr::SmolyakBasisAt)
-    (; family, kind, level, itrs, product_kind) = itr
+    (; family, kind, level, itrs, product) = itr
     N = length(itrs)
     __smolyak_length(family, kind, Val(N), level.total, level.each)
 end
 
-_prod(a::Real, b::Tuple{}) = (a, )
-
-_prod(a::Real, b::Tuple) = (a * first(b), b...)
-
 function Base.iterate(itr::SmolyakBasisAt, state = nothing)
-    (; family, kind, level, itrs, product_kind) = itr
+    (; family, kind, level, itrs, product) = itr
     # FIXME this does not yet work for derivatives
-    __smolyak_iterate(family, kind, level, _prod, itrs, first, state)
+    __smolyak_iterate(family, kind, level, product, itrs, first, state)
 end
 
 function basis_at(smolyak_basis::SmolyakBasis, x::Tuple)
     (; family, kind, domain_transformations, level) = smolyak_basis
     @argcheck length(x) == length(domain_transformations)
     itrs = map((x, d) -> _univariate_basis_itr(family, d, x), x, domain_transformations)
-    SmolyakBasisAt(family, kind, level, itrs, nothing)
+    SmolyakBasisAt(family, kind, level, itrs, _prod)
 end
 
 function basis_at(smolyak_basis::SmolyakBasis, x::SVector)
     basis_at(smolyak_basis, Tuple(x))
 end
 
-# function basis_at(smolyak_basis::SmolyakBasis, Dx::∂CoordinateExpansion)
-#     (; family, kind, domain_transformations, level) = smolyak_basis
-#     (; ∂D, x) = Dx
-#     itrs = map((x, d) -> basis_at(UnivariateBasis(family, kind, d, each), x),
-#                x, domain_transformations)
-#     BasisAt(family, kind, total, each, itrs, ∂D)
-# end
+function basis_at(smolyak_basis::SmolyakBasis, Dx::∂CoordinateExpansion)
+    (; family, kind, domain_transformations, level) = smolyak_basis
+    (; ∂D, x) = Dx
+    itrs = map((x, d) -> basis_at(UnivariateBasis(family, kind, d, level.each), x),
+               x, domain_transformations)
+    SmolyakBasisAt(family, kind, level, itrs, ∂prod(Val(length(itrs)), ∂D))
+end
 
 struct SmolyakGrid{I,F,K,S<:SmolyakLevel}
     family::F
