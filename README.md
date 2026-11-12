@@ -24,50 +24,6 @@ At the moment, the package API is experimental and subject to change.
 
 Asking for help in [issues](https://github.com/tpapp/SpectralKit.jl/issues) is fine, you can also ping me as `@Tamas_Papp` on the [Discourse forum](https://discourse.julialang.org/)
 
-## Pretty pictures
-
-Some examples generated this library. **Circles mark values at the limit, shifted horizontally when this is needed to avoid overlap**. Infinite limits shown at finite values, so of course they don't match (this is a visual check of continuity, naturally it is unit tested).
-
-### Chebyshev polynomials and their derivatives
-
-<img src="docs/plots/chebyshev.png" width="50%">
-
-<img src="docs/plots/chebyshev_deriv.png" width="50%">
-
-### Chebyshev rational functions on [0,∞)
-
-Up close, you can see the oscillation.
-
-<img src="docs/plots/semiinf.png" width="50%">
-
-Let's zoom out a bit to see convergence to 0 at ∞.
-
-<img src="docs/plots/semiinf_birdseye.png" width="50%">
-
-Derivatives die out faster.
-
-<img src="docs/plots/semiinf_deriv.png" width="50%">
-
-### Chebyshev rational functions on (-∞,∞)
-
-Up close, you can see the oscillation.
-
-<img src="docs/plots/inf.png" width="50%">
-
-Let's zoom out a bit to see convergence at -∞ and ∞.
-
-<img src="docs/plots/inf_birdseye.png" width="50%">
-
-Derivatives die out slower than for the [0,∞) transformation.
-
-<img src="docs/plots/inf_deriv.png" width="50%">
-
-### A Smolyak grid
-
-With `B = 3`.
-
-<img src="docs/plots/smolyak_grid.png" width="50%">
-
 ## Bibliography
 
 - Boyd, J. P. (2001). Chebyshev and fourier spectral methods. Courier Corporation.
