@@ -7,7 +7,7 @@ using SpectralKit, Test
 # test internals
 using SpectralKit: 𝑑Derivatives, _one, _add, _sub, _mul,
     Partials, _is_strict_subset, _partials_minimal_representation,
-    _partials_canonical_expansion, ∂Derivatives, ∂CoordinateExpansion
+    _partials_canonical_expansion, ∂Derivatives, ∂CoordinateExpansion, 𝑑, ∂
 using Random: randperm
 using StaticArrays: SVector
 
