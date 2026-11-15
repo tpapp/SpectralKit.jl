@@ -12,8 +12,10 @@ SmolyakLevel(total = 3, each = 2)
 In two dimensions, this would allow level combinations ``(0,0), (1,0), (0,1), (2,0), (1,1), (0,2), (2,1), (1,2)``. In this scheme, grids also nest:
 
 ```@example smolyak
-[collect(grid(Float16, SmolyakBasis(Chebyshev(), Interior(), (t, t), SmolyakLevel(; total, each = total))))
- for total in 0:2]
+let t = BoundedLinear(0.0, 1.0)
+    [collect(grid(Float16, SmolyakBasis(Chebyshev(), Interior(), (t, t), SmolyakLevel(; total, each = total))))
+     for total in 0:2]
+end
  ```
 
 Inputs `each > total` are accepted, but normalized with a warning:
