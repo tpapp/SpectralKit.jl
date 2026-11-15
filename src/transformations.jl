@@ -2,8 +2,8 @@
 ##### transformations
 #####
 
-export domain, domain_kind, ErrorOutsideDomain, NearestInDomain, transform_to,
-    transform_from, BoundedLinear, InfRational, SemiInfRational
+export domain, ErrorOutsideDomain, NearestInDomain, transform_to, transform_from,
+    BoundedLinear, InfRational, SemiInfRational
 
 ####
 #### generic api
@@ -15,8 +15,6 @@ $(TYPEDEF)
 An abstract type for univariate transformations.
 """
 abstract type AbstractUnivariateTransformation end
-
-domain_kind(::Type{<:AbstractUnivariateTransformation}) = :univariate
 
 """
 `$(FUNCTIONNAME)(domain, transformation, x)`

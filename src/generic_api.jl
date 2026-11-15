@@ -34,8 +34,7 @@ interface:
 
 - [`grid`](@ref) to obtain collocation points.
 
-- `length` and `getindex` for multivariate bases `(domain_kind(domain(basis)) ==
-  :multivariate)`, getindex returns a compatible marginal basis
+- for multivariate bases: `length`; and `getindex` which returns a compatible marginal basis
 
 [`linear_combination`](@ref) and [`collocation_matrix`](@ref) are also supported, building
 on the above.
@@ -51,15 +50,13 @@ is_function_basis(f) = is_function_basis(typeof(f))
 """
 `$(FUNCTIONNAME)(basis)`
 
-The domain of a function basis.
+The domain of a function basis. A tuple for multivariate bases.
 
 `$(FUNCTIONNAME)(transformation)`
 
 The (co)domain of a transformation. The “other” domain (codomain, depending on the
 mapping) is provided explicitly for transformations, and should be compatible with
 the`domain` of the basis.
-
-See [`domain_kind`](@ref) for the interface supported by domains.
 """
 function domain end
 

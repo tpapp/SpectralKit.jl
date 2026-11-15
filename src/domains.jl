@@ -2,33 +2,6 @@
 ##### domains
 #####
 
-export domain_kind
-
-####
-#### generic
-####
-
-"""
-$(SIGNATURES)
-
-Return the *kind* of a domain type (preferred) or value. Errors for objects/types which
-are not domains. Also works for domains of transformations.
-
-The following return values are possible:
-
-1. `:univariate`, the bounds of which can be accessed using `minimum`, `maximum`, and
-`extrema`,
-
-2. `:multivariate`, which supports `length`, `getindex` (`[]`), and conversion with `Tuple`.
-"""
-@inline domain_kind(x) = domain_kind(typeof(x))
-
-domain_kind(::Type{T}) where T = throw(MethodError(domain_kind, (T,)))
-
-####
-#### univariate domains
-####
-
 """
 Univariate domain representation. Supports `extrema`, `minimum`, `maximum`.
 
@@ -36,8 +9,6 @@ Univariate domain representation. Supports `extrema`, `minimum`, `maximum`.
     Implementations only need to define `extrema`.
 """
 abstract type AbstractUnivariateDomain end
-
-@inline domain_kind(::Type{<:AbstractUnivariateDomain}) = :univariate
 
 Broadcast.broadcastable(domain::AbstractUnivariateDomain) = Ref(domain)
 
