@@ -228,8 +228,8 @@ Base.size(g::ChebyshevGrid) = (g.N, )
 
 function Base.getindex(g::ChebyshevGrid{T}, i::Int) where T
     (; kind, domain_transformation, level, N̂) = g
-    transform_from(PM1(), domain_transformation,
-                   _chebyshev_extremum(T, _chebyshev_extremum_shuffle(kind, i, level), N̂))::T
+    T(transform_from(PM1(), domain_transformation,
+                     _chebyshev_extremum(T, _chebyshev_extremum_shuffle(kind, i, level), N̂)))::T
 end
 
 function grid(::Type{T},

@@ -1,0 +1,142 @@
+# Overview
+
+This page introduces the concepts of the package through univariate examples.
+
+## Concepts
+
+For the purposes of this package,
+
+1. A *basis* is a finite *family* of functions, defined over a given domain.
+
+2. Each family has a canonical domain: for example, Chebyshev polynomials are defined over ``[-1,1]``. This is mostly hidden from the user, allowing the specification of custom domains using *transformations*.
+
+3. The number of basis functions is the *dimension*.
+
+4. Each basis has an associated *grid* recommended for collocation methods.
+
+5. The dimension is determined by the *level* and the grid *kind*. Levels are integers starting from `0`.
+
+6. The grid also has a level, which defaults to the level of the basis: default grid has as many points as the dimension of the basis.
+
+7. Levels allow *nesting* gridpoints. Increasing the level (or the grid level) of the basis adds more grid points to existing ones.
+
+## Univariate bases
+
+Let's demonstrate these concepts with a concrete example, by constructing a basis of Chebyshev polynomials, transformed to the interval ``[0, 1]`` (using a linear mapping), with level = 2.
+
+```@example univariate
+using SpectralKit
+basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), 2)
+```
+
+The default printing methods shows the dimension, but one can of query it too using the API:
+
+```@example univariate
+dimension(basis)
+```
+
+The grid is an `::AbstractVector`, but it is calculated *on demand*, so that `grid` does not allocate:
+```@example univariate
+grid(basis)
+```
+
+One could use a denser grid, eg for the a least squares approximation:
+```@example univariate
+basis_ls = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), 1, 2)
+```
+
+Increasing the level adds more points. Grids can be calculated with types other than `Float64` (the default), here we use `Float46` for more compact printing:
+```@example univariate
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), level))
+ for level in 0:3]
+```
+
+## Grid kinds
+
+Currently, two kinds of grids are supported: [`Endpoints`](@ref) and [`Interior`](@ref).
+
+`Endpoints()` grids are Chebyshev nodes of the second kind, also known as Chebyshev–Lobatto nodes or Chebyshev extrema. They are the [extrema of Chebyshev polynomials](https://en.wikipedia.org/wiki/Chebyshev_nodes), and nest with each level adding 2, 2, 4, 8, … gridpoints:
+
+```@example
+[grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
+ for level in 0:3]
+```
+
+`Interior()` grids are these with -1 and 1 dropped:
+
+```@example
+[grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
+ for level in 0:3]
+```
+
+## Domain transformations
+
+The domain transformations are [`BoundedLinear`](@ref), [`SemiInfRational`](@ref), and [`InfRational`](@ref), with the latter transforming to semi-infinite regions, such as ``(0, ∞)``, and the real line. The latter two have parameters that influence the scale:
+
+```@example
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(), InfRational(; scale), 2))
+ for scale in [0.5, 1.0, 2.0]]
+```
+
+and location
+
+```@example
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(; endpoint), 2))
+ for endpoint in 0:2]
+```
+
+## Linear combinations
+
+The whole point of this package is to *evaluate* a combination of basis functions. There are two ways to do that: either use [`linear_combination`](@ref) with a basis and a vector of coefficients, which gives a callable inside the domain, or to add the input as the third argument.
+
+```@example linear_combination
+using SpectralKit, Miter
+basis = UnivariateBasis(Chebyshev(), Interior(), InfRational(), 2)
+θ = [1/x for x^2 in 1:7]
+linear_combination(basis, θ, 0.5)
+```
+
+```@example linear_combination
+let f = linear_combination(basis, θ), g = grid(basis)
+    Plot(Lines((x, f(x)) for x in range(extrema(g)...; length = 500)),
+         Scatter(MarkSymbol(:o), ((x, f(x)) for x in g(basis))))
+end
+```
+
+[`basis_at`](@ref) provides an *iterable* of the basis functions evaluated at a point:
+
+```@example
+collect(basis_at(basis, 0.3))
+```
+
+Importantly, since basis functions are calculated recursively, this is not indexable as a vector. It serves as a building block for [`linear_combination`](@ref).
+
+## Domain and values outside it
+
+You can use [`domain`](@ref) to query the domain of a transformation:
+
+```@example domain
+using SpectralKit
+b_strict = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 3.0), 2)
+domain(b_strict)
+```
+
+Domains support `extrema`:
+```@example domain
+extrema(domain(b_strict))
+```
+
+The default behavior is to error for inputs outside the domain:
+
+```@example domain
+linear_combination(b_strict, ones(dimension(b_strict)), 3.0001)
+```
+
+but this can be overridden:
+
+```@example domain
+b_tolerant = UnivariateB_Tolerant(Chebyshev(), Interior(), BoundedLinear(0.0, 3.0, NearestInDomain()), 2)
+linear_combination(b_tolerant, ones(dimension(b_tolerant)), 3.0001)
+```
+
+Transformations that do not cover the entire real line have an option to specify what happens outside the domain. This is for **handling floating point error**: do not deliberately evaluate bases outside their domain.

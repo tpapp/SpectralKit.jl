@@ -1,4 +1,4 @@
-using Documenter, SpectralKit
+using Documenter, SpectralKit, Miter, Colors
 DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit);
                     recursive=true)
 
@@ -7,7 +7,11 @@ makedocs(
     format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
-    pages = Any["index.md"],
+    pages = Any["index.md",
+                "overview.md",
+                "smolyak.md",
+                "approximation.md",
+                "api.md"],
     clean = true,
     checkdocs = :exports,
 )
