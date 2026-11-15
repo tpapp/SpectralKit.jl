@@ -1,5 +1,9 @@
 using Documenter, SpectralKit, Miter, Colors
-DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit);
+DocMeta.setdocmeta!(SpectralKit, :DocTestSetup,
+                    quote
+                        using SpectralKit
+                        using SpectralKit: 𝑑, ∂ # derivatives API currently not exposed
+                    end,
                     recursive=true)
 
 makedocs(

@@ -21,13 +21,6 @@ Interior
 Endpoints
 ```
 
-## Introspection
-
-```@docs
-dimension
-domain
-```
-
 ## Domain transformations
 
 ```@docs
@@ -50,4 +43,11 @@ grid
 collocation_matrix
 constant_coefficients
 adjust_coefficients
+```
+
+## Transformations
+
+```@docs
+transform_to
+transform_from
 ```

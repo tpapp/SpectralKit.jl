@@ -16,7 +16,7 @@ let t = BoundedLinear(0.0, 1.0)
     [collect(grid(Float16, SmolyakBasis(Chebyshev(), Interior(), (t, t), SmolyakLevel(; total, each = total))))
      for total in 0:2]
 end
- ```
+```
 
 Inputs `each > total` are accepted, but normalized with a warning:
 
