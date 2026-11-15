@@ -11,7 +11,7 @@ makedocs(
     format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
-    pages = Any["overview.md",
+    pages = Any["index.md",
                 "smolyak.md",
                 "approximation.md",
                 "api.md"],
