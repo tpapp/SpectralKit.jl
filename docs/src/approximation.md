@@ -21,6 +21,7 @@ Adjustment either pads with zeroes or truncates. It is useful as a starting poin
 An initial apprimation may also be obtained using a *collocation matrix*, ie the basis functions evaluated at gridpoints:
 
 ```@example sin
+using SpectralKit
 b_sin = UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(0, 2*π), 2)
 θ = collocation_matrix(b_sin) \ sin.(grid(b_sin))
 ```

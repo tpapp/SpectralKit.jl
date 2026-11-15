@@ -2,7 +2,7 @@
 
 ```@docs
 UnivariateBasis
-SmolyakkBasis
+SmolyakBasis
 Chebyshev
 Interior
 Endpoints
@@ -28,6 +28,6 @@ linear_combination
 basis_at
 grid
 collocation_matrix
-constant_coeffieicnts
+constant_coefficients
 adjust_coefficients
 ```

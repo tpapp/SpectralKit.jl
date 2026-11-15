@@ -1,5 +1,9 @@
 # Overview
 
+```@docs
+SpectralKit
+```
+
 This page introduces the concepts of the package through univariate examples.
 
 ## Concepts
@@ -57,14 +61,15 @@ Currently, two kinds of grids are supported: [`Endpoints`](@ref) and [`Interior`
 
 `Endpoints()` grids are Chebyshev nodes of the second kind, also known as Chebyshev–Lobatto nodes or Chebyshev extrema. They are the [extrema of Chebyshev polynomials](https://en.wikipedia.org/wiki/Chebyshev_nodes), and nest with each level adding 2, 2, 4, 8, … gridpoints:
 
-```@example
+```@example gridkinds
+using SpectralKit
 [grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
  for level in 0:3]
 ```
 
 `Interior()` grids are these with -1 and 1 dropped:
 
-```@example
+```@example gridkinds
 [grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
  for level in 0:3]
 ```
@@ -73,14 +78,14 @@ Currently, two kinds of grids are supported: [`Endpoints`](@ref) and [`Interior`
 
 The domain transformations are [`BoundedLinear`](@ref), [`SemiInfRational`](@ref), and [`InfRational`](@ref), with the latter transforming to semi-infinite regions, such as ``(0, ∞)``, and the real line. The latter two have parameters that influence the scale:
 
-```@example
+```@example gridkinds
 [grid(Float16, UnivariateBasis(Chebyshev(), Interior(), InfRational(; scale), 2))
  for scale in [0.5, 1.0, 2.0]]
 ```
 
 and location
 
-```@example
+```@example gridkinds
 [grid(Float16, UnivariateBasis(Chebyshev(), Interior(), SemiInfRational(; endpoint), 2))
  for endpoint in 0:2]
 ```
@@ -92,7 +97,7 @@ The whole point of this package is to *evaluate* a combination of basis function
 ```@example linear_combination
 using SpectralKit, Miter
 basis = UnivariateBasis(Chebyshev(), Interior(), InfRational(), 2)
-θ = [1/x for x^2 in 1:7]
+θ = [1/x^2 for x in 1:7]
 linear_combination(basis, θ, 0.5)
 ```
 
@@ -105,7 +110,7 @@ end
 
 [`basis_at`](@ref) provides an *iterable* of the basis functions evaluated at a point:
 
-```@example
+```@example linear_combination
 collect(basis_at(basis, 0.3))
 ```
 
