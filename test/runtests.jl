@@ -9,7 +9,9 @@ end
 
 @testset "QA with Aqua" begin
     import Aqua
-    Aqua.test_all(SpectralKit)
+    Aqua.test_all(SpectralKit;
+                  # versions below 1.12 give false positives for module parameters
+                  unbound_args = VERSION ≥ v"1.12")
 end
 
 using Accessors, DocStringExtensions, StaticArrays, BenchmarkTools
