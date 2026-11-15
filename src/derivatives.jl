@@ -1,8 +1,9 @@
 #####
 ##### Internal implementation for derivatives.
 #####
+##### NOTE under redesign, not yet public API
 
-export 𝑑, ∂, ∂Result
+# export 𝑑, ∂, ∂Result
 
 ####
 #### Operations we support for calculating (untransformed) basis functions and their
