@@ -104,7 +104,7 @@ linear_combination(basis, θ, 0.5)
 ```@example linear_combination
 let f = linear_combination(basis, θ), g = grid(basis)
     Plot(Lines((x, f(x)) for x in range(extrema(g)...; length = 500)),
-         Scatter(MarkSymbol(:o), ((x, f(x)) for x in g(basis))))
+         Scatter(MarkSymbol(:o), ((x, f(x)) for x in g)))
 end
 ```
 
@@ -133,14 +133,14 @@ extrema(domain(b_strict))
 
 The default behavior is to error for inputs outside the domain:
 
-```@example domain
+```@repl domain
 linear_combination(b_strict, ones(dimension(b_strict)), 3.0001)
 ```
 
 but this can be overridden:
 
 ```@example domain
-b_tolerant = UnivariateB_Tolerant(Chebyshev(), Interior(), BoundedLinear(0.0, 3.0, NearestInDomain()), 2)
+b_tolerant = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 3.0, NearestInDomain()), 2)
 linear_combination(b_tolerant, ones(dimension(b_tolerant)), 3.0001)
 ```
 
