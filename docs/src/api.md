@@ -1,11 +1,31 @@
-## Bases
+# Bases
+
+## Univariate bases
 
 ```@docs
 UnivariateBasis
+```
+
+## Smolyak bases
+
+```@docs
 SmolyakBasis
+SmolyakLevel
+```
+
+## Families and grid types
+
+```@docs
 Chebyshev
 Interior
 Endpoints
+```
+
+## Introspection
+
+```@docs
+dimension
+domain
 ```
 
 ## Domain transformations
