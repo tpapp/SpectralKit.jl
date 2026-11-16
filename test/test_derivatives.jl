@@ -7,7 +7,7 @@ using SpectralKit, Test
 # test internals
 using SpectralKit: 𝑑Derivatives, _one, _add, _sub, _mul,
     Partials, _is_strict_subset, _partials_minimal_representation,
-    _partials_canonical_expansion, ∂Derivatives, ∂CoordinateExpansion
+    _partials_canonical_expansion, ∂Derivatives, ∂CoordinateExpansion, 𝑑, ∂
 using Random: randperm
 using StaticArrays: SVector
 
@@ -26,7 +26,7 @@ end
     f(x) = _sub(_add(_one(typeof(x)), _mul(2.0, x)), _mul(x, x))
     f𝑑x = @inferred f(𝑑x)
     for i in 0:N
-        @test f𝑑x[i] ≈ DD(f, x, i) atol = 1e-8
+        @test f𝑑x[i] ≈ DD(Val(i), f, x) atol = 1e-8
     end
 end
 

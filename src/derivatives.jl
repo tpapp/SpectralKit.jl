@@ -1,8 +1,9 @@
 #####
 ##### Internal implementation for derivatives.
 #####
+##### NOTE under redesign, not yet public API
 
-export 𝑑, ∂
+# export 𝑑, ∂, ∂Result
 
 ####
 #### Operations we support for calculating (untransformed) basis functions and their
@@ -192,7 +193,7 @@ struct Partials{N}
 
     Partial derivatives up to given indices. Eg `Partials((1, 2))` would contain
     - the value,
-    - first derivatives ``∂_1`, ``∂_2``,
+    - first derivatives ``∂_1``, ``∂_2``,
     - cross derivatives ``∂_1 ∂_2``,
     - second derivative ``∂^2_2``
 
@@ -259,7 +260,7 @@ Collapse specification of partial derivatives (an iterable of `Partials`) so a c
 “minimal” representation with respect to the total ordering. Eliminates nested
 specifications and duplicates.
 
-!!! NOTE
+!!! note
     Takes any iterable of `Partials`, returns a `Vector`. Allocates, for use in
     generated functions.
 """
@@ -277,7 +278,7 @@ end
 """
 $(SIGNATURES)
 
-The ordering of partial derivatives contains for containers, for `N`-dimensional
+The ordering of partial derivatives for containers, for `N`-dimensional
 arguments. Returns an iterable of `N`-tuples that contain integer indices of partial
 derivatives, eg `(0, 1, 2)` for ``∂_2 ∂_3^2``.
 """
@@ -362,7 +363,7 @@ $(SIGNATURES)
 
 Partial derivatives along the given coordinates.
 
-!!! NOTE
+!!! note
     Partial derivatives are currently **experimental** and not heavily tested. API may
     change at any point without prior notice or deprecation.
 
@@ -482,38 +483,63 @@ end
 #     end
 # end
 
-"""
-$(SIGNATURES)
-
-Conceptually equivalent to `prod(x))`, which it returns when `kind` is `nothing`, a
-placeholder calculating any derivatives. Internal.
-"""
-_product(kind::Nothing, x::Tuple) = prod(x)
+###
+### make a product
+###
 
 """
-$(SIGNATURES)
-
-Type that is returnedby [`_product`](@ref).
+Container for output of evaluating partial derivatives. Each corresponds to an
+specification in a [`Partials`](@ref). Can be indexed with integers, iterated, or
+converted to a `Tuple`.
 """
-function _product_type(::Type{Nothing}, source_eltypes)
-    mapfoldl(eltype, promote_type, source_eltypes)
+struct ∂Result{C,T}
+    values::NTuple{C,T}
 end
 
-@generated function _product(∂D::∂Derivatives{Ps}, x::NTuple{N,𝑑Expansion}) where {Ps,N}
-    function _product(d)
-        # FIXME could skip bounds checking if verified at the beginning
-        mapreduce(i -> :(x[$i].coefficients[$(d[i]) + 1]), (a, b) -> :($(a) * $(b)), 1:N)
-    end
-    products = [_product(d) for d in _partials_canonical_expansion(Val(N), fieldtypes(Ps))]
+function Base.show(io::IO, ∂output::∂Result)
+    print(io, "SpectralKit.∂Result(")
+    join(io, ∂output.values, ", ")
+    print(io, ")")
+end
+
+_mul(a::Real, b::∂Result) = ∂Result(map(b -> a * b, b.values))
+
+_add(a::∂Result{C}, b::∂Result{C}) where C = ∂Result(map(+, a.values, b.values))
+
+@inline Base.Tuple(∂output::∂Result) = ∂output.values
+
+@inline Base.length(∂output::∂Result) = length(∂output.values)
+
+@inline Base.getindex(∂output::∂Result, i) = ∂output.values[i]
+
+@inline Base.iterate(∂output::∂Result, i...) = Base.iterate(∂output.values, i...)
+
+"A callable that can be used for Smolyak products with derivatives."
+struct ∂Prod{N,C}
+    canonical_expansion::NTuple{C,NTuple{N,Int}}
+end
+
+function (P::∂Prod)(a::𝑑Expansion, b::Tuple{})
+    (∂Result(map(c -> a.coefficients[last(c) + 1], P.canonical_expansion)),)
+end
+
+function (P::∂Prod{N,C})(a::𝑑Expansion, b::NTuple{K,∂Result{C}}) where {N,C,K}
+    L = N - K
+    (∂Result(map((c, b) -> (a.coefficients[c[L] + 1] * b),
+                 P.canonical_expansion, first(b).values)),
+     b...)
+end
+
+@generated function ∂prod(::Val{N}, ∂D::∂Derivatives{Ps}) where {N,Ps}
+    canonical_expansion = (_partials_canonical_expansion(Val(N), fieldtypes(Ps))...,)
     quote
-        ∂Expansion(∂D, SVector($(products...)))
+        ∂Prod($canonical_expansion)
     end
 end
 
-function _product_type(::Type{D}, source_eltypes::NTuple{M}) where {Ps,D<:∂Derivatives{Ps},M}
-    T = _product_type(Nothing, map(eltype, source_eltypes))
-    N = length(_partials_canonical_expansion(Val(M), fieldtypes(Ps)))
-    ∂Expansion{D,N,T}
+function _product_type(::Type{∂Prod{N,C}}, source_eltypes::NTuple{N}) where {N,C}
+    T = _product_type(typeof(_prod), map(eltype, source_eltypes))
+    ∂Result{C,T}
 end
 
 #####
@@ -612,27 +638,3 @@ end
 ####
 #### products (used by tensor / Smolyak bases)
 ####
-
-
-# """
-# Container for output of evaluating partial derivatives. Each corresponds to an
-# specification in a [`∂Specification`](@ref). Can be indexed with integers, iterated, or
-# converted to a `Tuple`.
-# """
-# struct ∂Output{N,T}
-#     values::NTuple{N,T}
-# end
-
-# function Base.show(io::IO, ∂output::∂Output)
-#     print(io, "SpectralKit.∂Output(")
-#     join(io, ∂output.values, ", ")
-#     print(io, ")")
-# end
-
-# @inline Base.Tuple(∂output::∂Output) = ∂output.values
-
-# @inline Base.length(∂output::∂Output) = length(∂output.values)
-
-# @inline Base.getindex(∂output::∂Output, i) = ∂output.values[i]
-
-# @inline Base.iterate(∂output::∂Output, i...) = Base.iterate(∂output.values, i...)

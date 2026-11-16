@@ -1,228 +1,172 @@
-# SpectralKit
+# Overview
 
-This is a very simple package for *building blocks* of spectral methods. Its intended audience is users who are familiar with the theory and practice of these methods, and prefer to assemble their code from modular building blocks, potentially reusing calculations. If you need an introduction, a book like *Boyd (2001): Chebyshev and Fourier spectral methods* is a good place to start.
+```@docs
+SpectralKit
+```
 
-This package was designed primarily for solving functional equations, as usually encountered in economics when solving discrete and continuous-time problems. Key features include
-
-1. evaluation of univariate and multivatiate basis functions, including Smolyak combinations,
-2. transformed to the relevant domains of interest, eg ``[a,b] × [0,∞)``,
-3. (partial) derivatives, with correct limits at endpoints,
-4. allocation-free, thread safe linear combinations for the above with a given set of coefficients,
-5. using [static arrays](https://github.com/JuliaArrays/StaticArrays.jl) extensively to avoid allocation and unroll *some* loops.
-
-While there is some functionality in this package to *fit* approximations to existing functions, it does not use optimized algorithms (DCT) for that, as it was optimized for mapping a set of coefficients to residuals of functional equations at gridpoints.
-
-Also, while the package should interoperate seamlessly with most AD frameworks, only the derivative API (explained below) is guaranteed to have correct derivatives of limits near infinity.
+This page introduces the concepts of the package through univariate examples.
 
 ## Concepts
 
-In this package,
+For the purposes of this package,
 
-1. A *basis* is a finite family of functions for approximating other functions. The [`dimension`](@ref) of a basis tells you how many functions are in there, while [`domain`](@ref) can be used to query its domain.
+1. A *basis* is a finite *family* of functions, defined over a given domain.
 
-2. A [`grid`](@ref) is vector of *suggested* gridpoints for evaluating the function to be approximated that has useful theoretical properties. You can contruct a [`collocation_matrix`](@ref) using this grid (or any other set of points). Grids are associated with bases at the time of their construction: a basis with the same set of functions can have different grids.
+2. Each family has a canonical domain: for example, Chebyshev polynomials are defined over ``[-1,1]``. This is mostly hidden from the user, allowing the specification of custom domains using *transformations*.
 
-3. [`basis_at`](@ref) returns an *iterator* for evaluating basis functions at an arbitrary point inside their domain. This iterator is meant to be heavily optimized and non-allocating. [`linear_combination`](@ref) is a convenience wrapper for obtaining a linear combination of basis functions at a given point.
+3. The number of basis functions is the *dimension*.
 
-## Univariate basis example
+4. Each basis has an associated *grid* recommended for collocation methods.
 
-We construct a basis of Chebyshev polynomials on ``[0, 4]``. This requires a transformation since their canonical domain is ``[-1,1]``. Other transformations include [`SemiInfRational`](@ref) for ``[A, \infty]`` intervals  and [`InfRational`](@ref) for ``[-\infty, \infty] `` intervals.
+5. The dimension is determined by the *level* and the grid *kind*.
 
-We display the domian and the dimension (number of basis functions).
+6. The grid also has a level, which defaults to the level of the basis: default grid has as many points as the dimension of the basis.
+
+7. Levels allow *nesting* gridpoints. Increasing the level (or the grid level) of the basis adds more grid points to existing ones.
+
+## Univariate bases
+
+Let's demonstrate these concepts with a concrete example, by constructing a basis of Chebyshev polynomials, transformed to the interval ``[0, 1]`` (using a linear mapping), with level = 2.
+
 ```@repl univariate
-using SpectralKit
-basis = Chebyshev(InteriorGrid(), 5) ∘ BoundedLinear(0, 4)
-domain(basis)
+using SpectralKit;
+basis = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), 2)
+```
+
+The default printing methods shows the dimension, but one can of query it too using the API:
+
+```@repl univariate
 dimension(basis)
 ```
 
-We have chosen an interior grid, shown below. We `collect` the result for the purpose of this tutorial, since `grid` returns an iterable to avoid allocations.
+The grid is an iterable calculated *on demand*, so that `grid` does not allocate:
 ```@repl univariate
-collect(grid(basis))
+grid(basis)
 ```
 
-We can show evaluate the basis functions at a given point. Again, it is an iterable, so we `collect` to show it here.
+To get the number of points in a grid, just use `grid(length(basis))`.
+
+For univariate bases, levels are integers starting from `0`. One could use a denser grid, eg for the a least squares approximation, by also specifying *a level for the grid*:
 ```@repl univariate
-collect(basis_at(basis, 0.41))
+basis_ls = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), 1, 2)
 ```
 
-We can evaluate linear combination as directly, or via partial application.
+Increasing the level adds more points. Grids can be calculated with types other than `Float64` (the default), here we use `Float16` for more compact printing:
 ```@repl univariate
-θ = [1, 0.5, 0.2, 0.3, 0.001];           # a vector of coefficients
-x = 0.41
-linear_combination(basis, θ, x)          # combination at some value
-linear_combination(basis, θ)(x)          # also as a callable
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), level))
+ for level in 0:3]
 ```
 
-We can also evaluate *derivatives* of either the basis or the linear combination at a given point. Here we want the derivatives up to order 3.
-```@repl univariate
-dx = (𝑑^2)(x)
-collect(basis_at(basis, dx))
-fdx = linear_combination(basis, θ, dx)
-fdx[0] # the value
-fdx[1] # the first derivative
-```
+## Grid kinds
 
-Having an approximation, we can embed it in a larger basis, extending the coefficients accordingly.
-```@repl univariate
-basis2 = Chebyshev(EndpointGrid(), 8) ∘ transformation(basis)       # 8 Chebyshev polynomials
-is_subset_basis(basis, basis2)              # we could augment θ …
-augment_coefficients(basis, basis2, θ)      # … so let's do it
-```
+Currently, two kinds of grids are supported: [`Endpoints`](@ref) and [`Interior`](@ref).
 
-## Multivariate (Smolyak) approximation example
+`Endpoints()` grids are Chebyshev nodes of the second kind, also known as Chebyshev–Lobatto nodes or Chebyshev extrema. They are the [extrema of Chebyshev polynomials](https://en.wikipedia.org/wiki/Chebyshev_nodes), and nest with each level adding 2, 2, 4, 8, … gridpoints:
 
-We set up a Smolyak basis to approximate functions on ``[-1,2] \times [-3, \infty]``, where the second dimension has a scaling of ``3``.
-
-```@example smolyak
-using SpectralKit, StaticArrays
-basis = smolyak_basis(Chebyshev, InteriorGrid2(), SmolyakParameters(3), 2)
-ct = coordinate_transformations(BoundedLinear(-1, 2.0), SemiInfRational(-3.0, 3.0))
-basis_t = basis ∘ ct
-```
-Note how the basis can be combined with a transformation using `∘`.
-
-We will approximate the following function:
-```@example smolyak
-f2((x1, x2)) = exp(x1) + exp(-abs2(x2))
-```
-
-We find the coefficients by solving with the collocation matrix.
-```@example smolyak
-θ = collocation_matrix(basis_t) \ f2.(grid(basis_t))
-```
-
-Finally, we check the approximation at a point.
-```@example smolyak
-z = (0.5, 0.7)                            # evaluate at this point
-isapprox(f2(z), linear_combination(basis_t, θ)(z), rtol = 0.005)
-```
-
-## Infinite endpoints
-
-Values and derivatives at ``\pm\infty`` should provide the correct limits.
-```@repl
+```@repl gridkinds
 using SpectralKit
-basis = Chebyshev(InteriorGrid(), 4) ∘ InfRational(0.0, 1.0)
-collect(basis_at(basis, 𝑑(Inf)))
-collect(basis_at(basis, 𝑑(-Inf)))
+[grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
+ for level in 0:3]
 ```
 
-## Constructing bases
+`Interior()` grids are these with -1 and 1 dropped:
 
-### Grid specifications
-
-```@docs
-EndpointGrid
-InteriorGrid
-InteriorGrid2
+```@repl gridkinds
+[grid(Float16, UnivariateBasis(Chebyshev(), Endpoints(), BoundedLinear(-1, 1), level))
+ for level in 0:3]
 ```
 
-### Domains and transformations
+## Domain transformations
 
-A transformation maps values between a *domain*, usually specified by
-the basis, and the (co)domain that is specified by a transformation.
-Transformations are not required to be subtypes of anything, but need
-to support
+The domain transformations are [`BoundedLinear`](@ref), [`SemiInfRational`](@ref), and [`InfRational`](@ref), with the latter transforming to semi-infinite regions, such as ``(0, ∞)``, and the real line, respectively. The latter two have parameters that influence the scale:
 
-```@docs
-transform_to
-transform_from
-domain
+```@repl gridkinds
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(), InfRational(; scale), 2))
+ for scale in [0.5, 1.0, 2.0]]
 ```
 
-In most cases you do not need to specify a domain directly: transformations specify their domains (eg from ``(0, ∞)``), and the codomain is determined by a basis. However, the following can be used to construct and query some concrete domains.
+and location
 
-```@docs
-domain_kind
-coordinate_domains
+```@repl gridkinds
+[grid(Float16, UnivariateBasis(Chebyshev(), Interior(),
+                               SemiInfRational(; endpoint), 2))
+ for endpoint in 0:2]
 ```
 
-Bases are defined on a *canonical domain*, such as ``[-1, 1]`` for Chebyshev polynomials. *Transformations* map other uni- and multivariate sets into these domains.
+## Linear combinations
 
-```@docs
-BoundedLinear
-InfRational
-SemiInfRational
-coordinate_transformations
+There are two ways to *evaluate* a combination of basis functions: either use [`linear_combination`](@ref) with a basis and a vector of coefficients, which gives a callable inside the domain, or to add the input as the third argument.
+
+```@repl linear_combination
+using SpectralKit, Miter
+basis = UnivariateBasis(Chebyshev(), Interior(), InfRational(), 2)
+θ = [1/x^2 for x in 1:7]
+linear_combination(basis, θ, 0.5)
 ```
 
-### Univariate bases
-
-Currently, only Chebyshev polynomials are implemented. Univariate bases operate on real numbers.
-
-```@docs
-Chebyshev
+```@example linear_combination
+let f = linear_combination(basis, θ), g = grid(basis)
+    Plot(Lines((x, f(x)) for x in range(extrema(g)...; length = 500)),
+         Scatter(MarkSymbol(:o), ((x, f(x)) for x in g)))
+end
 ```
 
-### Multivariate bases
+[`basis_at`](@ref) provides an *iterable* of the basis functions evaluated at a point:
 
-Multivariate bases operate on tuples or vectors (`StaticArrays.SVector` is preferred for performance, but all `<:AbstractVector` types should work).
-
-```@docs
-SmolyakParameters
-smolyak_basis
+```@repl linear_combination
+collect(basis_at(basis, 0.3))
 ```
 
-## Using bases
+Importantly, since basis functions are calculated recursively, this is not indexable as a vector. It serves as a building block for [`linear_combination`](@ref).
 
-### Introspection
+## Domain and values outside it
 
-```@docs
-is_function_basis
-dimension
-transformation
+You can use [`domain`](@ref) to query the domain of a transformation:
+
+```@repl domain
+using SpectralKit
+b_strict = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0.0, 3.0), 2)
+domain(b_strict)
 ```
 
-See also [`domain`](@ref).
-
-### Evaluation
-
-```@docs
-basis_at
-linear_combination
+Domains support `extrema`:
+```@repl domain
+extrema(domain(b_strict))
 ```
 
-### Grids and collocation
+The default behavior is to error for inputs outside the domain:
 
-```@docs
-grid
-collocation_matrix
+```@repl domain
+linear_combination(b_strict, ones(dimension(b_strict)), 3.0001)
 ```
 
-### Augment coordinates for a wider basis
+but this can be overridden:
 
-```@docs
-augment_coefficients
-is_subset_basis
+```@repl domain
+b_tolerant = UnivariateBasis(Chebyshev(), Interior(),
+                             BoundedLinear(0.0, 3.0, NearestInDomain()), 2)
+linear_combination(b_tolerant, ones(dimension(b_tolerant)), 3.0001)
 ```
 
-## Derivatives
+Transformations that do not cover the entire real line have an option to specify what happens outside the domain. This is for **handling floating point error**: do not deliberately evaluate bases outside their domain.
 
-!!! note
-    API for derivatives is still experimental and subject to change.
+## Dimensions without transformations
 
-For univariate functions, use [`𝑑`](@ref). For multivariate functions, use partial derivatives with [`∂`](@ref).
+If you don't need grid values or linear combinations, you can specify an arbitrary value, such as `0` or `nothing`, in place of transformations. This allows the user to obtain the just *dimension* of the basis or the grid.
 
-```@docs
-𝑑
-∂
+```@repl just-dimension
+using SpectralKit
+dimension(UnivariateBasis(Chebyshev(), Interior(), nothing, 2))
 ```
 
-## Internals
+This also works with [Smolyak bases](@ref smolyak), and/or `length(grid(basis))`.
 
-This section of the documentation is probably only relevant to contributors and others who want to understand the internals.
+## Changing one aspect of a basis
 
-### Type hierarchies
+[`UnivariateBasis`](@ref) and [`SmolyakBasis`](@ref) are just containers for their properties. This means that if you just want to change some aspects of a basis, you can use a library like [Accessors.jl](https://github.com/JuliaObjects/Accessors.jl):
 
-Generally, the abstract types below are not part of the exposed API, and new types don't have to subtype them (unless they want to rely on the existing convenience methods). They are merely for code organization.
-
-```@docs
-SpectralKit.AbstractUnivariateDomain
-```
-
-### Grid internals
-
-```@docs
-SpectralKit.gridpoint
+```@repl
+using SpectralKit, Accessors
+basis = UnivariateBasis(Chebyshev(), Interior(), (BoundedLinear(1, 2), SemiInfRational()), 2)
+basis2 = @set basis.level = 2
 ```

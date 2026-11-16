@@ -1,13 +1,21 @@
-using Documenter, SpectralKit
-DocMeta.setdocmeta!(SpectralKit, :DocTestSetup, :(using SpectralKit);
+using Documenter, SpectralKit, Miter, Colors
+DocMeta.setdocmeta!(SpectralKit, :DocTestSetup,
+                    quote
+                        using SpectralKit
+                        using SpectralKit: 𝑑, ∂ # derivatives API currently not exposed
+                    end,
                     recursive=true)
 
 makedocs(
     modules = [SpectralKit],
-    format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
+    format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true",
+                             assets = ["assets/html/custom.css"]),
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
-    pages = Any["index.md", "experimental.md"],
+    pages = Any["index.md",
+                "smolyak.md",
+                "approximation.md",
+                "api.md"],
     clean = true,
     checkdocs = :exports,
 )
