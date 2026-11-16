@@ -8,7 +8,8 @@ DocMeta.setdocmeta!(SpectralKit, :DocTestSetup,
 
 makedocs(
     modules = [SpectralKit],
-    format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
+    format = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true",
+                             assets = ["assets/html/custom.css"]),
     authors = "Tamas K. Papp",
     sitename = "SpectralKit.jl",
     pages = Any["index.md",

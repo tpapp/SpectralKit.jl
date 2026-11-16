@@ -4,7 +4,7 @@ Now we consider multivariate approximations. For a few dimensions, it makes sens
 
 A solution to this problem is *sparse grids*. This package implements a sparse variant known as Smolyak bases or grids. We only allow combinations that have a *total* level below some threshold, also limiting *each* dimension's level. The way to specify this is with
 
-```@example smolyak
+```@repl smolyak
 using SpectralKit
 SmolyakLevel(total = 3, each = 2)
 ```
@@ -12,15 +12,18 @@ SmolyakLevel(total = 3, each = 2)
 In two dimensions, this would allow level combinations ``(0,0), (1,0), (0,1), (2,0), (1,1), (0,2), (2,1), (1,2)``. In this scheme, grids also nest:
 
 ```@example smolyak
-let t = BoundedLinear(0.0, 1.0)
-    [collect(grid(Float16, SmolyakBasis(Chebyshev(), Interior(), (t, t), SmolyakLevel(; total, each = total))))
-     for total in 0:2]
+using Miter, Miter.Lengths
+let t = BoundedLinear(-1, 1)
+    Plot([Scatter(MarkSymbol(:o; size = 1mm * (total + 0.5)),
+                  grid(SmolyakBasis(Chebyshev(), Interior(),
+                                    (t, t), SmolyakLevel(; total, each = total))))
+          for total in 0:2])
 end
 ```
 
 Inputs `each > total` are accepted, but normalized with a warning:
 
-```@example smolyak
+```@repl smolyak
 SmolyakLevel(; total = 1, each = 5)
 ```
 
