@@ -120,7 +120,8 @@ function DD(::Val{N}, f, x) where N
         @assert N > 0
         if isfinite(x)
             # this is overkill but works
-            Enzyme.autodiff(Enzyme.Forward, Enzyme.Const(x -> DD(Val(N-1), f, x)),
+            Enzyme.autodiff(Enzyme.set_runtime_activity(Enzyme.Forward),
+                            Enzyme.Const(x -> DD(Val(N-1), f, x)),
                             Enzyme.Duplicated(x, 1.0))[1]
         elseif isinf(x)
             zero(x)             # transformations converge to constant
