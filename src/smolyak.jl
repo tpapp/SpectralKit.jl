@@ -75,12 +75,12 @@ function __smolyak_iterate(family, kind, level::SmolyakLevel, f::F, itrs, g::G,
     end
 end
 
-struct SmolyakBasis{F,K,D} <: MultivariateBasis
+struct SmolyakBasis{F,K,D,G<:Union{Nothing,SmolyakLevel}} <: MultivariateBasis
     family::F
     kind::K
     domain_transformations::D
     level::SmolyakLevel
-    grid_level::SmolyakLevel
+    grid_level::G
     @doc """
     $(SIGNATURES)
 
@@ -92,14 +92,17 @@ struct SmolyakBasis{F,K,D} <: MultivariateBasis
     `level` is a [`SmolyakLevel`](@ref), specifying the number of *blocks* used to build
     the grid.
 
+    `grid_level` can be either `nothing`, in which case it defaults to be the same as
+    `level`, or a [`SmolyakLevel`](@ref).
+
     ### Miscellaneous
 
     As a convenience, `smolyak_basis[i]` returns an univariate basis along coordinate `i`.
     """
     function SmolyakBasis(family::F, kind::K, domain_transformations::D,
                           level::SmolyakLevel,
-                          grid_level::SmolyakLevel = level) where {F,K,D<:Tuple}
-        new{F,K,D}(family, kind, domain_transformations, level, grid_level)
+                          grid_level::G = nothing) where {F,K,D<:Tuple,G<:Union{Nothing,SmolyakLevel}}
+        new{F,K,D,G}(family, kind, domain_transformations, level, grid_level)
     end
 end
 
@@ -111,7 +114,7 @@ function Base.show(io::IO, basis::SmolyakBasis)
     print(io, lead, family, ", ", kind, next,
           domain_transformations, next,
           level)
-    if grid_level ≠ level
+    if grid_level ≢ nothing
         print(io, next, grid_level)
     end
     print(io, ")")
@@ -119,7 +122,8 @@ end
 
 function Base.getindex(basis::SmolyakBasis, i::Integer)
     (; family, kind, domain_transformations, level, grid_level) = basis
-    UnivariateBasis(family, kind, domain_transformations[i], level.each, grid_level.each)
+    UnivariateBasis(family, kind, domain_transformations[i], level.each,
+                    something(grid_level, level).each)
 end
 
 # ## Example
@@ -232,7 +236,8 @@ function Base.iterate(itr::SmolyakGrid, state = nothing)
 end
 
 function grid(::Type{T}, smolyak_basis::SmolyakBasis) where {T<:AbstractFloat}
-    (; family, kind, domain_transformations, grid_level) = smolyak_basis
+    (; family, kind, domain_transformations, level, grid_level) = smolyak_basis
+    grid_level = something(grid_level, level)
     (; each) = grid_level
     itrs = map(d -> grid(T, UnivariateBasis(family, kind, d, each)), domain_transformations)
     SmolyakGrid(family, kind, grid_level, itrs)

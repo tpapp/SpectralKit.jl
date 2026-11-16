@@ -18,7 +18,7 @@ For the purposes of this package,
 
 4. Each basis has an associated *grid* recommended for collocation methods.
 
-5. The dimension is determined by the *level* and the grid *kind*. Levels are integers starting from `0`.
+5. The dimension is determined by the *level* and the grid *kind*.
 
 6. The grid also has a level, which defaults to the level of the basis: default grid has as many points as the dimension of the basis.
 
@@ -39,17 +39,19 @@ The default printing methods shows the dimension, but one can of query it too us
 dimension(basis)
 ```
 
-The grid is an `::AbstractVector`, but it is calculated *on demand*, so that `grid` does not allocate:
+The grid is an iterable calculated *on demand*, so that `grid` does not allocate:
 ```@example univariate
 grid(basis)
 ```
 
-One could use a denser grid, eg for the a least squares approximation:
+To get the number of points in a grid, just use `grid(length(basis))`.
+
+For univariate bases, levels are integers starting from `0`. One could use a denser grid, eg for the a least squares approximation, by also specifying *a level for the grid*:
 ```@example univariate
 basis_ls = UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), 1, 2)
 ```
 
-Increasing the level adds more points. Grids can be calculated with types other than `Float64` (the default), here we use `Float46` for more compact printing:
+Increasing the level adds more points. Grids can be calculated with types other than `Float64` (the default), here we use `Float16` for more compact printing:
 ```@example univariate
 [grid(Float16, UnivariateBasis(Chebyshev(), Interior(), BoundedLinear(0, 1), level))
  for level in 0:3]
@@ -76,7 +78,7 @@ using SpectralKit
 
 ## Domain transformations
 
-The domain transformations are [`BoundedLinear`](@ref), [`SemiInfRational`](@ref), and [`InfRational`](@ref), with the latter transforming to semi-infinite regions, such as ``(0, ∞)``, and the real line. The latter two have parameters that influence the scale:
+The domain transformations are [`BoundedLinear`](@ref), [`SemiInfRational`](@ref), and [`InfRational`](@ref), with the latter transforming to semi-infinite regions, such as ``(0, ∞)``, and the real line, respectively. The latter two have parameters that influence the scale:
 
 ```@example gridkinds
 [grid(Float16, UnivariateBasis(Chebyshev(), Interior(), InfRational(; scale), 2))
@@ -92,7 +94,7 @@ and location
 
 ## Linear combinations
 
-The whole point of this package is to *evaluate* a combination of basis functions. There are two ways to do that: either use [`linear_combination`](@ref) with a basis and a vector of coefficients, which gives a callable inside the domain, or to add the input as the third argument.
+There are two ways to *evaluate* a combination of basis functions: either use [`linear_combination`](@ref) with a basis and a vector of coefficients, which gives a callable inside the domain, or to add the input as the third argument.
 
 ```@example linear_combination
 using SpectralKit, Miter
@@ -145,3 +147,24 @@ linear_combination(b_tolerant, ones(dimension(b_tolerant)), 3.0001)
 ```
 
 Transformations that do not cover the entire real line have an option to specify what happens outside the domain. This is for **handling floating point error**: do not deliberately evaluate bases outside their domain.
+
+## Dimensions without transformations
+
+If you don't need grid values or linear combinations, you can specify an arbitrary value, such as `0` or `nothing`, in place of transformations. This allows the user to obtain the just *dimension* of the basis or the grid.
+
+```@example just-dimension
+using SpectralKit
+dimension(UnivariateBasis(Chebyshev(), Interior(), nothing, 2))
+```
+
+This also works with [Smolyak bases](@ref smolyak), and/or `length(grid(basis))`.
+
+## Changing one aspect of a basis
+
+[`UnivariateBasis`](@ref) and [`SmolyakBasis`](@ref) are just containers for their properties. This means that if you just want to change some aspects of a basis, you can use a library like [Accessors.jl](https://github.com/JuliaObjects/Accessors.jl):
+
+```@example
+using SpectralKit, Accessors
+basis = UnivariateBasis(Chebyshev(), Interior(), (BoundedLinear(1, 2), SemiInfRational()), 2)
+basis2 = @set basis.level = 2
+```

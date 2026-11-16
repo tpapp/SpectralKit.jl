@@ -1,4 +1,4 @@
-# Bases
+# API
 
 ## Univariate bases
 

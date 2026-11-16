@@ -139,6 +139,8 @@ end
     @test length(grid(basis)) ==
         SpectralKit.grid_length(Chebyshev(), Interior(), 3) ==
         length(collect(grid(basis)))
+    basis2 = @set basis.grid_level = nothing
+    @test length(grid(basis2)) == dimension(basis2)
 end
 
 @testset "outside domain handling" begin

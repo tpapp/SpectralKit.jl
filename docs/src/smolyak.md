@@ -1,4 +1,4 @@
-# Smolyak bases
+# [Smolyak bases](@id smolyak)
 
 Now we consider multivariate approximations. For a few dimensions, it makes sense to form a tensor product of univariate basis functions: that is, for each dimension, we consider all basis functions, and just multiply them together to form a multivariate function. Unfortunately, this runs into the [curse of dimensionality](https://en.wikipedia.org/wiki/Curse_of_dimensionality): in ``N`` dimensions, of each basis has ``d`` functions, we end up with ``N^d`` of them.
 
