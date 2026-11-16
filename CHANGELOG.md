@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v0.17.0
 
+**Breaking API changes in the whole API, reread the docs.**
+
 ### Added
 
 - change transformation interface, informatively named keyword arguments
