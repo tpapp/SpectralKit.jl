@@ -12,7 +12,8 @@ SmolyakLevel(total = 3, each = 2)
 In two dimensions, this would allow level combinations ``(0,0), (1,0), (0,1), (2,0), (1,1), (0,2), (2,1), (1,2)``. In this scheme, grids also nest:
 
 ```@example smolyak
-using Miter, Miter.Lengths
+using Miter
+using Miter.Lengths
 let t = BoundedLinear(-1, 1)
     Plot([Scatter(MarkSymbol(:o; size = 1mm * (total + 0.5)),
                   grid(SmolyakBasis(Chebyshev(), Interior(),
