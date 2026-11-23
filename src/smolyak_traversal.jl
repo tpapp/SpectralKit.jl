@@ -103,10 +103,26 @@ Base.eltype(::Type{NonIncreasingSmolyakLevels{N}}) where N = NTuple{N,Int}
 
 Base.IteratorSize(::Type{<:NonIncreasingSmolyakLevels}) = Base.SizeUnknown()
 
-function __step_noninc(total::Int, each::Int, Σ_and_indices::Int...)
-    Σ, i1, iτ... = Σ_and_indices
-    if Σ < total && isempty(iτ)
-        # single index, increment if possible
+"""
+$(SIGNATURES)
+
+For traversing indices `i = (i1, iτ...)` in a way that
+
+1. `i[1] ≤ total`,
+2. each index is `≤ each`,
+3. `i` is non-increasing (weakly decreasing).
+
+Maintains the invariant that `Σ = sum(i)`.
+
+Caller assumes responsibility for these, and also for `each ≤ total`.
+
+Returns the updated `Σ` and `i`. Called should stop iteration when `i[1] > each`.
+"""
+function __step_noninc(total::Int, each::Int, Σ::Int, i1::Int, iτ::Int...)
+    if isempty(iτ)
+        # Single index, increment. If called from the same function, that is from branch
+        # below, where `Σ < total` was ensured. Otherwise, this is the first index, so
+        # iteration should stop.
         (i1 + 1, i1 + 1)
     elseif Σ < total && i1 > last(iτ)
         # room to increment indices in the tail

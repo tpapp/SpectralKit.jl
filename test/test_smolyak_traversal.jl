@@ -18,9 +18,9 @@ end
     for N in 1:3
         for total in 0:4
             for each in 0:total
-                N, total, each = 2, 3, 3
                 itr = SpectralKit.NonIncreasingSmolyakLevels{N}(total, each)
                 @test sort(collect(itr)) == sort(nonincreasing_smolyak_levels(Val(N), total, each))
+                @test_call collect(itr)
             end
         end
     end
