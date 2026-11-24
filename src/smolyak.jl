@@ -159,9 +159,7 @@ function dimension(smolyak_basis::SmolyakBasis)
 end
 
 function constant_coefficients(U::SmolyakBasis{Chebyshev}, y::T) where {T<:Real}
-    θ = zeros(T, dimension(U))
-    θ[1] = y
-    θ
+    ZerosButFirst(y, dimension(U))
 end
 
 struct SmolyakBasisAt{I,P,F,K,L<:SmolyakLevel}

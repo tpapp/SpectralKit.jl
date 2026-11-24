@@ -136,3 +136,21 @@ function _ntuple_like(::Type{T}, v::AbstractVector) where {N,T<:NTuple{N}}
     @argcheck length(v) == N
     NTuple{N}(v)
 end
+
+####
+#### special vectors
+####
+
+"""
+A vector a scalar followed by zeros. For avoiding allocations in constant coefficients.
+"""
+struct ZerosButFirst{T} <: AbstractVector{T}
+    "The first value (which does not have to be zero)."
+    a::T
+    "The total length."
+    n::Int
+end
+
+Base.size(z::ZerosButFirst) = (z.n,)
+
+Base.getindex(z::ZerosButFirst{T}, i) where T = i == 1 ? z.a : zero(T)
