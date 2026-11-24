@@ -171,9 +171,7 @@ domain(U::UnivariateBasis) = domain(U.domain_transformation)
 dimension(U::UnivariateBasis) = grid_length(U.family, U.kind, U.level)
 
 function constant_coefficients(U::UnivariateBasis{Chebyshev}, y::T) where {T<:Real}
-    θ = zeros(T, dimension(U))
-    θ[1] = y
-    θ
+    ZerosButFirst(y, dimension(U))
 end
 
 struct UnivariateBasisAt{I}

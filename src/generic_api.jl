@@ -89,6 +89,8 @@ function basis_at end
 
 Return coefficients `θ` so that `linear_combination(basis, θ, x) ≈ y` for all `x` in the
 domain.
+
+The value is a vector, but may not be mutable. `collect` the result if you want to modify.
 """
 function constant_coefficients end
 
